@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,7 +83,7 @@ const MessageCard = ({ message, onClick, isSelected }: MessageCardProps) => {
     <Card 
       className={`cursor-pointer transition-all duration-200 hover:shadow-lg border-white/20 ${
         isSelected 
-          ? 'bg-blue-50/80 border-blue-200 shadow-md' 
+          ? 'bg-purple-50/80 border-purple-200 shadow-md' 
           : 'bg-white/60 hover:bg-white/80'
       }`}
       onClick={onClick}
@@ -93,7 +92,7 @@ const MessageCard = ({ message, onClick, isSelected }: MessageCardProps) => {
         <div className="flex items-start space-x-4">
           <Avatar className="w-12 h-12 border-2 border-white/50">
             <AvatarImage src={message.avatar} alt={message.from} />
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-500 text-white">
+            <AvatarFallback className="bg-gradient-to-br from-purple-500 to-indigo-500 text-white">
               {message.from.charAt(0)}
             </AvatarFallback>
           </Avatar>
@@ -126,12 +125,12 @@ const MessageCard = ({ message, onClick, isSelected }: MessageCardProps) => {
             {message.tasks.length > 0 && (
               <div className="mb-3">
                 <div className="flex items-center space-x-1 mb-2">
-                  <Sparkles className="w-3 h-3 text-blue-600" />
-                  <span className="text-xs font-medium text-blue-600">AI Extracted Tasks</span>
+                  <Sparkles className="w-3 h-3 text-purple-600" />
+                  <span className="text-xs font-medium text-purple-600">AI Extracted Tasks</span>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {message.tasks.map((task, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                    <Badge key={index} variant="secondary" className="text-xs bg-purple-100 text-purple-800">
                       <CheckSquare className="w-3 h-3 mr-1" />
                       {task}
                     </Badge>

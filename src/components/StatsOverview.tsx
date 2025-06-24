@@ -19,7 +19,7 @@ const StatsOverview = () => {
       icon: <Mail className="w-4 h-4" />,
       change: "+12%",
       trend: "up",
-      color: "text-blue-600"
+      color: "text-purple-600"
     },
     {
       label: "Tasks",
@@ -43,7 +43,7 @@ const StatsOverview = () => {
       icon: <TrendingUp className="w-4 h-4" />,
       change: "0%",
       trend: "neutral",
-      color: "text-purple-600"
+      color: "text-indigo-600"
     }
   ];
 
