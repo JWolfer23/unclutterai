@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Mail, 
@@ -8,10 +9,59 @@ import {
   Clock,
   TrendingUp,
   TrendingDown,
-  Minus
+  Minus,
+  ChevronDown,
+  ChevronRight,
+  User,
+  Twitter,
+  Mic
 } from "lucide-react";
 
-const StatsOverview = () => {
+interface StatsOverviewProps {
+  onMessageTypeFilter?: (type: string | null) => void;
+}
+
+const StatsOverview = ({ onMessageTypeFilter }: StatsOverviewProps) => {
+  const [isUnreadExpanded, setIsUnreadExpanded] = useState(false);
+
+  const unreadBreakdown = [
+    {
+      type: "text",
+      label: "Text",
+      count: 8,
+      icon: <MessageSquare className="w-3 h-3" />,
+      color: "text-blue-600"
+    },
+    {
+      type: "email", 
+      label: "Email",
+      count: 12,
+      icon: <Mail className="w-3 h-3" />,
+      color: "text-purple-600"
+    },
+    {
+      type: "social",
+      label: "DMs",
+      count: 3,
+      icon: <User className="w-3 h-3" />,
+      color: "text-green-600"
+    },
+    {
+      type: "social",
+      label: "Social Media", 
+      count: 1,
+      icon: <Twitter className="w-3 h-3" />,
+      color: "text-indigo-600"
+    },
+    {
+      type: "voice",
+      label: "Voice Messages",
+      count: 0,
+      icon: <Mic className="w-3 h-3" />,
+      color: "text-orange-600"
+    }
+  ];
+
   const stats = [
     {
       label: "Unread",
@@ -19,7 +69,8 @@ const StatsOverview = () => {
       icon: <Mail className="w-4 h-4" />,
       change: "+12%",
       trend: "up",
-      color: "text-purple-600"
+      color: "text-purple-600",
+      expandable: true
     },
     {
       label: "Tasks",
@@ -69,6 +120,12 @@ const StatsOverview = () => {
     }
   };
 
+  const handleMessageTypeClick = (type: string) => {
+    if (onMessageTypeFilter) {
+      onMessageTypeFilter(type);
+    }
+  };
+
   return (
     <Card className="bg-white/80 backdrop-blur-md border-white/20">
       <CardHeader className="pb-3">
@@ -76,20 +133,64 @@ const StatsOverview = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {stats.map((stat, index) => (
-          <div key={index} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div className={`w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center ${stat.color}`}>
-                {stat.icon}
+          <div key={index}>
+            <div 
+              className={`flex items-center justify-between p-3 bg-gray-50/50 rounded-lg ${
+                stat.expandable ? 'cursor-pointer hover:bg-gray-100/50 transition-colors' : ''
+              }`}
+              onClick={stat.expandable ? () => setIsUnreadExpanded(!isUnreadExpanded) : undefined}
+            >
+              <div className="flex items-center space-x-3">
+                <div className={`w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center ${stat.color}`}>
+                  {stat.icon}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 flex items-center space-x-1">
+                    <span>{stat.label}</span>
+                    {stat.expandable && (
+                      <div className="transition-transform duration-200">
+                        {isUnreadExpanded ? (
+                          <ChevronDown className="w-3 h-3 text-gray-400" />
+                        ) : (
+                          <ChevronRight className="w-3 h-3 text-gray-400" />
+                        )}
+                      </div>
+                    )}
+                  </p>
+                  <p className="font-semibold text-gray-900">{stat.value}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">{stat.label}</p>
-                <p className="font-semibold text-gray-900">{stat.value}</p>
+              <div className={`flex items-center space-x-1 text-xs ${getTrendColor(stat.trend)}`}>
+                {getTrendIcon(stat.trend)}
+                <span>{stat.change}</span>
               </div>
             </div>
-            <div className={`flex items-center space-x-1 text-xs ${getTrendColor(stat.trend)}`}>
-              {getTrendIcon(stat.trend)}
-              <span>{stat.change}</span>
-            </div>
+            
+            {/* Expanded breakdown for Unread */}
+            {stat.expandable && isUnreadExpanded && (
+              <div className="mt-2 ml-4 space-y-2 animate-fade-in">
+                {unreadBreakdown.map((item, idx) => (
+                  <div 
+                    key={idx}
+                    className="flex items-center justify-between p-2 bg-white/60 rounded-md cursor-pointer hover:bg-purple-50/60 transition-colors group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMessageTypeClick(item.type);
+                    }}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-5 h-5 rounded-md bg-gray-50 flex items-center justify-center ${item.color} group-hover:bg-white transition-colors`}>
+                        {item.icon}
+                      </div>
+                      <span className="text-xs text-gray-600">{item.label}</span>
+                    </div>
+                    <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded-full group-hover:bg-purple-100 transition-colors">
+                      {item.count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </CardContent>

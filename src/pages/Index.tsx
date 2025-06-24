@@ -30,6 +30,7 @@ import StatsOverview from "@/components/StatsOverview";
 const Index = () => {
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [messageTypeFilter, setMessageTypeFilter] = useState<string | null>(null);
 
   const mockMessages = [
     {
@@ -86,11 +87,19 @@ const Index = () => {
     }
   ];
 
-  const filteredMessages = mockMessages.filter(message => 
-    message.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    message.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    message.preview.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMessages = mockMessages.filter(message => {
+    const matchesSearch = message.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      message.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      message.preview.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesType = !messageTypeFilter || message.type === messageTypeFilter;
+    
+    return matchesSearch && matchesType;
+  });
+
+  const handleMessageTypeFilter = (type: string | null) => {
+    setMessageTypeFilter(type);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100">
@@ -131,7 +140,7 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            <StatsOverview />
+            <StatsOverview onMessageTypeFilter={handleMessageTypeFilter} />
             <AIAssistant />
           </div>
 
@@ -150,6 +159,16 @@ const Index = () => {
                       className="pl-10 bg-white/50 border-white/20"
                     />
                   </div>
+                  {messageTypeFilter && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setMessageTypeFilter(null)}
+                      className="bg-purple-50 border-purple-200 text-purple-700"
+                    >
+                      Clear Filter
+                    </Button>
+                  )}
                 </div>
 
                 <Tabs defaultValue="all" className="w-full">
