@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,6 +103,18 @@ const Index = () => {
     setMessageTypeFilter(type);
   };
 
+  const handleViewMessage = (messageId: number) => {
+    const message = mockMessages.find(m => m.id === messageId);
+    if (message) {
+      setSelectedMessage(message);
+      // Scroll to the message if needed
+      const messageElement = document.getElementById(`message-${messageId}`);
+      if (messageElement) {
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100">
       {/* Header */}
@@ -142,7 +155,10 @@ const Index = () => {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             <FocusScoreCard />
-            <StatsOverview onMessageTypeFilter={handleMessageTypeFilter} />
+            <StatsOverview 
+              onMessageTypeFilter={handleMessageTypeFilter}
+              onViewMessage={handleViewMessage}
+            />
             <AIAssistant />
           </div>
 
@@ -200,12 +216,13 @@ const Index = () => {
                   <TabsContent value="all" className="mt-6">
                     <div className="space-y-4">
                       {filteredMessages.map((message) => (
-                        <MessageCard
-                          key={message.id}
-                          message={message}
-                          onClick={() => setSelectedMessage(message)}
-                          isSelected={selectedMessage?.id === message.id}
-                        />
+                        <div key={message.id} id={`message-${message.id}`}>
+                          <MessageCard
+                            message={message}
+                            onClick={() => setSelectedMessage(message)}
+                            isSelected={selectedMessage?.id === message.id}
+                          />
+                        </div>
                       ))}
                     </div>
                   </TabsContent>
@@ -213,12 +230,13 @@ const Index = () => {
                   <TabsContent value="email" className="mt-6">
                     <div className="space-y-4">
                       {filteredMessages.filter(m => m.type === 'email').map((message) => (
-                        <MessageCard
-                          key={message.id}
-                          message={message}
-                          onClick={() => setSelectedMessage(message)}
-                          isSelected={selectedMessage?.id === message.id}
-                        />
+                        <div key={message.id} id={`message-${message.id}`}>
+                          <MessageCard
+                            message={message}
+                            onClick={() => setSelectedMessage(message)}
+                            isSelected={selectedMessage?.id === message.id}
+                          />
+                        </div>
                       ))}
                     </div>
                   </TabsContent>
@@ -226,12 +244,13 @@ const Index = () => {
                   <TabsContent value="text" className="mt-6">
                     <div className="space-y-4">
                       {filteredMessages.filter(m => m.type === 'text').map((message) => (
-                        <MessageCard
-                          key={message.id}
-                          message={message}
-                          onClick={() => setSelectedMessage(message)}
-                          isSelected={selectedMessage?.id === message.id}
-                        />
+                        <div key={message.id} id={`message-${message.id}`}>
+                          <MessageCard
+                            message={message}
+                            onClick={() => setSelectedMessage(message)}
+                            isSelected={selectedMessage?.id === message.id}
+                          />
+                        </div>
                       ))}
                     </div>
                   </TabsContent>
@@ -239,12 +258,13 @@ const Index = () => {
                   <TabsContent value="social" className="mt-6">
                     <div className="space-y-4">
                       {filteredMessages.filter(m => m.type === 'social').map((message) => (
-                        <MessageCard
-                          key={message.id}
-                          message={message}
-                          onClick={() => setSelectedMessage(message)}
-                          isSelected={selectedMessage?.id === message.id}
-                        />
+                        <div key={message.id} id={`message-${message.id}`}>
+                          <MessageCard
+                            message={message}
+                            onClick={() => setSelectedMessage(message)}
+                            isSelected={selectedMessage?.id === message.id}
+                          />
+                        </div>
                       ))}
                     </div>
                   </TabsContent>
@@ -252,12 +272,13 @@ const Index = () => {
                   <TabsContent value="voice" className="mt-6">
                     <div className="space-y-4">
                       {filteredMessages.filter(m => m.type === 'voice').map((message) => (
-                        <MessageCard
-                          key={message.id}
-                          message={message}
-                          onClick={() => setSelectedMessage(message)}
-                          isSelected={selectedMessage?.id === message.id}
-                        />
+                        <div key={message.id} id={`message-${message.id}`}>
+                          <MessageCard
+                            message={message}
+                            onClick={() => setSelectedMessage(message)}
+                            isSelected={selectedMessage?.id === message.id}
+                          />
+                        </div>
                       ))}
                     </div>
                   </TabsContent>
