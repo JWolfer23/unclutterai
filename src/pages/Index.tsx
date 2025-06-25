@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,17 +21,34 @@ import {
   Trash2,
   Clock,
   Users,
-  TrendingUp
+  TrendingUp,
+  Command
 } from "lucide-react";
 import MessageCard from "@/components/MessageCard";
 import AIAssistant from "@/components/AIAssistant";
 import StatsOverview from "@/components/StatsOverview";
 import FocusScoreCard from "@/components/FocusScoreCard";
+import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
+import ContextualSetupPrompt from "@/components/onboarding/ContextualSetupPrompt";
+import CommandPalette from "@/components/onboarding/CommandPalette";
+import { useOnboarding } from "@/hooks/useOnboarding";
+import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageTypeFilter, setMessageTypeFilter] = useState<string | null>(null);
+  const [showContextualPrompt, setShowContextualPrompt] = useState<{platform: string, feature: string} | null>(null);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  
+  const { 
+    state: onboardingState, 
+    completeOnboarding, 
+    connectPlatform, 
+    skipOnboarding,
+    requiresPlatform,
+    isOnboardingComplete 
+  } = useOnboarding();
 
   const mockMessages = [
     {
@@ -100,6 +116,19 @@ const Index = () => {
   });
 
   const handleMessageTypeFilter = (type: string | null) => {
+    // Check if platform is connected
+    const platformMap: {[key: string]: string} = {
+      'email': 'gmail',
+      'text': 'whatsapp', 
+      'social': 'twitter',
+      'voice': 'whatsapp'
+    };
+    
+    if (type && requiresPlatform(platformMap[type])) {
+      setShowContextualPrompt({platform: platformMap[type], feature: `View ${type} messages`});
+      return;
+    }
+    
     setMessageTypeFilter(type);
   };
 
@@ -107,13 +136,47 @@ const Index = () => {
     const message = mockMessages.find(m => m.id === messageId);
     if (message) {
       setSelectedMessage(message);
-      // Scroll to the message if needed
       const messageElement = document.getElementById(`message-${messageId}`);
       if (messageElement) {
         messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
   };
+
+  const handleConnect = (platform: string) => {
+    connectPlatform(platform);
+    setShowContextualPrompt(null);
+    toast({
+      title: "🎉 Connected!",
+      description: `${platform} is now connected and ready to use.`,
+    });
+  };
+
+  const handleCommand = (command: string) => {
+    // Process the command
+    toast({
+      title: "✨ Command Executed",
+      description: `Processing: ${command}`,
+    });
+  };
+
+  const handleSetupRequired = (platform: string, feature: string) => {
+    if (requiresPlatform(platform)) {
+      setShowContextualPrompt({platform, feature});
+    } else {
+      handleCommand(feature);
+    }
+  };
+
+  // Show onboarding for first-time users
+  if (onboardingState.showOnboarding && !isOnboardingComplete) {
+    return (
+      <OnboardingFlow 
+        onComplete={completeOnboarding}
+        onConnect={handleConnect}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100">
@@ -137,6 +200,14 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowCommandPalette(true)}
+              >
+                <Command className="w-4 h-4 mr-2" />
+                Command
+              </Button>
               <Button variant="outline" size="sm">
                 <Filter className="w-4 h-4 mr-2" />
                 Filter
@@ -288,6 +359,23 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {showContextualPrompt && (
+        <ContextualSetupPrompt
+          platform={showContextualPrompt.platform}
+          feature={showContextualPrompt.feature}
+          onConnect={handleConnect}
+          onDismiss={() => setShowContextualPrompt(null)}
+        />
+      )}
+
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        onCommand={handleCommand}
+        onSetupRequired={handleSetupRequired}
+      />
     </div>
   );
 };
