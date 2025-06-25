@@ -62,6 +62,7 @@ const StatsOverview = ({ onMessageTypeFilter }: StatsOverviewProps) => {
     }
   ];
 
+  // Remove Focus Score from main stats array since it's now separate
   const stats = [
     {
       label: "Unread",
@@ -87,14 +88,6 @@ const StatsOverview = ({ onMessageTypeFilter }: StatsOverviewProps) => {
       change: "-15%",
       trend: "down",
       color: "text-orange-600"
-    },
-    {
-      label: "Focus Score",
-      value: "87%",
-      icon: <TrendingUp className="w-4 h-4" />,
-      change: "0%",
-      trend: "neutral",
-      color: "text-indigo-600"
     }
   ];
 

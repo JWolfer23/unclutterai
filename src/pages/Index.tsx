@@ -26,6 +26,7 @@ import {
 import MessageCard from "@/components/MessageCard";
 import AIAssistant from "@/components/AIAssistant";
 import StatsOverview from "@/components/StatsOverview";
+import FocusScoreCard from "@/components/FocusScoreCard";
 
 const Index = () => {
   const [selectedMessage, setSelectedMessage] = useState(null);
@@ -140,6 +141,7 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
+            <FocusScoreCard />
             <StatsOverview onMessageTypeFilter={handleMessageTypeFilter} />
             <AIAssistant />
           </div>
@@ -208,7 +210,6 @@ const Index = () => {
                     </div>
                   </TabsContent>
 
-                  {/* Other tab contents would filter by type */}
                   <TabsContent value="email" className="mt-6">
                     <div className="space-y-4">
                       {filteredMessages.filter(m => m.type === 'email').map((message) => (
