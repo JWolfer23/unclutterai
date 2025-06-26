@@ -33,6 +33,7 @@ import ContextualSetupPrompt from "@/components/onboarding/ContextualSetupPrompt
 import CommandPalette from "@/components/onboarding/CommandPalette";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
+import DailyNotes from "@/components/DailyNotes";
 
 const Index = () => {
   const [selectedMessage, setSelectedMessage] = useState(null);
@@ -230,6 +231,7 @@ const Index = () => {
               onMessageTypeFilter={handleMessageTypeFilter}
               onViewMessage={handleViewMessage}
             />
+            <DailyNotes />
             <AIAssistant />
           </div>
 
