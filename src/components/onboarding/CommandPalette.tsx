@@ -1,19 +1,19 @@
 
-import { useState, useRef, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Command, 
   Search, 
-  Mic, 
-  MicOff,
-  Sparkles,
-  ArrowRight,
-  MessageSquare,
-  Mail,
-  Phone
+  Mail, 
+  MessageSquare, 
+  Phone, 
+  Twitter,
+  Calendar,
+  FileText,
+  Settings,
+  Zap
 } from "lucide-react";
 
 interface CommandPaletteProps {
@@ -23,76 +23,73 @@ interface CommandPaletteProps {
   onSetupRequired: (platform: string, feature: string) => void;
 }
 
+const commands = [
+  {
+    id: "view-emails",
+    title: "View Email Summary",
+    description: "See your latest emails",
+    icon: <Mail className="w-4 h-4" />,
+    platform: "gmail",
+    category: "Email"
+  },
+  {
+    id: "view-messages",
+    title: "View Messages",
+    description: "Check WhatsApp and texts",
+    icon: <MessageSquare className="w-4 h-4" />,
+    platform: "whatsapp",
+    category: "Messages"
+  },
+  {
+    id: "view-calls",
+    title: "View Missed Calls",
+    description: "See recent call activity",
+    icon: <Phone className="w-4 h-4" />,
+    platform: "phone",
+    category: "Calls"
+  },
+  {
+    id: "view-social",
+    title: "View Social Updates",
+    description: "Check mentions and DMs",
+    icon: <Twitter className="w-4 h-4" />,
+    platform: "twitter",
+    category: "Social"
+  },
+  {
+    id: "schedule-meeting",
+    title: "Schedule Meeting",
+    description: "Create a calendar event",
+    icon: <Calendar className="w-4 h-4" />,
+    platform: "calendar",
+    category: "Productivity"
+  },
+  {
+    id: "take-notes",
+    title: "Take Notes",
+    description: "Open daily notes",
+    icon: <FileText className="w-4 h-4" />,
+    platform: "notes",
+    category: "Productivity"
+  }
+];
+
 const CommandPalette = ({ isOpen, onClose, onCommand, onSetupRequired }: CommandPaletteProps) => {
-  const [query, setQuery] = useState("");
-  const [isListening, setIsListening] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const suggestions = [
-    { 
-      text: "Summarise unread email", 
-      icon: <Mail className="w-4 h-4" />,
-      platform: "gmail",
-      description: "Get a quick overview of your inbox"
-    },
-    { 
-      text: "Show WhatsApp messages", 
-      icon: <Phone className="w-4 h-4" />,
-      platform: "whatsapp",
-      description: "View recent chat activity"
-    },
-    { 
-      text: "Slack notifications summary", 
-      icon: <MessageSquare className="w-4 h-4" />,
-      platform: "slack",
-      description: "Catch up on team conversations"
-    }
-  ];
-
-  const filteredSuggestions = suggestions.filter(s => 
-    s.text.toLowerCase().includes(query.toLowerCase()) ||
-    s.description.toLowerCase().includes(query.toLowerCase())
+  const filteredCommands = commands.filter(command =>
+    command.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    command.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    command.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+  const handleCommandClick = (command: typeof commands[0]) => {
+    if (command.platform && ['gmail', 'whatsapp', 'twitter', 'phone'].includes(command.platform)) {
+      onSetupRequired(command.platform, command.title);
+    } else {
+      onCommand(command.title);
     }
-  }, [isOpen]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim()) {
-      // Check if command requires setup
-      const suggestion = suggestions.find(s => 
-        s.text.toLowerCase().includes(query.toLowerCase())
-      );
-      
-      if (suggestion) {
-        onSetupRequired(suggestion.platform, query);
-      } else {
-        onCommand(query);
-      }
-      setQuery("");
-      onClose();
-    }
-  };
-
-  const handleSuggestionClick = (suggestion: any) => {
-    onSetupRequired(suggestion.platform, suggestion.text);
     onClose();
-  };
-
-  const toggleVoice = () => {
-    setIsListening(!isListening);
-    // In a real implementation, this would start/stop speech recognition
-    if (!isListening) {
-      // Simulate voice input
-      setTimeout(() => {
-        setQuery("Summarise unread email");
-        setIsListening(false);
-      }, 2000);
-    }
   };
 
   if (!isOpen) return null;
@@ -100,81 +97,54 @@ const CommandPalette = ({ isOpen, onClose, onCommand, onSetupRequired }: Command
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center pt-20 p-4 z-50">
       <Card className="w-full max-w-2xl bg-white/95 backdrop-blur-md border-white/20 shadow-2xl">
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Command className="w-5 h-5 text-purple-600" />
-              <span className="font-medium text-gray-800">Command Palette</span>
-              <Badge variant="secondary" className="text-xs">Press Escape to close</Badge>
-            </div>
-
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Try: 'Summarise unread email' or 'Show Slack notifications'"
-                className="pl-10 pr-12 py-3 text-lg bg-white/50 border-white/20"
-              />
+        <CardHeader className="pb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search commands..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-white/50"
+              autoFocus
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="max-h-96 overflow-y-auto">
+          <div className="space-y-1">
+            {filteredCommands.map((command) => (
               <Button
-                type="button"
+                key={command.id}
                 variant="ghost"
-                size="sm"
-                onClick={toggleVoice}
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 ${
-                  isListening ? 'text-red-500' : 'text-gray-400'
-                }`}
+                className="w-full justify-start p-3 h-auto"
+                onClick={() => handleCommandClick(command)}
               >
-                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              </Button>
-            </div>
-
-            {isListening && (
-              <div className="flex items-center justify-center py-4">
-                <div className="flex items-center gap-2 text-red-500">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm">Listening...</span>
+                <div className="flex items-center gap-3 w-full">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-purple-100 to-indigo-100 flex items-center justify-center text-purple-600">
+                    {command.icon}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-medium">{command.title}</div>
+                    <div className="text-sm text-gray-500">{command.description}</div>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {command.category}
+                  </Badge>
                 </div>
-              </div>
-            )}
-
-            {query && (
-              <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Execute Command
-                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-            )}
-          </form>
-
-          {!query && (
-            <div className="mt-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Suggested Commands</h3>
-              <div className="space-y-2">
-                {filteredSuggestions.map((suggestion, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-purple-50 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="text-purple-600 group-hover:text-purple-700">
-                        {suggestion.icon}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-800">{suggestion.text}</div>
-                        <div className="text-sm text-gray-500">{suggestion.description}</div>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600" />
-                    </div>
-                  </button>
-                ))}
-              </div>
+            ))}
+          </div>
+          
+          {filteredCommands.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <Settings className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>No commands found</p>
+              <p className="text-sm">Try a different search term</p>
             </div>
           )}
         </CardContent>
       </Card>
+      
+      <div className="absolute inset-0" onClick={onClose} />
     </div>
   );
 };
