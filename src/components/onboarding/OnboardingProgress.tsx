@@ -8,14 +8,11 @@ interface OnboardingProgressProps {
 const OnboardingProgress = ({ progress }: OnboardingProgressProps) => {
   return (
     <div className="text-center space-y-4">
-      <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-        Welcome to Unclutter
-      </h1>
-      <p className="text-gray-600">We get it. Setups are annoying. Let's start small.</p>
+      <p className="text-gray-600 font-medium">Let's begin.</p>
       
       <div className="space-y-2">
-        <Progress value={progress} className="h-2" />
-        <p className="text-sm text-gray-500">{Math.round(progress)}% complete</p>
+        <Progress value={progress} className="h-3" />
+        <p className="text-sm text-gray-500">Step {Math.ceil(progress / 25)} of 4</p>
       </div>
     </div>
   );

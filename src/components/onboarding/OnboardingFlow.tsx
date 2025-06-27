@@ -1,25 +1,11 @@
 
 import { useState } from "react";
-import { 
-  Mail, 
-  MessageSquare, 
-  Sparkles
-} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import OnboardingProgress from "./OnboardingProgress";
 import OnboardingStepCard from "./OnboardingStepCard";
+import OnboardingComplete from "./OnboardingComplete";
 import ConnectedPlatforms from "./ConnectedPlatforms";
-import QuickSetupCard from "./QuickSetupCard";
-
-interface OnboardingStep {
-  id: number;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  action: string;
-  platform: string;
-  completed: boolean;
-}
+import { stepConfig } from "@/config/platforms";
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -28,103 +14,85 @@ interface OnboardingFlowProps {
 
 const OnboardingFlow = ({ onComplete, onConnect }: OnboardingFlowProps) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [showValue, setShowValue] = useState(false);
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
+  const [isComplete, setIsComplete] = useState(false);
 
-  const steps: OnboardingStep[] = [
-    {
-      id: 1,
-      title: "Connect Your Email",
-      description: "Let's start small — connect Gmail or Apple Mail to see your morning summary",
-      icon: <Mail className="w-6 h-6" />,
-      action: "Connect Gmail",
-      platform: "gmail",
-      completed: connectedPlatforms.includes("gmail")
-    },
-    {
-      id: 2,
-      title: "See the Magic",
-      description: "Here's your personalized message summary — saving you time already!",
-      icon: <Sparkles className="w-6 h-6" />,
-      action: "View Summary",
-      platform: "summary",
-      completed: showValue
-    },
-    {
-      id: 3,
-      title: "Add Team Chat",
-      description: "You've saved 8 minutes this week! Want to add Slack next?",
-      icon: <MessageSquare className="w-6 h-6" />,
-      action: "Connect Slack",
-      platform: "slack",
-      completed: connectedPlatforms.includes("slack")
-    }
-  ];
+  const progress = (currentStep / stepConfig.length) * 100;
 
-  const progress = (connectedPlatforms.length / 3) * 100;
-
-  const handleConnect = (platform: string) => {
-    setConnectedPlatforms(prev => [...prev, platform]);
-    onConnect(platform);
-    
-    if (platform === "gmail") {
-      setTimeout(() => {
-        setShowValue(true);
-        setCurrentStep(2);
+  const handleTogglePlatform = (platformId: string) => {
+    setConnectedPlatforms(prev => {
+      const isConnected = prev.includes(platformId);
+      const newPlatforms = isConnected 
+        ? prev.filter(p => p !== platformId)
+        : [...prev, platformId];
+      
+      // Call onConnect for newly connected platforms
+      if (!isConnected) {
+        onConnect(platformId);
         toast({
           title: "🎉 Connected!",
-          description: "Your inbox is now organized. Here's what we found...",
+          description: `Successfully connected ${platformId}`,
         });
-      }, 1500);
-    } else if (platform === "slack") {
-      setCurrentStep(4);
-      toast({
-        title: "✨ Awesome!",
-        description: "Slack connected. You're getting the full Unclutter experience!",
-      });
+      }
+      
+      return newPlatforms;
+    });
+  };
+
+  const handleNextStep = () => {
+    if (currentStep < stepConfig.length) {
+      setCurrentStep(prev => prev + 1);
+    } else {
+      setIsComplete(true);
     }
   };
 
-  const handleViewSummary = () => {
-    setShowValue(true);
-    setCurrentStep(3);
+  const handleCompleteSetup = () => {
+    setIsComplete(true);
     toast({
-      title: "📊 Your Summary",
-      description: "8 emails processed, 3 action items found, 2 meetings today",
+      title: "🚀 Setup Complete!",
+      description: "Your digital life is now unified in one place.",
     });
   };
 
-  const handleQuickSetup = () => {
-    handleConnect("gmail");
-    handleConnect("slack");
-    toast({
-      title: "🚀 Express Setup Complete!",
-      description: "All your accounts are now connected and ready to go.",
-    });
+  const handleFinish = () => {
+    onComplete();
   };
-
-  const getCurrentStepData = () => steps.find(step => step.id === currentStep);
-  const currentStepData = getCurrentStepData();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
-        <OnboardingProgress progress={progress} />
+      <div className="w-full max-w-lg space-y-6">
+        {!isComplete ? (
+          <>
+            <div className="text-center space-y-4">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                👋 Welcome to UnclutterAI
+              </h1>
+              <p className="text-gray-600 text-lg">
+                Give me 5 minutes, and you can delete the rest of your messaging apps.
+              </p>
+              <p className="text-gray-500">
+                We're going to connect everything that distracts you — so we can declutter your life. One feed, one assistant, zero chaos.
+              </p>
+            </div>
 
-        {currentStepData && (
-          <OnboardingStepCard
-            step={currentStepData}
-            currentStep={currentStep}
-            onConnect={handleConnect}
-            onViewSummary={handleViewSummary}
-            onComplete={onComplete}
+            <OnboardingProgress progress={progress} />
+
+            <OnboardingStepCard
+              currentStep={currentStep}
+              connectedPlatforms={connectedPlatforms}
+              onTogglePlatform={handleTogglePlatform}
+              onNextStep={handleNextStep}
+              onComplete={handleCompleteSetup}
+            />
+
+            <ConnectedPlatforms connectedPlatforms={connectedPlatforms} />
+          </>
+        ) : (
+          <OnboardingComplete 
+            connectedPlatforms={connectedPlatforms}
+            onFinish={handleFinish}
           />
-        )}
-
-        <ConnectedPlatforms connectedPlatforms={connectedPlatforms} />
-
-        {currentStep === 1 && (
-          <QuickSetupCard onQuickSetup={handleQuickSetup} />
         )}
       </div>
     </div>
