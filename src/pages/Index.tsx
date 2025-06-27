@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import ContextualSetupPrompt from "@/components/onboarding/ContextualSetupPrompt";
@@ -80,6 +79,22 @@ const Index = () => {
     }
   ];
 
+  const handleMessageAction = (messageId: number, action: 'block' | 'unsubscribe' | 'safe' | 'quarantine') => {
+    console.log(`Message ${messageId} action: ${action}`);
+    
+    const actionMessages = {
+      block: "🛡️ Sender blocked and future messages will be filtered",
+      unsubscribe: "📧 Unsubscribed successfully",
+      safe: "✅ Sender marked as safe",
+      quarantine: "🗂️ Message moved to quarantine"
+    };
+    
+    toast({
+      title: "Action Complete",
+      description: actionMessages[action],
+    });
+  };
+
   const handleMessageTypeFilter = (type: string | null) => {
     const platformMap: {[key: string]: string} = {
       'email': 'gmail',
@@ -150,6 +165,8 @@ const Index = () => {
           <SidebarSection 
             onMessageTypeFilter={handleMessageTypeFilter}
             onViewMessage={handleViewMessage}
+            messages={mockMessages}
+            onMessageAction={handleMessageAction}
           />
 
           <div className="lg:col-span-3 space-y-6">
