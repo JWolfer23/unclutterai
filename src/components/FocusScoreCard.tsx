@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { TrendingUp, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
+import CatchUpSummary from "./CatchUpSummary";
 
 const FocusScoreCard = () => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -16,6 +17,50 @@ const FocusScoreCard = () => {
   const [focusModeEnabled, setFocusModeEnabled] = useState(false);
   const [isFocusActive, setIsFocusActive] = useState(false);
   const [focusEndTime, setFocusEndTime] = useState<Date | null>(null);
+  const [showCatchUp, setShowCatchUp] = useState(false);
+  const [focusScore, setFocusScore] = useState(87);
+  const [focusStartTime, setFocusStartTime] = useState<Date | null>(null);
+
+  // Mock data for missed messages during focus time
+  const missedMessages = [
+    {
+      id: 1,
+      from: "Sarah Johnson",
+      subject: "Urgent: Project deadline moved up",
+      priority: "high",
+      type: "email",
+      time: "2 min ago",
+      requiresAction: true,
+      suggestedResponse: "Acknowledge receipt and ask for new timeline details"
+    },
+    {
+      id: 2,
+      from: "Marketing Team",
+      subject: "Campaign approval needed",
+      priority: "high",
+      type: "email",
+      time: "5 min ago",
+      requiresAction: true
+    },
+    {
+      id: 3,
+      from: "Mom",
+      subject: "Dinner this Sunday?",
+      priority: "medium",
+      type: "text",
+      time: "10 min ago",
+      requiresAction: true
+    },
+    {
+      id: 4,
+      from: "LinkedIn",
+      subject: "New connection request",
+      priority: "low",
+      type: "social",
+      time: "15 min ago",
+      requiresAction: false
+    }
+  ];
 
   const handleStartFocus = () => {
     if (selectedDate && startTime && endTime) {
@@ -28,6 +73,7 @@ const FocusScoreCard = () => {
       const focusEnd = new Date(selectedDate);
       focusEnd.setHours(parseInt(endHour), parseInt(endMinute));
       
+      setFocusStartTime(focusStart);
       setFocusEndTime(focusEnd);
       setIsFocusActive(true);
       setIsCalendarOpen(false);
@@ -41,7 +87,11 @@ const FocusScoreCard = () => {
     const timeLeft = focusEndTime.getTime() - now.getTime();
     
     if (timeLeft <= 0) {
-      setIsFocusActive(false);
+      if (isFocusActive) {
+        // Focus session just ended
+        setIsFocusActive(false);
+        setShowCatchUp(true);
+      }
       return "00:00";
     }
     
@@ -50,6 +100,27 @@ const FocusScoreCard = () => {
     
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
+
+  const calculateFocusDuration = () => {
+    if (!focusStartTime || !focusEndTime) return "0h 0m";
+    
+    const duration = focusEndTime.getTime() - focusStartTime.getTime();
+    const hours = Math.floor(duration / (1000 * 60 * 60));
+    const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${hours}h ${minutes}m`;
+  };
+
+  // Update timer every minute
+  useEffect(() => {
+    if (isFocusActive) {
+      const interval = setInterval(() => {
+        calculateTimeRemaining();
+      }, 60000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isFocusActive, focusEndTime]);
 
   return (
     <>
@@ -76,7 +147,7 @@ const FocusScoreCard = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Focus Score</p>
-                    <p className="text-3xl font-bold text-gray-900">87%</p>
+                    <p className="text-3xl font-bold text-gray-900">{focusScore}%</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -147,6 +218,15 @@ const FocusScoreCard = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Catch Up Summary Modal */}
+      <CatchUpSummary
+        isOpen={showCatchUp}
+        onClose={() => setShowCatchUp(false)}
+        focusDuration={calculateFocusDuration()}
+        missedMessages={missedMessages}
+        focusScore={focusScore}
+      />
     </>
   );
 };
