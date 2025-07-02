@@ -14,7 +14,7 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-purple-200/50 bg-white/50">
               <img 
-                src="/lovable-uploads/0ae5b11c-a621-4394-9a31-569e17849685.png" 
+                src="/lovable-uploads/064ee60b-3850-4faa-abe4-7aefeedf9961.png" 
                 alt="Unclutter Logo"
                 className="w-full h-full object-contain"
               />
