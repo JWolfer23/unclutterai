@@ -5,9 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { TrendingUp, Calendar as CalendarIcon, Clock } from "lucide-react";
+import { TrendingUp, Calendar as CalendarIcon, Clock, Zap } from "lucide-react";
 import { format } from "date-fns";
-import CatchUpSummary from "./CatchUpSummary";
+import { useFocusRecovery } from "@/hooks/useFocusRecovery";
+import FocusRecoveryDashboard from "./FocusRecoveryDashboard";
+import { toast } from "@/hooks/use-toast";
 
 const FocusScoreCard = () => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -17,50 +19,17 @@ const FocusScoreCard = () => {
   const [focusModeEnabled, setFocusModeEnabled] = useState(false);
   const [isFocusActive, setIsFocusActive] = useState(false);
   const [focusEndTime, setFocusEndTime] = useState<Date | null>(null);
-  const [showCatchUp, setShowCatchUp] = useState(false);
-  const [focusScore, setFocusScore] = useState(87);
   const [focusStartTime, setFocusStartTime] = useState<Date | null>(null);
+  const [showRecoveryDashboard, setShowRecoveryDashboard] = useState(false);
+  const [recoveryData, setRecoveryData] = useState<any>(null);
+  const [focusScore, setFocusScore] = useState(87);
+  const [interruptions, setInterruptions] = useState(0);
 
-  // Mock data for missed messages during focus time
-  const missedMessages = [
-    {
-      id: 1,
-      from: "Sarah Johnson",
-      subject: "Urgent: Project deadline moved up",
-      priority: "high",
-      type: "email",
-      time: "2 min ago",
-      requiresAction: true,
-      suggestedResponse: "Acknowledge receipt and ask for new timeline details"
-    },
-    {
-      id: 2,
-      from: "Marketing Team",
-      subject: "Campaign approval needed",
-      priority: "high",
-      type: "email",
-      time: "5 min ago",
-      requiresAction: true
-    },
-    {
-      id: 3,
-      from: "Mom",
-      subject: "Dinner this Sunday?",
-      priority: "medium",
-      type: "text",
-      time: "10 min ago",
-      requiresAction: true
-    },
-    {
-      id: 4,
-      from: "LinkedIn",
-      subject: "New connection request",
-      priority: "low",
-      type: "social",
-      time: "15 min ago",
-      requiresAction: false
-    }
-  ];
+  const { 
+    startFocusSession, 
+    endFocusSession, 
+    isNotificationsMuted 
+  } = useFocusRecovery();
 
   const handleStartFocus = () => {
     if (selectedDate && startTime && endTime) {
@@ -73,11 +42,40 @@ const FocusScoreCard = () => {
       const focusEnd = new Date(selectedDate);
       focusEnd.setHours(parseInt(endHour), parseInt(endMinute));
       
+      const plannedMinutes = (focusEnd.getTime() - focusStart.getTime()) / (1000 * 60);
+      
       setFocusStartTime(focusStart);
       setFocusEndTime(focusEnd);
       setIsFocusActive(true);
+      setInterruptions(0);
       setIsCalendarOpen(false);
+      
+      // Start the focus session
+      startFocusSession(plannedMinutes);
     }
+  };
+
+  const handleEndFocus = () => {
+    if (focusStartTime && focusEndTime) {
+      const now = new Date();
+      const actualMinutes = (now.getTime() - focusStartTime.getTime()) / (1000 * 60);
+      const plannedMinutes = (focusEndTime.getTime() - focusStartTime.getTime()) / (1000 * 60);
+      
+      const recovery = endFocusSession(plannedMinutes, actualMinutes, interruptions);
+      setRecoveryData(recovery);
+      setFocusScore(recovery.focusScore);
+      setIsFocusActive(false);
+      setShowRecoveryDashboard(true);
+    }
+  };
+
+  const handleFocusInterruption = () => {
+    setInterruptions(prev => prev + 1);
+    toast({
+      title: "⚠️ Focus Interrupted",
+      description: "Try to get back on track! Your score will be adjusted.",
+      variant: "destructive"
+    });
   };
 
   const calculateTimeRemaining = () => {
@@ -88,9 +86,7 @@ const FocusScoreCard = () => {
     
     if (timeLeft <= 0) {
       if (isFocusActive) {
-        // Focus session just ended
-        setIsFocusActive(false);
-        setShowCatchUp(true);
+        handleEndFocus();
       }
       return "00:00";
     }
@@ -124,18 +120,46 @@ const FocusScoreCard = () => {
 
   return (
     <>
+      {/* Active Focus Mode Card */}
       {isFocusActive && (
         <Card className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-none mb-4">
           <CardContent className="p-4">
             <div className="text-center">
-              <div className="text-sm font-medium mb-1">Focus Mode Active</div>
+              <div className="text-sm font-medium mb-1 flex items-center justify-center space-x-2">
+                <Zap className="w-4 h-4" />
+                <span>Focus Mode Active</span>
+              </div>
               <div className="text-2xl font-bold">{calculateTimeRemaining()}</div>
-              <div className="text-xs opacity-90">Time remaining</div>
+              <div className="text-xs opacity-90 mb-3">Time remaining</div>
+              <div className="flex space-x-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleFocusInterruption}
+                  className="text-purple-600 bg-white hover:bg-gray-100"
+                >
+                  Report Break
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleEndFocus}
+                  className="text-purple-600 bg-white hover:bg-gray-100"
+                >
+                  End Early
+                </Button>
+              </div>
+              {interruptions > 0 && (
+                <div className="text-xs mt-2 opacity-80">
+                  Interruptions: {interruptions}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
       
+      {/* Main Focus Score Card */}
       <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
         <DialogTrigger asChild>
           <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 cursor-pointer hover:shadow-lg transition-all duration-200 mb-6">
@@ -148,6 +172,9 @@ const FocusScoreCard = () => {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Focus Score</p>
                     <p className="text-3xl font-bold text-gray-900">{focusScore}%</p>
+                    {isNotificationsMuted && (
+                      <p className="text-xs text-purple-600 font-medium">🔕 Notifications Muted</p>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
@@ -219,14 +246,31 @@ const FocusScoreCard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Catch Up Summary Modal */}
-      <CatchUpSummary
-        isOpen={showCatchUp}
-        onClose={() => setShowCatchUp(false)}
-        focusDuration={calculateFocusDuration()}
-        missedMessages={missedMessages}
-        focusScore={focusScore}
-      />
+      {/* Focus Recovery Dashboard */}
+      <Dialog open={showRecoveryDashboard} onOpenChange={setShowRecoveryDashboard}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0">
+          {recoveryData && (
+            <FocusRecoveryDashboard
+              data={recoveryData}
+              focusDuration={calculateFocusDuration()}
+              onStartCatchUp={() => {
+                setShowRecoveryDashboard(false);
+                toast({
+                  title: "🚀 Starting Catch Up",
+                  description: "Let's tackle those high priority items first!"
+                });
+              }}
+              onReviewLater={() => {
+                setShowRecoveryDashboard(false);
+                toast({
+                  title: "⏰ Review Scheduled",
+                  description: "We'll remind you to catch up later."
+                });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

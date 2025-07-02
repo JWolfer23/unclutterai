@@ -12,7 +12,9 @@ import {
   Zap,
   TrendingUp,
   Users,
-  Mail
+  Mail,
+  Star,
+  Target
 } from "lucide-react";
 
 interface MissedMessage {
@@ -44,7 +46,9 @@ const CatchUpSummary = ({
   const [showActionPlan, setShowActionPlan] = useState(false);
 
   const highPriorityMessages = missedMessages.filter(m => m.priority === 'high');
-  const actionRequiredMessages = missedMessages.filter(m => m.requiresAction);
+  const quickActionMessages = missedMessages.filter(m => m.priority === 'medium');
+  const batchMessages = missedMessages.filter(m => m.priority === 'low');
+  const spamMessages = missedMessages.filter(m => !m.requiresAction);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -68,73 +72,69 @@ const CatchUpSummary = ({
     }
   };
 
+  const getScoreEmoji = (score: number) => {
+    if (score >= 90) return '🎯';
+    if (score >= 70) return '👍';
+    return '💪';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Zap className="w-5 h-5 text-purple-600" />
-            <span>Focus Session Complete!</span>
+          <DialogTitle className="flex items-center space-x-2 text-xl">
+            <span className="text-2xl">{getScoreEmoji(focusScore)}</span>
+            <span>Focus Score: {focusScore}% – {focusScore >= 90 ? 'Excellent!' : focusScore >= 70 ? 'Great job!' : 'Good effort!'}</span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Focus Score Card */}
+          {/* Enhanced Focus Summary */}
           <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-white" />
+            <CardContent className="p-6">
+              <div className="text-center mb-4">
+                <div className="text-lg font-semibold text-gray-900 mb-2">
+                  📩 You missed {missedMessages.length} messages total
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">🔥 {highPriorityMessages.length}</div>
+                    <div className="text-sm text-gray-600">High Priority</div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Focus Score</p>
-                    <p className="text-2xl font-bold text-gray-900">{focusScore}%</p>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-orange-600">✅ {quickActionMessages.length}</div>
+                    <div className="text-sm text-gray-600">Quick Actions</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">🗂 {batchMessages.length}</div>
+                    <div className="text-sm text-gray-600">Batch for Later</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-gray-600">💤 {spamMessages.length}</div>
+                    <div className="text-sm text-gray-600">Low Priority</div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600 flex items-center">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {focusDuration} focused
-                  </p>
-                  <Badge className="bg-green-100 text-green-800 border-green-200 mt-1">
-                    Session Complete
-                  </Badge>
+              </div>
+              
+              <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+                <div className="flex items-center space-x-1">
+                  <Clock className="w-4 h-4" />
+                  <span>{focusDuration} focused</span>
                 </div>
+                <Badge className="bg-green-100 text-green-800 border-green-200">
+                  Session Complete
+                </Badge>
               </div>
             </CardContent>
           </Card>
 
-          {/* Quick Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">While You Were Focused</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-3 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-gray-900">{missedMessages.length}</div>
-                  <div className="text-sm text-gray-600">Total Messages</div>
-                </div>
-                <div className="text-center p-3 bg-red-50 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{highPriorityMessages.length}</div>
-                  <div className="text-sm text-gray-600">High Priority</div>
-                </div>
-                <div className="text-center p-3 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">{actionRequiredMessages.length}</div>
-                  <div className="text-sm text-gray-600">Need Response</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* High Priority Messages */}
+          {/* High Priority Messages Preview */}
           {highPriorityMessages.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center space-x-2">
                   <AlertTriangle className="w-5 h-5 text-red-600" />
-                  <span>High Priority Messages</span>
+                  <span>🔥 High Priority Messages</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -148,8 +148,8 @@ const CatchUpSummary = ({
                       <p className="text-sm text-gray-800 truncate">{message.subject}</p>
                       <p className="text-xs text-gray-500">{message.time}</p>
                     </div>
-                    <Badge className={getPriorityColor(message.priority)}>
-                      {message.priority}
+                    <Badge className="bg-red-100 text-red-800 border-red-200">
+                      🔥 High Priority
                     </Badge>
                   </div>
                 ))}
@@ -162,12 +162,12 @@ const CatchUpSummary = ({
             </Card>
           )}
 
-          {/* Action Plan */}
+          {/* Enhanced Action Plan */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center space-x-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <span>Recommended Action Plan</span>
+                <Star className="w-5 h-5 text-purple-600" />
+                <span>🚀 Recommended Action Plan</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -176,31 +176,41 @@ const CatchUpSummary = ({
                   onClick={() => setShowActionPlan(true)}
                   className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
                 >
+                  <Target className="w-4 h-4 mr-2" />
                   Generate Action Plan
                 </Button>
               ) : (
-                <div className="space-y-3">
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="font-medium text-blue-900 mb-2">Immediate Actions (Next 5 mins)</h4>
-                    <ul className="text-sm text-blue-800 space-y-1">
+                <div className="space-y-4">
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                    <h4 className="font-medium text-red-900 mb-2 flex items-center space-x-2">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>✅ Immediate Actions (Next 5 mins)</span>
+                    </h4>
+                    <ul className="text-sm text-red-800 space-y-1">
                       <li>• Respond to {highPriorityMessages.length} high-priority messages</li>
                       <li>• Quick scan of urgent emails from key contacts</li>
                       <li>• Check for any time-sensitive requests</li>
                     </ul>
                   </div>
                   
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <h4 className="font-medium text-green-900 mb-2">Quick Responses (Next 10 mins)</h4>
-                    <ul className="text-sm text-green-800 space-y-1">
+                  <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                    <h4 className="font-medium text-orange-900 mb-2 flex items-center space-x-2">
+                      <MessageCircle className="w-4 h-4" />
+                      <span>✉️ Quick Replies (Next 10 mins)</span>
+                    </h4>
+                    <ul className="text-sm text-orange-800 space-y-1">
                       <li>• Use AI-suggested responses for routine messages</li>
                       <li>• Archive or delete non-essential notifications</li>
                       <li>• Schedule follow-ups for complex messages</li>
                     </ul>
                   </div>
 
-                  <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                    <h4 className="font-medium text-purple-900 mb-2">Batch Processing (Later)</h4>
-                    <ul className="text-sm text-purple-800 space-y-1">
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="font-medium text-blue-900 mb-2 flex items-center space-x-2">
+                      <Clock className="w-4 h-4" />
+                      <span>🗂 Batch Processing (Later)</span>
+                    </h4>
+                    <ul className="text-sm text-blue-800 space-y-1">
                       <li>• Process remaining {missedMessages.length - highPriorityMessages.length} messages in batch</li>
                       <li>• Update calendar with any new meetings or deadlines</li>
                       <li>• Review and respond to social media interactions</li>
@@ -217,6 +227,7 @@ const CatchUpSummary = ({
               onClick={onClose}
               className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
             >
+              <Zap className="w-4 h-4 mr-2" />
               Start Catch Up
             </Button>
             <Button 
@@ -224,6 +235,7 @@ const CatchUpSummary = ({
               onClick={onClose}
               className="flex-1"
             >
+              <Clock className="w-4 h-4 mr-2" />
               Review Later
             </Button>
           </div>
