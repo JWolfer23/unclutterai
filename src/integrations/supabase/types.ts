@@ -9,7 +9,155 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_archived: boolean | null
+          is_read: boolean | null
+          metadata: Json | null
+          platform: string
+          preview: string | null
+          priority: Database["public"]["Enums"]["priority_level"] | null
+          received_at: string | null
+          sender_avatar: string | null
+          sender_email: string | null
+          sender_name: string
+          sentiment: Database["public"]["Enums"]["sentiment_type"] | null
+          subject: string
+          type: Database["public"]["Enums"]["message_type"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_read?: boolean | null
+          metadata?: Json | null
+          platform: string
+          preview?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          received_at?: string | null
+          sender_avatar?: string | null
+          sender_email?: string | null
+          sender_name: string
+          sentiment?: Database["public"]["Enums"]["sentiment_type"] | null
+          subject: string
+          type: Database["public"]["Enums"]["message_type"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_read?: boolean | null
+          metadata?: Json | null
+          platform?: string
+          preview?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          received_at?: string | null
+          sender_avatar?: string | null
+          sender_email?: string | null
+          sender_name?: string
+          sentiment?: Database["public"]["Enums"]["sentiment_type"] | null
+          subject?: string
+          type?: Database["public"]["Enums"]["message_type"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          preferences: Json | null
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          preferences?: Json | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          preferences?: Json | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          priority: Database["public"]["Enums"]["priority_level"] | null
+          status: Database["public"]["Enums"]["task_status"] | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +166,10 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      message_type: "email" | "text" | "social" | "voice"
+      priority_level: "low" | "medium" | "high"
+      sentiment_type: "positive" | "negative" | "neutral"
+      task_status: "pending" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +284,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      message_type: ["email", "text", "social", "voice"],
+      priority_level: ["low", "medium", "high"],
+      sentiment_type: ["positive", "negative", "neutral"],
+      task_status: ["pending", "completed", "cancelled"],
+    },
   },
 } as const

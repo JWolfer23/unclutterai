@@ -1,14 +1,20 @@
+
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useMessages } from "@/hooks/useMessages";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import ContextualSetupPrompt from "@/components/onboarding/ContextualSetupPrompt";
 import CommandPalette from "@/components/onboarding/CommandPalette";
 import HeaderSection from "@/components/HeaderSection";
 import SidebarSection from "@/components/SidebarSection";
 import MessageTabs from "@/components/MessageTabs";
+import AuthPage from "@/components/auth/AuthPage";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
 
 const Index = () => {
+  const { user, loading: authLoading } = useAuth();
+  const { messages, isLoading: messagesLoading } = useMessages();
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [messageTypeFilter, setMessageTypeFilter] = useState<string | null>(null);
@@ -24,60 +30,22 @@ const Index = () => {
     isOnboardingComplete 
   } = useOnboarding();
 
-  const mockMessages = [
-    {
-      id: 1,
-      type: "email",
-      from: "Sarah Chen",
-      avatar: "/placeholder.svg",
-      subject: "Q4 Budget Review Meeting",
-      preview: "Hi team, I wanted to schedule our quarterly budget review for next week. Could everyone please...",
-      time: "2 hours ago",
-      priority: "high",
-      platform: "Gmail",
-      tasks: ["Schedule budget review", "Prepare Q4 reports"],
-      sentiment: "neutral"
-    },
-    {
-      id: 2,
-      type: "text",
-      from: "Alex Thompson",
-      avatar: "/placeholder.svg",
-      subject: "Weekend Plans",
-      preview: "Hey! Are we still on for hiking this Saturday? The weather looks perfect and I found a new trail...",
-      time: "4 hours ago",
-      priority: "low",
-      platform: "iMessage",
-      tasks: [],
-      sentiment: "positive"
-    },
-    {
-      id: 3,
-      type: "social",
-      from: "TechCrunch",
-      avatar: "/placeholder.svg",
-      subject: "New AI breakthrough announced",
-      preview: "Breaking: Major AI research lab announces breakthrough in language understanding...",
-      time: "6 hours ago",
-      priority: "medium",
-      platform: "Twitter",
-      tasks: ["Read full article", "Share with team"],
-      sentiment: "neutral"
-    },
-    {
-      id: 4,
-      type: "voice",
-      from: "Mom",
-      avatar: "/placeholder.svg",
-      subject: "Voice Message",
-      preview: "AI Transcription: Hi honey, just wanted to check in and see how your new job is going...",
-      time: "1 day ago",
-      priority: "medium",
-      platform: "WhatsApp",
-      tasks: ["Call mom back"],
-      sentiment: "positive"
-    }
-  ];
+  // Show loading spinner while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth page if not authenticated
+  if (!user) {
+    return <AuthPage />;
+  }
 
   const handleMessageAction = (messageId: number, action: 'block' | 'unsubscribe' | 'safe' | 'quarantine') => {
     console.log(`Message ${messageId} action: ${action}`);
@@ -112,7 +80,7 @@ const Index = () => {
   };
 
   const handleViewMessage = (messageId: number) => {
-    const message = mockMessages.find(m => m.id === messageId);
+    const message = messages.find(m => m.id === messageId.toString());
     if (message) {
       setSelectedMessage(message);
       const messageElement = document.getElementById(`message-${messageId}`);
@@ -156,6 +124,21 @@ const Index = () => {
     );
   }
 
+  // Convert Supabase messages to the format expected by existing components
+  const formattedMessages = messages.map(msg => ({
+    id: parseInt(msg.id.split('-')[0], 16), // Convert UUID to number for compatibility
+    type: msg.type,
+    from: msg.sender_name,
+    avatar: msg.sender_avatar || "/placeholder.svg",
+    subject: msg.subject,
+    preview: msg.preview || msg.content.substring(0, 100) + "...",
+    time: new Date(msg.received_at || msg.created_at).toLocaleString(),
+    priority: msg.priority || "medium",
+    platform: msg.platform,
+    tasks: [], // This would need to be populated from the tasks table
+    sentiment: msg.sentiment || "neutral"
+  }));
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100">
       <HeaderSection onShowCommandPalette={() => setShowCommandPalette(true)} />
@@ -165,20 +148,26 @@ const Index = () => {
           <SidebarSection 
             onMessageTypeFilter={handleMessageTypeFilter}
             onViewMessage={handleViewMessage}
-            messages={mockMessages}
+            messages={formattedMessages}
             onMessageAction={handleMessageAction}
           />
 
           <div className="lg:col-span-3 space-y-6">
-            <MessageTabs
-              messages={mockMessages}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              messageTypeFilter={messageTypeFilter}
-              onClearFilter={() => setMessageTypeFilter(null)}
-              selectedMessage={selectedMessage}
-              onSelectMessage={setSelectedMessage}
-            />
+            {messagesLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+              </div>
+            ) : (
+              <MessageTabs
+                messages={formattedMessages}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                messageTypeFilter={messageTypeFilter}
+                onClearFilter={() => setMessageTypeFilter(null)}
+                selectedMessage={selectedMessage}
+                onSelectMessage={setSelectedMessage}
+              />
+            )}
           </div>
         </div>
       </div>
