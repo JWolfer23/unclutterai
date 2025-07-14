@@ -1,8 +1,9 @@
 
 import { Button } from "@/components/ui/button";
-import { Filter, Sparkles, Command, LogOut } from "lucide-react";
+import { Filter, Sparkles, Command, LogOut, Coins } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface HeaderSectionProps {
   onShowCommandPalette: () => void;
@@ -10,6 +11,7 @@ interface HeaderSectionProps {
 
 const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
   const { signOut, user } = useAuth();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -50,6 +52,14 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
             >
               <Command className="w-4 h-4 mr-2" />
               Command
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate('/crypto-integration')}
+            >
+              <Coins className="w-4 h-4 mr-2" />
+              Crypto
             </Button>
             <Button variant="outline" size="sm">
               <Filter className="w-4 h-4 mr-2" />
