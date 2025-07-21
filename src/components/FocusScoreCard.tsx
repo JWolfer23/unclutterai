@@ -162,11 +162,11 @@ const FocusScoreCard = () => {
         </Card>
       )}
 
-      {/* Enhanced Focus Score Card with UCT Tokens and Community Ranking */}
-      <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 mb-6">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Focus Score Section */}
+      {/* Focus Summary Section - 3 Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mb-6">
+        {/* Focus Score Card */}
+        <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+          <CardContent className="p-6">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-white" />
@@ -251,8 +251,12 @@ const FocusScoreCard = () => {
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* UCT Tokens Section */}
+        {/* UCT Tokens Card */}
+        <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+          <CardContent className="p-6">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
                 <Coins className="w-6 h-6 text-white" />
@@ -263,8 +267,12 @@ const FocusScoreCard = () => {
                 <p className="text-xs text-amber-600 font-medium">+47 today</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Community Ranking Section */}
+        {/* Community Ranking Card */}
+        <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
+          <CardContent className="p-6">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center">
                 <Trophy className="w-6 h-6 text-white" />
@@ -275,9 +283,9 @@ const FocusScoreCard = () => {
                 <p className="text-xs text-emerald-600 font-medium">↗ +2% this week</p>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Focus Recovery Dashboard */}
       <Dialog open={showRecoveryDashboard} onOpenChange={setShowRecoveryDashboard}>
