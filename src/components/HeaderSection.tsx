@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Filter, Sparkles, Command, LogOut, Coins } from "lucide-react";
+import { Sparkles, Search, LogOut, Coins } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -43,33 +43,39 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
               <p className="text-sm text-gray-500">AI Communication Assistant</p>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <span className="text-sm text-gray-600">Welcome, {user?.email}</span>
             <Button 
               variant="outline" 
               size="sm"
               onClick={onShowCommandPalette}
+              className="transition-all duration-200 hover:scale-105"
             >
-              <Command className="w-4 h-4 mr-2" />
-              Command
+              <Search className="w-4 h-4 mr-2" />
+              Search
             </Button>
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => navigate('/crypto-integration')}
+              className="transition-all duration-200 hover:scale-105"
             >
               <Coins className="w-4 h-4 mr-2" />
               Crypto
             </Button>
-            <Button variant="outline" size="sm">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
-            <Button size="sm" className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700">
+            <Button 
+              size="sm" 
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 hover:scale-105"
+            >
               <Sparkles className="w-4 h-4 mr-2" />
               AI Compose
             </Button>
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSignOut}
+              className="transition-all duration-200 hover:scale-105"
+            >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </Button>

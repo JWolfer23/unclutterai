@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { TrendingUp, Calendar as CalendarIcon, Clock, Zap } from "lucide-react";
+import { TrendingUp, Calendar as CalendarIcon, Clock, Zap, Coins, Trophy } from "lucide-react";
 import { format } from "date-fns";
 import { useFocusRecovery } from "@/hooks/useFocusRecovery";
 import FocusRecoveryDashboard from "./FocusRecoveryDashboard";
@@ -24,6 +23,10 @@ const FocusScoreCard = () => {
   const [recoveryData, setRecoveryData] = useState<any>(null);
   const [focusScore, setFocusScore] = useState(87);
   const [interruptions, setInterruptions] = useState(0);
+
+  // Mock data for UCT tokens and community ranking
+  const [uctTokens, setUctTokens] = useState(1247);
+  const [communityRanking, setCommunityRanking] = useState(15); // Top 15%
 
   const { 
     startFocusSession, 
@@ -158,93 +161,123 @@ const FocusScoreCard = () => {
           </CardContent>
         </Card>
       )}
-      
-      {/* Main Focus Score Card */}
-      <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-        <DialogTrigger asChild>
-          <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 cursor-pointer hover:shadow-lg transition-all duration-200 mb-6">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Focus Score</p>
-                    <p className="text-3xl font-bold text-gray-900">{focusScore}%</p>
-                    {isNotificationsMuted && (
-                      <p className="text-xs text-purple-600 font-medium">🔕 Notifications Muted</p>
-                    )}
-                  </div>
+
+      {/* Enhanced Focus Score Card with UCT Tokens and Community Ranking */}
+      <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 mb-6">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Focus Score Section */}
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 mb-1">Focus Score</p>
+                <div className="flex items-center space-x-3">
+                  <p className="text-3xl font-bold text-gray-900">{focusScore}%</p>
+                  <Dialog open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="transition-all duration-200 hover:scale-105"
+                      >
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        Schedule
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Schedule Focus Time</DialogTitle>
+                      </DialogHeader>
+                      
+                      <div className="space-y-6">
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Select Date</label>
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            className="rounded-md border pointer-events-auto"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium mb-2 block">Start Time</label>
+                            <input
+                              type="time"
+                              value={startTime}
+                              onChange={(e) => setStartTime(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-2 block">End Time</label>
+                            <input
+                              type="time"
+                              value={endTime}
+                              onChange={(e) => setEndTime(e.target.value)}
+                              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <p className="font-medium text-sm">Focus Mode</p>
+                            <p className="text-xs text-gray-600">Mute all notifications</p>
+                          </div>
+                          <Switch
+                            checked={focusModeEnabled}
+                            onCheckedChange={setFocusModeEnabled}
+                          />
+                        </div>
+                        
+                        <Button 
+                          onClick={handleStartFocus}
+                          disabled={!selectedDate}
+                          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                        >
+                          <Clock className="w-4 h-4 mr-2" />
+                          Start Focus Session
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
-                <div className="text-right">
-                  <CalendarIcon className="w-5 h-5 text-purple-600 mb-2" />
-                  <p className="text-xs text-gray-500">Click to schedule</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </DialogTrigger>
-        
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Schedule Focus Time</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-6">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Select Date</label>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                className="rounded-md border pointer-events-auto"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Start Time</label>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">End Time</label>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+                {isNotificationsMuted && (
+                  <p className="text-xs text-purple-600 font-medium mt-1">🔕 Notifications Muted</p>
+                )}
               </div>
             </div>
-            
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div>
-                <p className="font-medium text-sm">Focus Mode</p>
-                <p className="text-xs text-gray-600">Mute all notifications</p>
+
+            {/* UCT Tokens Section */}
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
+                <Coins className="w-6 h-6 text-white" />
               </div>
-              <Switch
-                checked={focusModeEnabled}
-                onCheckedChange={setFocusModeEnabled}
-              />
+              <div>
+                <p className="text-sm text-gray-600 mb-1">UCT Tokens Earned</p>
+                <p className="text-3xl font-bold text-gray-900">{uctTokens.toLocaleString()}</p>
+                <p className="text-xs text-amber-600 font-medium">+47 today</p>
+              </div>
             </div>
-            
-            <Button 
-              onClick={handleStartFocus}
-              disabled={!selectedDate}
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            >
-              <Clock className="w-4 h-4 mr-2" />
-              Start Focus Session
-            </Button>
+
+            {/* Community Ranking Section */}
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Community Ranking</p>
+                <p className="text-3xl font-bold text-gray-900">Top {communityRanking}%</p>
+                <p className="text-xs text-emerald-600 font-medium">↗ +2% this week</p>
+              </div>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
 
       {/* Focus Recovery Dashboard */}
       <Dialog open={showRecoveryDashboard} onOpenChange={setShowRecoveryDashboard}>
