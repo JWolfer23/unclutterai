@@ -53,6 +53,27 @@ export type Database = {
         }
         Relationships: []
       }
+      focus_streaks: {
+        Row: {
+          current_streak: number | null
+          last_session: string | null
+          longest_streak: number | null
+          user_id: string | null
+        }
+        Insert: {
+          current_streak?: number | null
+          last_session?: string | null
+          longest_streak?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          current_streak?: number | null
+          last_session?: string | null
+          longest_streak?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       interruptions: {
         Row: {
           created_at: string | null
@@ -239,6 +260,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tokens: {
+        Row: {
+          balance: number | null
+          id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          balance?: number | null
+          id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          balance?: number | null
+          id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
