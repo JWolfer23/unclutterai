@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
+import { registerBiometric, authenticateWithBiometric, checkBiometricSupport } from "@/lib/webauthn";
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -54,6 +55,56 @@ export const useAuth = () => {
     return { error };
   };
 
+  const registerBiometricAuth = async () => {
+    if (!user) return { error: new Error('User not logged in') };
+    
+    try {
+      const { success, credential, error } = await registerBiometric(user.id, user.email || 'User');
+      
+      if (success && credential) {
+        // Store credential ID in user metadata
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: { biometric_credential_id: credential.id }
+        });
+        
+        if (updateError) throw updateError;
+        return { success: true };
+      } else {
+        return { error: error || new Error('Failed to register biometric') };
+      }
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const signInWithBiometric = async () => {
+    try {
+      // Get stored credential from user's session or localStorage
+      const storedCredentialId = localStorage.getItem('biometric_credential_id');
+      if (!storedCredentialId) {
+        return { error: new Error('No biometric credential found') };
+      }
+
+      const { success, result, error } = await authenticateWithBiometric(storedCredentialId);
+      
+      if (success && result) {
+        // Create a custom session or sign in the user
+        // For now, we'll store the credential verification in localStorage
+        // In a production app, you'd verify this server-side
+        localStorage.setItem('biometric_verified', 'true');
+        return { success: true };
+      } else {
+        return { error: error || new Error('Biometric authentication failed') };
+      }
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const isBiometricSupported = async () => {
+    return await checkBiometricSupport();
+  };
+
   return {
     user,
     session,
@@ -61,5 +112,8 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
+    registerBiometricAuth,
+    signInWithBiometric,
+    isBiometricSupported,
   };
 };
