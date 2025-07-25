@@ -74,25 +74,47 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
+  // Validate and sanitize config data to prevent XSS
+  const sanitizedColorConfig = colorConfig.filter(([key, itemConfig]) => {
+    // Validate key contains only safe characters
+    if (!/^[a-zA-Z0-9_-]+$/.test(key)) return false
+    
+    // Validate color values
+    const color = itemConfig.theme || itemConfig.color
+    if (typeof color === 'string') {
+      // Only allow hex colors, hsl(), rgb(), and CSS color names
+      return /^(#[0-9a-fA-F]{3,8}|hsl\([^)]+\)|rgb\([^)]+\)|[a-zA-Z]+)$/.test(color)
+    } else if (typeof color === 'object' && color) {
+      // Validate theme object colors
+      return Object.values(color).every(c => 
+        typeof c === 'string' && /^(#[0-9a-fA-F]{3,8}|hsl\([^)]+\)|rgb\([^)]+\)|[a-zA-Z]+)$/.test(c)
+      )
+    }
+    return false
+  })
+
+  // Generate CSS using CSS custom properties instead of dangerouslySetInnerHTML
+  const cssRules = Object.entries(THEMES)
+    .map(([theme, prefix]) => {
+      const themeRules = sanitizedColorConfig
+        .map(([key, itemConfig]) => {
+          const color =
+            itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
+            itemConfig.color
+          return color ? `  --color-${key}: ${color};` : null
+        })
+        .filter(Boolean)
+        .join("\n")
+      
+      return themeRules ? `${prefix} [data-chart=${id}] {\n${themeRules}\n}` : null
+    })
+    .filter(Boolean)
+    .join("\n")
+
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
-}
-`
-          )
-          .join("\n"),
+        __html: cssRules,
       }}
     />
   )
