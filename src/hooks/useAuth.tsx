@@ -56,18 +56,29 @@ export const useAuth = () => {
   };
 
   const registerBiometricAuth = async () => {
-    if (!user) return { error: new Error('User not logged in') };
+    if (!user || !session) return { error: new Error('User not logged in') };
     
     try {
       const { success, credential, error } = await registerBiometric(user.id, user.email || 'User');
       
       if (success && credential) {
-        // Store credential ID in user metadata
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: { biometric_credential_id: credential.id }
+        // Store credential securely via edge function
+        const { error: storeError } = await supabase.functions.invoke('biometric-auth', {
+          body: {
+            action: 'register',
+            credentialData: {
+              id: credential.id,
+              publicKey: credential.response.publicKey,
+              counter: 0
+            },
+            userId: user.id
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
         });
         
-        if (updateError) throw updateError;
+        if (storeError) throw storeError;
         return { success: true };
       } else {
         return { error: error || new Error('Failed to register biometric') };
@@ -78,20 +89,34 @@ export const useAuth = () => {
   };
 
   const signInWithBiometric = async () => {
+    if (!session) return { error: new Error('No active session') };
+    
     try {
-      // Get stored credential from user's session or localStorage
-      const storedCredentialId = localStorage.getItem('biometric_credential_id');
-      if (!storedCredentialId) {
+      // Check if user has biometric credential in their metadata
+      const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+      if (userError || !currentUser?.user_metadata?.biometric_credential) {
         return { error: new Error('No biometric credential found') };
       }
 
-      const { success, result, error } = await authenticateWithBiometric(storedCredentialId);
+      const credentialId = currentUser.user_metadata.biometric_credential.id;
+      const { success, result, error } = await authenticateWithBiometric(credentialId);
       
       if (success && result) {
-        // Create a custom session or sign in the user
-        // For now, we'll store the credential verification in localStorage
-        // In a production app, you'd verify this server-side
-        localStorage.setItem('biometric_verified', 'true');
+        // Verify server-side via edge function
+        const { data, error: verifyError } = await supabase.functions.invoke('biometric-auth', {
+          body: {
+            action: 'verify',
+            credentialData: result
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
+        
+        if (verifyError || !data?.success) {
+          return { error: new Error('Biometric verification failed') };
+        }
+        
         return { success: true };
       } else {
         return { error: error || new Error('Biometric authentication failed') };
