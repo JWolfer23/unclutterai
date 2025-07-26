@@ -42,6 +42,7 @@ const Index = () => {
 
   // Show loading spinner while checking auth
   if (authLoading) {
+    console.log('Auth loading state:', { authLoading, user: !!user });
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
