@@ -135,13 +135,14 @@ const Index = () => {
   }
 
   // Convert Supabase messages to the format expected by existing components
-  const formattedMessages = messages.map(msg => ({
-    id: parseInt(msg.id.split('-')[0], 16), // Convert UUID to number for compatibility
+  const formattedMessages = messages.map((msg, index) => ({
+    id: index + 1, // Use array index for compatibility instead of parsing UUID
+    originalId: msg.id, // Keep original UUID for database operations
     type: msg.type,
     from: msg.sender_name,
     avatar: msg.sender_avatar || "/placeholder.svg",
     subject: msg.subject,
-    preview: msg.preview || msg.content.substring(0, 100) + "...",
+    preview: msg.preview || (msg.content ? msg.content.substring(0, 100) + "..." : ""),
     time: new Date(msg.received_at || msg.created_at).toLocaleString(),
     priority: msg.priority || "medium",
     platform: msg.platform,
