@@ -65,8 +65,8 @@ export const securityMonitor = new SecurityMonitor();
 
 // Input validation utilities
 export const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
-  return emailRegex.test(email) && email.length <= 254;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 254 && email.length >= 5;
 };
 
 export const validatePassword = (password: string): boolean => {
