@@ -49,6 +49,7 @@ const OnboardingFlow = ({ onComplete, onConnect }: OnboardingFlowProps) => {
 
   const handleCompleteSetup = () => {
     setIsComplete(true);
+    onComplete(); // Call onComplete immediately to mark onboarding as finished
     toast({
       title: "🚀 Setup Complete!",
       description: "Your digital life is now unified in one place.",
