@@ -12,7 +12,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <div className="dark"> {/* Force dark theme */}
+      <div> {/* Light theme as default */}
         <Toaster />
         <Sonner />
         <BrowserRouter>

@@ -6,46 +6,50 @@
 
 @layer base {
   :root {
-    /* Dark theme as default - black background with teal/green accents */
-    --background: 0 0% 3%;
-    --foreground: 0 0% 98%;
+    /* Light theme as default - clean background with teal/green accents */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
 
-    --card: 0 0% 6%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
 
-    --popover: 0 0% 6%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
 
     --primary: 175 100% 40%;
-    --primary-foreground: 0 0% 3%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 160 30% 15%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 10%;
 
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
     --accent: 175 100% 35%;
-    --accent-foreground: 0 0% 3%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 10%;
+    --border: 0 0% 88%;
+    --input: 0 0% 100%;
     --ring: 175 100% 40%;
 
     --radius: 0.5rem;
 
     /* Sidebar tokens */
-    --sidebar-background: 0 0% 6%;
-    --sidebar-foreground: 0 0% 90%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 10%;
     --sidebar-primary: 175 100% 40%;
-    --sidebar-primary-foreground: 0 0% 3%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 0 0% 90%;
-    --sidebar-border: 0 0% 15%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 88%;
     --sidebar-ring: 175 100% 40%;
+
+    /* Enhanced shadows for light mode */
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 
     /* UCT Token Colors */
     --token-primary: 175 100% 40%;
