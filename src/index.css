@@ -6,58 +6,69 @@
 
 @layer base {
   :root {
-    /* Light theme as default - clean background with teal/green accents */
-    --background: 0 0% 98%;
-    --foreground: 0 0% 10%;
+    /* Light theme with lavender/grey accents */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 8%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 0 0% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover-foreground: 0 0% 8%;
 
-    --primary: 175 100% 40%;
-    --primary-foreground: 0 0% 98%;
+    /* UnclutterAI brand colors */
+    --primary: 260 100% 50%; /* Purple */
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary-foreground: 0 0% 8%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 250 20% 96%; /* Soft lavender */
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 175 100% 35%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 250 30% 94%; /* Lavender accent */
+    --accent-foreground: 0 0% 8%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 88%;
+    --border: 250 20% 90%; /* Soft grey border */
     --input: 0 0% 100%;
-    --ring: 175 100% 40%;
+    --ring: 260 100% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     /* Sidebar tokens */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 10%;
-    --sidebar-primary: 175 100% 40%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 96%;
-    --sidebar-accent-foreground: 0 0% 10%;
-    --sidebar-border: 0 0% 88%;
-    --sidebar-ring: 175 100% 40%;
+    --sidebar-foreground: 0 0% 8%;
+    --sidebar-primary: 260 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 250 20% 96%;
+    --sidebar-accent-foreground: 0 0% 8%;
+    --sidebar-border: 250 20% 90%;
+    --sidebar-ring: 260 100% 50%;
 
     /* Enhanced shadows for light mode */
-    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-card: 0 2px 8px 0 rgb(0 0 0 / 0.06), 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    --shadow-card-hover: 0 8px 25px 0 rgb(0 0 0 / 0.1), 0 4px 12px 0 rgb(0 0 0 / 0.08);
 
-    /* UCT Token Colors */
-    --token-primary: 175 100% 40%;
-    --token-secondary: 160 80% 45%;
+    /* Brand colors for dashboard */
+    --purple: 260 100% 50%;
+    --green: 142 76% 36%;
+    --orange: 25 95% 53%;
+    --teal: 175 100% 40%;
     
     /* Focus Score Colors */
-    --focus-primary: 175 100% 40%;
-    --focus-secondary: 160 80% 45%;
+    --focus-primary: 260 100% 50%;
+    --focus-secondary: 250 100% 60%;
+    
+    /* Token Colors */
+    --token-primary: 25 95% 53%; /* Orange */
+    --token-secondary: 45 93% 47%;
+    
+    /* Community Colors */
+    --community-primary: 142 76% 36%; /* Green */
+    --community-secondary: 120 76% 40%;
     
     /* Priority Colors */
     --priority-high: 0 84% 60%;

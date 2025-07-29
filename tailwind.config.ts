@@ -61,6 +61,24 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Brand colors
+				purple: 'hsl(var(--purple))',
+				green: 'hsl(var(--green))',
+				orange: 'hsl(var(--orange))',
+				teal: 'hsl(var(--teal))',
+				// Component specific
+				focus: {
+					primary: 'hsl(var(--focus-primary))',
+					secondary: 'hsl(var(--focus-secondary))'
+				},
+				token: {
+					primary: 'hsl(var(--token-primary))',
+					secondary: 'hsl(var(--token-secondary))'
+				},
+				community: {
+					primary: 'hsl(var(--community-primary))',
+					secondary: 'hsl(var(--community-secondary))'
 				}
 			},
 			boxShadow: {

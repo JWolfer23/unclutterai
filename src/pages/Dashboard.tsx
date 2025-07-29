@@ -3,6 +3,8 @@ import InboxView from "@/components/InboxView";
 import TasksView from "@/components/TasksView";
 import CatchUpAssistant from "@/components/CatchUpAssistant";
 import TokenBalance from "@/components/TokenBalance";
+import DashboardCards from "@/components/DashboardCards";
+import OverviewSection from "@/components/OverviewSection";
 
 interface DashboardProps {
   activeView?: 'overview' | 'inbox' | 'tasks' | 'focus' | 'tokens';
@@ -34,17 +36,12 @@ export default function Dashboard({ activeView = 'overview' }: DashboardProps) {
       default:
         console.log("Dashboard.tsx - Rendering overview (default)");
         return (
-          <div className="space-y-6">
-            {/* Overview Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <FocusScoreCard />
-                <CatchUpAssistant />
-              </div>
-              <div className="space-y-6">
-                <TokenBalance />
-              </div>
-            </div>
+          <div className="space-y-8">
+            {/* Dashboard Cards */}
+            <DashboardCards />
+            
+            {/* Overview Section */}
+            <OverviewSection />
           </div>
         );
     }
