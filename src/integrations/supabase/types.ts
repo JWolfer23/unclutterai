@@ -114,7 +114,6 @@ export type Database = {
       }
       messages: {
         Row: {
-          ai_summary: string | null
           content: string
           created_at: string | null
           id: string
@@ -135,7 +134,6 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          ai_summary?: string | null
           content: string
           created_at?: string | null
           id?: string
@@ -156,7 +154,6 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          ai_summary?: string | null
           content?: string
           created_at?: string | null
           id?: string

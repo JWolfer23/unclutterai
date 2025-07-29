@@ -25,64 +25,59 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
   };
 
   return (
-    <header className="bg-background border-b border-border sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between py-4">
-          {/* Left: Logo + Brand */}
+    <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-lg overflow-hidden border border-border bg-muted/30">
+            <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-purple-200/50 bg-white/50">
               <img 
                 src="/lovable-uploads/064ee60b-3850-4faa-abe4-7aefeedf9961.png" 
                 alt="Unclutter Logo"
                 className="w-full h-full object-contain"
               />
             </div>
-            <h1 className="text-xl font-bold text-foreground">
-              Unclutter
-            </h1>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                Unclutter
+              </h1>
+              <p className="text-sm text-gray-500">AI Communication Assistant</p>
+            </div>
           </div>
-
-          {/* Center: Welcome */}
-          <div className="text-center">
-            <p className="text-base font-medium text-foreground">Welcome, {user?.email}</p>
-            <p className="text-sm text-muted-foreground">AI Communication Assistant</p>
-          </div>
-
-          {/* Right: Action Buttons */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-6">
+            <span className="text-sm text-gray-600">Welcome, {user?.email}</span>
             <Button 
               variant="outline" 
               size="sm"
               onClick={onShowCommandPalette}
-              className="text-sm"
+              className="transition-all duration-200 hover:scale-105"
             >
               <Search className="w-4 h-4 mr-2" />
-              🔍 Search
+              Search
             </Button>
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => navigate('/crypto-integration')}
-              className="text-sm"
+              className="transition-all duration-200 hover:scale-105"
             >
               <Coins className="w-4 h-4 mr-2" />
-              ⛓️ Crypto
+              Crypto
             </Button>
             <Button 
               size="sm" 
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 hover:scale-105"
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              🧠 AI Compose
+              AI Compose
             </Button>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleSignOut}
-              className="text-sm"
+              className="transition-all duration-200 hover:scale-105"
             >
               <LogOut className="w-4 h-4 mr-2" />
-              🔓 Sign Out
+              Sign Out
             </Button>
           </div>
         </div>
