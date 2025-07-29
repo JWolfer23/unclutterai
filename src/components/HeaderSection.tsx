@@ -1,9 +1,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Sparkles, Search, LogOut, Coins } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import BetaTestButton from "./BetaTestButton";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderSectionProps {
   onShowCommandPalette: () => void;
@@ -45,7 +46,8 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
           </div>
           <div className="flex items-center space-x-6">
             <span className="text-sm text-gray-600">Welcome, {user?.email}</span>
-            <Button 
+          <BetaTestButton />
+          <Button
               variant="outline" 
               size="sm"
               onClick={onShowCommandPalette}

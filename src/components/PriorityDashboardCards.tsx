@@ -1,16 +1,21 @@
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Coins, Trophy } from "lucide-react";
-import { useFocusRecovery } from "@/hooks/useFocusRecovery";
+import { useFocusSessions } from "@/hooks/useFocusSessions";
+import { useFocusStreaks } from "@/hooks/useFocusStreaks";
+import { useTokens } from "@/hooks/useTokens";
 
 interface PriorityDashboardCardsProps {
   onShowRecoveryDashboard: () => void;
 }
 
 const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCardsProps) => {
-  const [focusScore] = useState(87);
-  const { isNotificationsMuted } = useFocusRecovery();
+  const { focusScore } = useFocusSessions();
+  const { currentStreak } = useFocusStreaks();
+  const { balance } = useTokens();
+
+  // Calculate today's earnings (mock for now - could be tracked in a separate table)
+  const todayEarnings = 47;
 
   return (
     <div className="w-full mb-6">
@@ -44,11 +49,8 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
                   </span>
                 </div>
                 <p className="text-xs text-purple-600 font-medium">
-                  ↗ Improving
+                  {currentStreak > 0 ? `🔥 ${currentStreak} day streak` : "↗ Improving"}
                 </p>
-                {isNotificationsMuted && (
-                  <p className="text-xs text-purple-600 font-medium mt-1">🔕 Notifications Muted</p>
-                )}
               </div>
             </div>
           </CardContent>
@@ -63,8 +65,8 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900">UCT Tokens Earned</h3>
-                <p className="text-2xl font-bold text-amber-700">2,847</p>
-                <p className="text-xs text-amber-600 font-medium">+47 today</p>
+                <p className="text-2xl font-bold text-amber-700">{balance.toLocaleString()}</p>
+                <p className="text-xs text-amber-600 font-medium">+{todayEarnings} today</p>
               </div>
             </div>
           </CardContent>
@@ -79,8 +81,8 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900">Community Ranking</h3>
-                <p className="text-2xl font-bold text-emerald-700">Top 15%</p>
-                <p className="text-xs text-emerald-600 font-medium">↗ +2% this week</p>
+                <p className="text-2xl font-bold text-emerald-700">Top {Math.ceil((100 - focusScore) / 5)}%</p>
+                <p className="text-xs text-emerald-600 font-medium">↗ {currentStreak > 0 ? `+${currentStreak}% this week` : '+2% this week'}</p>
               </div>
             </div>
           </CardContent>
