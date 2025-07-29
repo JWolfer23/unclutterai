@@ -9,22 +9,30 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ activeView = 'overview' }: DashboardProps) {
+  console.log("Dashboard.tsx - Rendering with activeView:", activeView);
+  
   const renderActiveView = () => {
+    console.log("Dashboard.tsx - renderActiveView called with:", activeView);
     switch (activeView) {
       case 'inbox':
+        console.log("Dashboard.tsx - Rendering InboxView");
         return <InboxView />;
       case 'tasks':
+        console.log("Dashboard.tsx - Rendering TasksView");
         return <TasksView />;
       case 'focus':
+        console.log("Dashboard.tsx - Rendering Focus view");
         return (
           <div className="space-y-6">
-                <FocusScoreCard />
+            <FocusScoreCard />
             {/* Add focus mode controls here */}
           </div>
         );
       case 'tokens':
+        console.log("Dashboard.tsx - Rendering TokenBalance");
         return <TokenBalance />;
       default:
+        console.log("Dashboard.tsx - Rendering overview (default)");
         return (
           <div className="space-y-6">
             {/* Overview Grid */}

@@ -20,8 +20,11 @@ const Index = () => {
     isOnboardingComplete 
   } = useOnboarding();
 
+  console.log("Index.tsx - Render state:", { authLoading, user: !!user, onboardingState, isOnboardingComplete });
+
   // Show loading spinner while checking auth
   if (authLoading) {
+    console.log("Index.tsx - Showing auth loading state");
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -34,6 +37,7 @@ const Index = () => {
 
   // Show auth page if not authenticated
   if (!user) {
+    console.log("Index.tsx - No user, showing auth page");
     return <AuthPage />;
   }
 
@@ -47,6 +51,7 @@ const Index = () => {
 
   // Show onboarding for first-time users
   if (onboardingState.showOnboarding && !isOnboardingComplete) {
+    console.log("Index.tsx - Showing onboarding flow");
     return (
       <OnboardingFlow 
         onComplete={completeOnboarding}
@@ -54,6 +59,8 @@ const Index = () => {
       />
     );
   }
+
+  console.log("Index.tsx - Rendering main dashboard with activeView:", activeView);
 
   return (
     <SidebarProvider>
