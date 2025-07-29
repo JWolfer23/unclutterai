@@ -40,6 +40,11 @@ const Index = () => {
     isOnboardingComplete 
   } = useOnboarding();
 
+  // Debug onboarding state
+  console.log("Onboarding state:", onboardingState);
+  console.log("Is onboarding complete:", isOnboardingComplete);
+  console.log("Should show onboarding:", onboardingState.showOnboarding && !isOnboardingComplete);
+
   // Show loading spinner while checking auth
   if (authLoading) {
     console.log('Auth loading state:', { authLoading, user: !!user });
