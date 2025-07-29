@@ -9,12 +9,9 @@ import HeaderSection from "@/components/HeaderSection";
 import SidebarSection from "@/components/SidebarSection";
 import MessageTabs from "@/components/MessageTabs";
 import AuthPage from "@/components/auth/AuthPage";
+import PriorityDashboardCards from "@/components/PriorityDashboardCards";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { TrendingUp, Coins, Trophy } from "lucide-react";
-import { useFocusRecovery } from "@/hooks/useFocusRecovery";
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
@@ -25,11 +22,6 @@ const Index = () => {
   const [showContextualPrompt, setShowContextualPrompt] = useState<{platform: string, feature: string} | null>(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showRecoveryDashboard, setShowRecoveryDashboard] = useState(false);
-  const [focusScore] = useState(87);
-  
-  const { 
-    isNotificationsMuted 
-  } = useFocusRecovery();
   
   const { 
     state: onboardingState, 
@@ -155,7 +147,15 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100">
       <HeaderSection onShowCommandPalette={() => setShowCommandPalette(true)} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Priority Dashboard Cards - Always at top */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <PriorityDashboardCards 
+          onShowRecoveryDashboard={() => setShowRecoveryDashboard(true)}
+        />
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <SidebarSection 
             onMessageTypeFilter={handleMessageTypeFilter}
@@ -165,78 +165,6 @@ const Index = () => {
           />
 
           <div className="lg:col-span-3 space-y-6">
-            {/* Focus Summary Banner - 3 Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-              {/* Focus Score Card */}
-              <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 flex items-center justify-center">
-                      <TrendingUp className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900">Focus Score</h3>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowRecoveryDashboard(true)}
-                          className="ml-2 h-7 px-3 text-xs border-purple-300 text-purple-700 hover:bg-purple-100"
-                        >
-                          Schedule
-                        </Button>
-                      </div>
-                      <div className="flex items-baseline space-x-2">
-                        <span className="text-2xl font-bold text-purple-700">
-                          {focusScore}%
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          +3%
-                        </span>
-                      </div>
-                      <p className="text-xs text-purple-600 font-medium">
-                        ↗ Improving
-                      </p>
-                      {isNotificationsMuted && (
-                        <p className="text-xs text-purple-600 font-medium mt-1">🔕 Notifications Muted</p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* UCT Tokens Card */}
-              <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
-                      <Coins className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">UCT Tokens Earned</h3>
-                      <p className="text-2xl font-bold text-amber-700">2,847</p>
-                      <p className="text-xs text-amber-600 font-medium">+47 today</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Community Ranking Card */}
-              <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center">
-                      <Trophy className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">Community Ranking</h3>
-                      <p className="text-2xl font-bold text-emerald-700">Top 15%</p>
-                      <p className="text-xs text-emerald-600 font-medium">↗ +2% this week</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
 
             {messagesLoading ? (
               <div className="flex items-center justify-center h-64">
