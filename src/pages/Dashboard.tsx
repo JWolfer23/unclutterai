@@ -1,14 +1,14 @@
-import FocusScorecard from "@/components/FocusScoreCard";
+import FocusScoreCard from "@/components/FocusScoreCard";
 import InboxView from "@/components/InboxView";
 import TasksView from "@/components/TasksView";
 import CatchUpAssistant from "@/components/CatchUpAssistant";
 import TokenBalance from "@/components/TokenBalance";
 
 interface DashboardProps {
-  activeView: 'overview' | 'inbox' | 'tasks' | 'focus' | 'tokens';
+  activeView?: 'overview' | 'inbox' | 'tasks' | 'focus' | 'tokens';
 }
 
-export default function Dashboard({ activeView }: DashboardProps) {
+export default function Dashboard({ activeView = 'overview' }: DashboardProps) {
   const renderActiveView = () => {
     switch (activeView) {
       case 'inbox':
@@ -18,7 +18,7 @@ export default function Dashboard({ activeView }: DashboardProps) {
       case 'focus':
         return (
           <div className="space-y-6">
-            <FocusScorecard />
+                <FocusScoreCard />
             {/* Add focus mode controls here */}
           </div>
         );
@@ -30,7 +30,7 @@ export default function Dashboard({ activeView }: DashboardProps) {
             {/* Overview Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
-                <FocusScorecard />
+                <FocusScoreCard />
                 <CatchUpAssistant />
               </div>
               <div className="space-y-6">
