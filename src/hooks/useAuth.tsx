@@ -175,9 +175,16 @@ export const useAuth = () => {
   };
 
   const signIn = async (email: string, password: string) => {
+    console.log('🔐 Sign-in attempt started', { 
+      email: email.substring(0, 3) + '***',
+      password: password.length + ' chars',
+      timestamp: new Date().toISOString()
+    });
+
     // Input validation
     if (!validateEmail(email)) {
       const error = new Error('Invalid email format');
+      console.error('❌ Sign-in validation failed: Invalid email format');
       securityMonitor.logEvent({
         type: 'auth_failure',
         metadata: { reason: 'invalid_email', email: email.substring(0, 3) + '***' }
@@ -188,6 +195,7 @@ export const useAuth = () => {
     // Rate limiting
     if (!authRateLimiter.isAllowed(email)) {
       const error = new Error('Too many signin attempts. Please try again later.');
+      console.warn('⚠️ Sign-in rate limit exceeded for email:', email.substring(0, 3) + '***');
       return { error };
     }
 
@@ -196,27 +204,83 @@ export const useAuth = () => {
       metadata: { action: 'signin', email: email.substring(0, 3) + '***' }
     });
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    console.log('🚀 Calling supabase.auth.signInWithPassword...');
     
-    if (error) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      console.log('📊 Complete Supabase signIn response:', {
+        hasData: !!data,
+        hasUser: !!data?.user,
+        userId: data?.user?.id,
+        userEmail: data?.user?.email,
+        emailConfirmed: data?.user?.email_confirmed_at !== null,
+        hasSession: !!data?.session,
+        sessionId: data?.session?.access_token?.substring(0, 10) + '...',
+        hasError: !!error,
+        errorCode: error?.status,
+        errorMessage: error?.message,
+        fullError: error
+      });
+      
+      if (error) {
+        console.error('🚨 Sign-in error details:', {
+          message: error.message,
+          status: error.status,
+          fullError: error
+        });
+
+        let friendlyMessage = error.message;
+        
+        if (error.message.includes('Invalid login credentials')) {
+          friendlyMessage = 'Invalid email or password. Please check your credentials and try again.';
+          console.error('🔍 Invalid credentials - could be unconfirmed email or wrong password');
+        } else if (error.message.includes('Email not confirmed')) {
+          friendlyMessage = 'Please check your email and click the confirmation link before signing in.';
+        } else if (error.message.includes('User not found')) {
+          friendlyMessage = 'No account found with this email. Please sign up first.';
+        }
+        
+        const enhancedError = new Error(friendlyMessage);
+        (enhancedError as any).originalError = error;
+        
+        securityMonitor.logEvent({
+          type: 'auth_failure',
+          metadata: { action: 'signin', reason: error.message, email: email.substring(0, 3) + '***' }
+        });
+        
+        return { error: enhancedError };
+      } else {
+        console.log('✅ Sign-in successful for user:', data?.user?.id);
+        securityMonitor.logEvent({
+          type: 'auth_success',
+          userId: data?.user?.id,
+          metadata: { action: 'signin', email: email.substring(0, 3) + '***' }
+        });
+        // Reset rate limiter on successful login
+        authRateLimiter.reset(email);
+      }
+      
+      return { data, error };
+    } catch (networkError) {
+      console.error('🌐 Network error during sign-in:', networkError);
+      const friendlyError = new Error('Network connection issue. Please check your internet connection and try again.');
+      (friendlyError as any).originalError = networkError;
+      
       securityMonitor.logEvent({
         type: 'auth_failure',
-        metadata: { action: 'signin', reason: error.message, email: email.substring(0, 3) + '***' }
+        metadata: { 
+          action: 'signin', 
+          reason: 'network_error',
+          email: email.substring(0, 3) + '***' 
+        }
       });
-    } else {
-      securityMonitor.logEvent({
-        type: 'auth_success',
-        userId: user?.id,
-        metadata: { action: 'signin', email: email.substring(0, 3) + '***' }
-      });
-      // Reset rate limiter on successful login
-      authRateLimiter.reset(email);
+      
+      return { error: friendlyError };
     }
-    
-    return { error };
   };
 
   const signOut = async () => {
