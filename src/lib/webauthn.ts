@@ -59,13 +59,18 @@ export const registerBiometric = async (userId: string, userName: string) => {
   const challengeArray = crypto.getRandomValues(new Uint8Array(64)); // Increased to 64 bytes
   const challenge = btoa(String.fromCharCode(...challengeArray));
 
-  // Add additional entropy for device fingerprinting
+  // Enhanced device fingerprinting for security
   const deviceInfo = {
     userAgent: navigator.userAgent,
     language: navigator.language,
     platform: navigator.platform,
+    screenResolution: `${screen.width}x${screen.height}`,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     timestamp: Date.now()
   };
+  
+  // Create consistent device fingerprint
+  const deviceFingerprint = btoa(JSON.stringify(deviceInfo));
   
   const registrationOptions = {
     rp: {
@@ -73,7 +78,7 @@ export const registerBiometric = async (userId: string, userName: string) => {
       id: window.location.hostname,
     },
     user: {
-      id: btoa(userId + JSON.stringify(deviceInfo)), // Include device fingerprint
+      id: btoa(userId + deviceFingerprint), // Include device fingerprint
       name: userName,
       displayName: userName,
     },
@@ -81,6 +86,7 @@ export const registerBiometric = async (userId: string, userName: string) => {
     pubKeyCredParams: [
       { alg: -7, type: 'public-key' as const }, // ES256
       { alg: -257, type: 'public-key' as const }, // RS256
+      { alg: -37, type: 'public-key' as const }, // PS256
     ],
     authenticatorSelection: {
       authenticatorAttachment: 'platform' as const,
@@ -93,22 +99,46 @@ export const registerBiometric = async (userId: string, userName: string) => {
 
   try {
     const registrationResult = await startRegistration({ optionsJSON: registrationOptions });
-    return { success: true, credential: registrationResult };
+    
+    // Add device fingerprint to the credential data
+    const enhancedResult = {
+      ...registrationResult,
+      deviceFingerprint
+    };
+    
+    return { success: true, credential: enhancedResult };
   } catch (error) {
     console.error('Biometric registration failed:', error);
     return { success: false, error };
   }
 };
 
-export const authenticateWithBiometric = async (credentialId: string) => {
+export const authenticateWithBiometric = async (credentialId: string, serverChallenge?: string) => {
   // Rate limiting check
   if (!checkRateLimit(`auth_${credentialId}`)) {
     throw new Error('Too many authentication attempts. Please try again later.');
   }
 
-  // Generate cryptographically secure challenge
-  const challengeArray = crypto.getRandomValues(new Uint8Array(64)); // Increased to 64 bytes
-  const challenge = btoa(String.fromCharCode(...challengeArray));
+  // Use server-provided challenge or generate one (prefer server challenge for security)
+  let challenge: string;
+  if (serverChallenge) {
+    challenge = serverChallenge;
+  } else {
+    const challengeArray = crypto.getRandomValues(new Uint8Array(64));
+    challenge = btoa(String.fromCharCode(...challengeArray));
+  }
+
+  // Regenerate device fingerprint for validation
+  const deviceInfo = {
+    userAgent: navigator.userAgent,
+    language: navigator.language,
+    platform: navigator.platform,
+    screenResolution: `${screen.width}x${screen.height}`,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timestamp: Date.now()
+  };
+  
+  const deviceFingerprint = btoa(JSON.stringify(deviceInfo));
 
   const authenticationOptions = {
     challenge,
@@ -123,20 +153,28 @@ export const authenticateWithBiometric = async (credentialId: string) => {
   try {
     const authenticationResult = await startAuthentication({ optionsJSON: authenticationOptions });
     
-    // Log successful authentication for monitoring
+    // Enhance result with security metadata
+    const enhancedResult = {
+      ...authenticationResult,
+      deviceFingerprint,
+      challenge // Include the challenge used
+    };
+    
+    // Log successful authentication for monitoring (minimal info for privacy)
     console.info('Biometric authentication successful', {
       credentialId: credentialId.substring(0, 8) + '...', // Partial ID for logging
       timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent
+      hasDeviceFingerprint: !!deviceFingerprint
     });
     
-    return { success: true, result: authenticationResult };
+    return { success: true, result: enhancedResult };
   } catch (error) {
     // Log failed authentication attempts for monitoring
     console.warn('Biometric authentication failed', {
       credentialId: credentialId.substring(0, 8) + '...', // Partial ID for logging
       timestamp: new Date().toISOString(),
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      errorName: error instanceof Error ? error.name : 'Unknown'
     });
     
     return { success: false, error };

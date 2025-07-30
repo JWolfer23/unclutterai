@@ -301,14 +301,15 @@ export const useAuth = () => {
       const { success, credential, error } = await registerBiometric(user.id, user.email || 'User');
       
       if (success && credential) {
-        // Store credential securely via edge function
+        // Store credential securely via enhanced edge function
         const { error: storeError } = await supabase.functions.invoke('biometric-auth', {
           body: {
             action: 'register',
             credentialData: {
               id: credential.id,
               publicKey: credential.response.publicKey,
-              counter: 0
+              counter: 0,
+              deviceFingerprint: credential.deviceFingerprint
             },
             userId: user.id
           },
@@ -367,15 +368,30 @@ export const useAuth = () => {
         metadata: { action: 'authenticate' }
       });
 
+      // Get a secure challenge from the server first
+      const { data: challengeData, error: challengeError } = await supabase.functions.invoke('biometric-auth', {
+        body: {
+          action: 'challenge'
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (challengeError || !challengeData?.challenge) {
+        throw new Error('Failed to get security challenge');
+      }
+
       const credentialId = currentUser.user_metadata.biometric_credential.id;
-      const { success, result, error } = await authenticateWithBiometric(credentialId);
+      const { success, result, error } = await authenticateWithBiometric(credentialId, challengeData.challenge);
       
       if (success && result) {
-        // Verify server-side via edge function
+        // Verify server-side via enhanced edge function
         const { data, error: verifyError } = await supabase.functions.invoke('biometric-auth', {
           body: {
             action: 'verify',
-            credentialData: result
+            credentialData: result,
+            challenge: challengeData.challenge
           },
           headers: {
             Authorization: `Bearer ${session.access_token}`
