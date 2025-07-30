@@ -15,10 +15,10 @@ export default defineConfig(({ mode }) => ({
       'X-XSS-Protection': '1; mode=block',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-      // Content Security Policy
+      // Enhanced Content Security Policy
       'Content-Security-Policy': mode === 'development' 
-        ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: wss: ws: https://supabase.com https://*.supabase.co; img-src 'self' data: blob: https:; connect-src 'self' wss: ws: https://supabase.com https://*.supabase.co;"
-        : "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://supabase.com https://*.supabase.co; frame-ancestors 'none';"
+        ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' wss: ws: https://supabase.com https://*.supabase.co https://api.openai.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+        : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://supabase.com https://*.supabase.co https://api.openai.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none';"
     }
   },
   plugins: [

@@ -85,30 +85,48 @@ export const sanitizeHtml = (input: string): string => {
 // Rate limiting utilities
 export class RateLimiter {
   private attempts: Map<string, { count: number; resetTime: number }> = new Map();
+  private ipAttempts: Map<string, { count: number; resetTime: number }> = new Map();
 
   constructor(
     private maxAttempts: number = 5,
     private windowMs: number = 60000 // 1 minute
   ) {}
 
-  isAllowed(identifier: string): boolean {
+  isAllowed(identifier: string, ipAddress?: string): boolean {
     const now = Date.now();
+    
+    // Check identifier-based rate limiting
     const record = this.attempts.get(identifier);
-
     if (!record || now > record.resetTime) {
       this.attempts.set(identifier, { count: 1, resetTime: now + this.windowMs });
-      return true;
+    } else {
+      if (record.count >= this.maxAttempts) {
+        securityMonitor.logEvent({
+          type: 'rate_limit_exceeded',
+          metadata: { identifier, attempts: record.count, type: 'identifier' }
+        });
+        return false;
+      }
+      record.count++;
     }
 
-    if (record.count >= this.maxAttempts) {
-      securityMonitor.logEvent({
-        type: 'rate_limit_exceeded',
-        metadata: { identifier, attempts: record.count }
-      });
-      return false;
+    // Check IP-based rate limiting if provided
+    if (ipAddress) {
+      const ipRecord = this.ipAttempts.get(ipAddress);
+      if (!ipRecord || now > ipRecord.resetTime) {
+        this.ipAttempts.set(ipAddress, { count: 1, resetTime: now + this.windowMs });
+      } else {
+        if (ipRecord.count >= this.maxAttempts * 2) { // More lenient for IP
+          securityMonitor.logEvent({
+            type: 'rate_limit_exceeded',
+            metadata: { identifier: ipAddress, attempts: ipRecord.count, type: 'ip' }
+          });
+          return false;
+        }
+        ipRecord.count++;
+      }
     }
 
-    record.count++;
     return true;
   }
 
