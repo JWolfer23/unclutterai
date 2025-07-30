@@ -15,18 +15,50 @@ const AuthDebugger = () => {
     setResults(prev => [{ timestamp: new Date().toISOString(), ...result }, ...prev]);
   };
 
-  const runSimpleSignUp = async () => {
+  const checkDatabaseState = async () => {
+    try {
+      // Check if we can access profiles table
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .limit(5);
+      
+      // Check if we can access tokens table
+      const { data: tokens, error: tokensError } = await supabase
+        .from('tokens')
+        .select('*')
+        .limit(5);
+      
+      addResult({
+        test: 'Database State Check',
+        status: (!profilesError && !tokensError) ? 'SUCCESS' : 'MIXED',
+        profilesCount: profiles?.length || 0,
+        tokensCount: tokens?.length || 0,
+        profilesError: profilesError?.message,
+        tokensError: tokensError?.message
+      });
+    } catch (err) {
+      addResult({
+        test: 'Database State Check',
+        status: 'FAILED',
+        error: err instanceof Error ? err.message : 'Unknown error'
+      });
+    }
+  };
+
+  const runSignUpWithProfileCheck = async () => {
     setLoading(true);
-    console.log('🧪 Starting simple sign-up test...');
+    console.log('🧪 Starting sign-up with profile verification...');
     
     try {
-      // First, try to sign out any existing session
+      // First, sign out any existing session
       await supabase.auth.signOut();
       
-      const email = `test+${Date.now()}@example.com`;
+      const email = `debug+${Date.now()}@example.com`;
       console.log('📧 Testing with email:', email);
       
-      const { data, error } = await supabase.auth.signUp({
+      // Step 1: Sign up
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password: testPassword,
         options: {
@@ -34,62 +66,58 @@ const AuthDebugger = () => {
         }
       });
       
-      console.log('📊 Sign-up result:', { data, error });
-      
-      if (error) {
+      if (signUpError) {
         addResult({
-          test: 'Simple Sign-up',
-          status: 'FAILED',
-          error: error.message,
-          details: error
+          test: 'Sign-up with Profile Check',
+          status: 'SIGNUP_FAILED',
+          error: signUpError.message,
+          step: 'signup'
         });
-        toast({
-          title: "Sign-up Failed",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        addResult({
-          test: 'Simple Sign-up',
-          status: 'SUCCESS',
-          userId: data.user?.id,
-          hasSession: !!data.session,
-          email: data.user?.email
-        });
-        
-        // Wait a moment then check if profile was created
-        setTimeout(async () => {
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', data.user?.id)
-              .single();
-              
-            addResult({
-              test: 'Profile Check',
-              status: profileError ? 'FAILED' : 'SUCCESS',
-              profile,
-              error: profileError?.message
-            });
-          } catch (err) {
-            addResult({
-              test: 'Profile Check',
-              status: 'FAILED',
-              error: 'Profile check failed'
-            });
-          }
-        }, 2000);
-        
-        toast({
-          title: "Sign-up Success",
-          description: `User created: ${data.user?.id}`,
-        });
+        return;
       }
-    } catch (err) {
-      console.error('🚨 Unexpected error:', err);
+      
+      const userId = signUpData.user?.id;
+      if (!userId) {
+        addResult({
+          test: 'Sign-up with Profile Check',
+          status: 'NO_USER_ID',
+          step: 'signup'
+        });
+        return;
+      }
+      
+      // Step 2: Wait a moment for trigger to execute
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Step 3: Check if profile was created
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      // Step 4: Check if tokens record was created
+      const { data: tokens, error: tokensError } = await supabase
+        .from('tokens')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
       addResult({
-        test: 'Simple Sign-up',
+        test: 'Sign-up with Profile Check',
+        status: (!profileError && !tokensError && profile && tokens) ? 'SUCCESS' : 'PARTIAL_SUCCESS',
+        userId,
+        hasProfile: !!profile,
+        hasTokens: !!tokens,
+        profileError: profileError?.message,
+        tokensError: tokensError?.message,
+        profileData: profile,
+        tokensData: tokens
+      });
+      
+    } catch (err) {
+      addResult({
+        test: 'Sign-up with Profile Check',
         status: 'ERROR',
         error: err instanceof Error ? err.message : 'Unknown error'
       });
@@ -151,23 +179,6 @@ const AuthDebugger = () => {
     setLoading(false);
   };
 
-  const checkDatabaseTrigger = async () => {
-    try {
-      // Just add a note that the trigger should be checked manually
-      addResult({
-        test: 'Database Trigger Check',
-        status: 'MANUAL_CHECK_NEEDED',
-        note: 'Check Supabase logs to verify handle_new_user trigger is executing'
-      });
-    } catch (err) {
-      addResult({
-        test: 'Database Trigger Check',
-        status: 'FAILED',
-        error: err instanceof Error ? err.message : 'Unknown error'
-      });
-    }
-  };
-
   const clearResults = () => {
     setResults([]);
   };
@@ -199,11 +210,11 @@ const AuthDebugger = () => {
         
         <div className="flex gap-2 flex-wrap">
           <Button 
-            onClick={runSimpleSignUp}
+            onClick={runSignUpWithProfileCheck}
             disabled={loading}
-            variant="outline"
+            variant="default"
           >
-            🧪 Test Single Sign-up
+            🧪 Test Sign-up + DB Check
           </Button>
           <Button 
             onClick={testMultipleSignUps}
@@ -213,11 +224,11 @@ const AuthDebugger = () => {
             🔄 Test 3 Sign-ups
           </Button>
           <Button 
-            onClick={checkDatabaseTrigger}
+            onClick={checkDatabaseState}
             disabled={loading}
             variant="outline"
           >
-            🗄️ Check DB Trigger
+            🗄️ Check Database State
           </Button>
           <Button 
             onClick={clearResults}
@@ -247,6 +258,12 @@ const AuthDebugger = () => {
                   {result.error && <div><strong>Error:</strong> {result.error}</div>}
                   {result.userId && <div><strong>User ID:</strong> {result.userId}</div>}
                   {result.email && <div><strong>Email:</strong> {result.email}</div>}
+                  {result.hasProfile !== undefined && <div><strong>Has Profile:</strong> {result.hasProfile ? '✅' : '❌'}</div>}
+                  {result.hasTokens !== undefined && <div><strong>Has Tokens:</strong> {result.hasTokens ? '✅' : '❌'}</div>}
+                  {result.profilesCount !== undefined && <div><strong>Profiles Count:</strong> {result.profilesCount}</div>}
+                  {result.tokensCount !== undefined && <div><strong>Tokens Count:</strong> {result.tokensCount}</div>}
+                  {result.profileError && <div><strong>Profile Error:</strong> {result.profileError}</div>}
+                  {result.tokensError && <div><strong>Tokens Error:</strong> {result.tokensError}</div>}
                   {result.note && <div><strong>Note:</strong> {result.note}</div>}
                 </div>
               </div>
