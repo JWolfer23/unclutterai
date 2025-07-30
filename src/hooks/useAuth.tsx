@@ -32,9 +32,16 @@ export const useAuth = () => {
   }, []);
 
   const signUp = async (email: string, password: string) => {
+    console.log('🔐 Sign-up attempt started', { 
+      email: email.substring(0, 3) + '***',
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent.substring(0, 50) + '...'
+    });
+
     // Input validation
     if (!validateEmail(email)) {
       const error = new Error('Invalid email format');
+      console.error('❌ Validation failed: Invalid email format');
       securityMonitor.logEvent({
         type: 'auth_failure',
         metadata: { reason: 'invalid_email', email: email.substring(0, 3) + '***' }
@@ -43,7 +50,8 @@ export const useAuth = () => {
     }
 
     if (!validatePassword(password)) {
-      const error = new Error('Password does not meet security requirements');
+      const error = new Error('Password does not meet security requirements (minimum 6 characters, mix of letters and numbers)');
+      console.error('❌ Validation failed: Weak password');
       securityMonitor.logEvent({
         type: 'auth_failure',
         metadata: { reason: 'weak_password', email: email.substring(0, 3) + '***' }
@@ -54,6 +62,7 @@ export const useAuth = () => {
     // Rate limiting
     if (!authRateLimiter.isAllowed(email)) {
       const error = new Error('Too many signup attempts. Please try again later.');
+      console.warn('⚠️ Rate limit exceeded for email:', email.substring(0, 3) + '***');
       return { error };
     }
 
@@ -63,28 +72,84 @@ export const useAuth = () => {
     });
 
     const redirectUrl = `${window.location.origin}/`;
+    console.log('🔗 Using redirect URL:', redirectUrl);
     
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+      
+      console.log('📊 Supabase signUp response:', {
+        hasUser: !!data?.user,
+        userId: data?.user?.id,
+        hasSession: !!data?.session,
+        errorCode: error?.status,
+        errorMessage: error?.message
+      });
+      
+      if (error) {
+        // Enhanced error categorization
+        let friendlyMessage = error.message;
+        
+        if (error.message.includes('Database error')) {
+          friendlyMessage = 'Database connection issue. Please try again in a moment.';
+          console.error('🗄️ Database error during signup:', error);
+        } else if (error.message.includes('User already registered')) {
+          friendlyMessage = 'An account with this email already exists. Please sign in instead.';
+        } else if (error.message.includes('Invalid email')) {
+          friendlyMessage = 'Please enter a valid email address.';
+        } else if (error.message.includes('Password')) {
+          friendlyMessage = 'Password requirements not met. Use at least 6 characters.';
+        } else if (error.status === 429) {
+          friendlyMessage = 'Too many requests. Please wait a moment and try again.';
+        } else if (error.status >= 500) {
+          friendlyMessage = 'Server error. Please try again or contact support if the issue persists.';
+          console.error('🚨 Server error during signup:', error);
+        }
+        
+        const enhancedError = new Error(friendlyMessage);
+        (enhancedError as any).originalError = error;
+        
+        securityMonitor.logEvent({
+          type: 'auth_failure',
+          metadata: { 
+            action: 'signup', 
+            reason: error.message, 
+            status: error.status,
+            email: email.substring(0, 3) + '***' 
+          }
+        });
+        
+        return { error: enhancedError };
+      } else {
+        console.log('✅ Sign-up successful for user:', data?.user?.id);
+        securityMonitor.logEvent({
+          type: 'auth_success',
+          metadata: { action: 'signup', email: email.substring(0, 3) + '***' }
+        });
       }
-    });
-    
-    if (error) {
+      
+      return { error };
+    } catch (networkError) {
+      console.error('🌐 Network error during signup:', networkError);
+      const friendlyError = new Error('Network connection issue. Please check your internet connection and try again.');
+      (friendlyError as any).originalError = networkError;
+      
       securityMonitor.logEvent({
         type: 'auth_failure',
-        metadata: { action: 'signup', reason: error.message, email: email.substring(0, 3) + '***' }
+        metadata: { 
+          action: 'signup', 
+          reason: 'network_error',
+          email: email.substring(0, 3) + '***' 
+        }
       });
-    } else {
-      securityMonitor.logEvent({
-        type: 'auth_success',
-        metadata: { action: 'signup', email: email.substring(0, 3) + '***' }
-      });
+      
+      return { error: friendlyError };
     }
-    
-    return { error };
   };
 
   const signIn = async (email: string, password: string) => {

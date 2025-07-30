@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { Fingerprint } from "lucide-react";
+import DeviceInfoOverlay from "@/components/debug/DeviceInfoOverlay";
+import TestAccountGenerator from "@/components/debug/TestAccountGenerator";
 
 const AuthPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -88,6 +90,8 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">
+      <DeviceInfoOverlay />
+      <TestAccountGenerator />
       <Card className="w-full max-w-md bg-white/80 backdrop-blur-md border-white/20 shadow-lg">
         <CardHeader className="text-center">
           <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-purple-200/50 bg-white/50 mx-auto mb-4">
