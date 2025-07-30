@@ -185,6 +185,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          onboarding_completed: boolean
           preferences: Json | null
           timezone: string | null
           updated_at: string | null
@@ -195,6 +196,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          onboarding_completed?: boolean
           preferences?: Json | null
           timezone?: string | null
           updated_at?: string | null
@@ -205,6 +207,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          onboarding_completed?: boolean
           preferences?: Json | null
           timezone?: string | null
           updated_at?: string | null
