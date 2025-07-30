@@ -126,6 +126,69 @@ const AuthDebugger = () => {
     }
   };
 
+  const testSignInFlow = async () => {
+    setLoading(true);
+    console.log('🔐 Testing sign-in flow...');
+    
+    try {
+      // First, let's create a test user
+      const email = `signin+${Date.now()}@example.com`;
+      console.log('📧 Creating test user:', email);
+      
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password: testPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
+      
+      if (signUpError) {
+        addResult({
+          test: 'Sign-in Flow Test',
+          status: 'SIGNUP_FAILED',
+          error: signUpError.message,
+          step: 'signup'
+        });
+        return;
+      }
+      
+      addResult({
+        test: 'Sign-in Flow Test - Step 1',
+        status: 'SIGNUP_SUCCESS',
+        userId: signUpData.user?.id,
+        emailConfirmed: signUpData.user?.email_confirmed_at !== null,
+        step: 'signup'
+      });
+      
+      // Wait a moment then try to sign in
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('🔑 Attempting sign-in with same credentials...');
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: testPassword
+      });
+      
+      addResult({
+        test: 'Sign-in Flow Test - Step 2',
+        status: signInError ? 'SIGNIN_FAILED' : 'SUCCESS',
+        error: signInError?.message,
+        hasSession: !!signInData.session,
+        step: 'signin'
+      });
+      
+    } catch (err) {
+      addResult({
+        test: 'Sign-in Flow Test',
+        status: 'ERROR',
+        error: err instanceof Error ? err.message : 'Unknown error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const testMultipleSignUps = async () => {
     setLoading(true);
     console.log('🧪 Testing multiple sign-ups...');
@@ -215,6 +278,13 @@ const AuthDebugger = () => {
             variant="default"
           >
             🧪 Test Sign-up + DB Check
+          </Button>
+          <Button 
+            onClick={testSignInFlow}
+            disabled={loading}
+            variant="default"
+          >
+            🔑 Test Sign-in Flow
           </Button>
           <Button 
             onClick={testMultipleSignUps}
