@@ -31,24 +31,45 @@ const AuthPage = () => {
     e.preventDefault();
     setLoading(true);
 
+    console.log('🎯 Form submission:', { 
+      isSignUp, 
+      email: email.substring(0, 3) + '***',
+      passwordLength: password.length 
+    });
+
     try {
-      const { error } = isSignUp 
+      const result = isSignUp 
         ? await signUp(email, password)
         : await signIn(email, password);
 
-      if (error) {
+      console.log('📱 Auth result:', { 
+        hasError: !!result.error,
+        hasData: !!(result as any).data,
+        errorMessage: result.error?.message 
+      });
+
+      if (result.error) {
+        console.error('🚨 Auth error in component:', result.error);
         toast({
           title: "Authentication Error",
-          description: error.message,
+          description: result.error.message,
           variant: "destructive",
         });
       } else if (isSignUp) {
+        console.log('✅ Sign-up success, showing email confirmation message');
         toast({
           title: "Check your email",
           description: "Please check your email for the confirmation link.",
         });
+      } else {
+        console.log('✅ Sign-in success');
+        toast({
+          title: "Welcome back!",
+          description: "You have been signed in successfully.",
+        });
       }
     } catch (error) {
+      console.error('🚨 Unexpected error in handleSubmit:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred",

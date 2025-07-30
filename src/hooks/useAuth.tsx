@@ -34,6 +34,7 @@ export const useAuth = () => {
   const signUp = async (email: string, password: string) => {
     console.log('🔐 Sign-up attempt started', { 
       email: email.substring(0, 3) + '***',
+      password: password.length + ' chars',
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent.substring(0, 50) + '...'
     });
@@ -75,6 +76,12 @@ export const useAuth = () => {
     console.log('🔗 Using redirect URL:', redirectUrl);
     
     try {
+      console.log('🚀 Calling supabase.auth.signUp with:', {
+        email: email.substring(0, 3) + '***',
+        passwordLength: password.length,
+        redirectUrl
+      });
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -83,19 +90,33 @@ export const useAuth = () => {
         }
       });
       
-      console.log('📊 Supabase signUp response:', {
+      console.log('📊 Complete Supabase signUp response:', {
+        hasData: !!data,
         hasUser: !!data?.user,
         userId: data?.user?.id,
+        userEmail: data?.user?.email,
         hasSession: !!data?.session,
+        sessionId: data?.session?.access_token?.substring(0, 10) + '...',
+        hasError: !!error,
         errorCode: error?.status,
-        errorMessage: error?.message
+        errorMessage: error?.message,
+        fullError: error
       });
       
       if (error) {
+        console.error('🚨 Sign-up error details:', {
+          message: error.message,
+          status: error.status,
+          fullError: error
+        });
+
         // Enhanced error categorization
         let friendlyMessage = error.message;
         
-        if (error.message.includes('Database error')) {
+        if (error.message.includes('Invalid login credentials')) {
+          friendlyMessage = 'Sign-up failed: Invalid credentials. Please check your email and password format.';
+          console.error('🔍 Invalid credentials error - this might be a configuration issue');
+        } else if (error.message.includes('Database error')) {
           friendlyMessage = 'Database connection issue. Please try again in a moment.';
           console.error('🗄️ Database error during signup:', error);
         } else if (error.message.includes('User already registered')) {
@@ -127,13 +148,14 @@ export const useAuth = () => {
         return { error: enhancedError };
       } else {
         console.log('✅ Sign-up successful for user:', data?.user?.id);
+        console.log('📧 User confirmation required:', !data?.session);
         securityMonitor.logEvent({
           type: 'auth_success',
           metadata: { action: 'signup', email: email.substring(0, 3) + '***' }
         });
       }
       
-      return { error };
+      return { data, error };
     } catch (networkError) {
       console.error('🌐 Network error during signup:', networkError);
       const friendlyError = new Error('Network connection issue. Please check your internet connection and try again.');
