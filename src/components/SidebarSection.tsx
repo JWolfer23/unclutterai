@@ -4,6 +4,7 @@ import StatsOverview from "@/components/StatsOverview";
 import DailyNotes from "@/components/DailyNotes";
 import AIAssistant from "@/components/AIAssistant";
 import SpamGuard from "@/components/SpamGuard";
+import WalletSection from "@/components/WalletSection";
 
 interface SidebarSectionProps {
   onMessageTypeFilter: (type: string | null) => void;
@@ -29,6 +30,7 @@ const SidebarSection = ({
         messages={messages}
         onMessageAction={onMessageAction}
       />
+      <WalletSection />
       <DailyNotes />
       <AIAssistant />
     </div>

@@ -2,6 +2,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAIAssistant } from "@/hooks/useAIAssistant";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Mail, 
   MessageSquare, 
@@ -16,7 +18,9 @@ import {
   Clock,
   Sparkles,
   AlertCircle,
-  TrendingUp
+  TrendingUp,
+  ListTodo,
+  FileText
 } from "lucide-react";
 
 interface Message {
@@ -26,11 +30,13 @@ interface Message {
   avatar: string;
   subject: string;
   preview: string;
+  content?: string;
   time: string;
   priority: string;
   platform: string;
   tasks: string[];
   sentiment: string;
+  ai_summary?: string;
 }
 
 interface MessageCardProps {
@@ -40,6 +46,31 @@ interface MessageCardProps {
 }
 
 const MessageCard = ({ message, onClick, isSelected }: MessageCardProps) => {
+  const { summarizeMessage, generateTasks, isProcessing } = useAIAssistant();
+  const { user } = useAuth();
+
+  const handleSummarize = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (message.content && !message.ai_summary) {
+      summarizeMessage({
+        messageId: message.id.toString(),
+        content: message.content,
+        subject: message.subject
+      });
+    }
+  };
+
+  const handleGenerateTasks = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (message.content && user?.id) {
+      generateTasks({
+        messageId: message.id.toString(),
+        content: message.content,
+        subject: message.subject,
+        userId: user.id
+      });
+    }
+  };
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'email':
@@ -121,6 +152,17 @@ const MessageCard = ({ message, onClick, isSelected }: MessageCardProps) => {
             <h4 className="font-medium text-gray-800 mb-1 truncate">{message.subject}</h4>
             <p className="text-sm text-gray-600 line-clamp-2 mb-3">{message.preview}</p>
 
+            {/* AI Summary */}
+            {message.ai_summary && (
+              <div className="mb-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center space-x-1 mb-1">
+                  <FileText className="w-3 h-3 text-blue-600" />
+                  <span className="text-xs font-medium text-blue-600">AI Summary</span>
+                </div>
+                <p className="text-xs text-blue-800">{message.ai_summary}</p>
+              </div>
+            )}
+
             {/* AI-Generated Tasks */}
             {message.tasks.length > 0 && (
               <div className="mb-3">
@@ -146,9 +188,27 @@ const MessageCard = ({ message, onClick, isSelected }: MessageCardProps) => {
                   <Reply className="w-3 h-3 mr-1" />
                   Reply
                 </Button>
-                <Button size="sm" variant="ghost" className="h-8 px-3 text-xs">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  AI Reply
+                {!message.ai_summary && message.content && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-8 px-3 text-xs" 
+                    onClick={handleSummarize}
+                    disabled={isProcessing}
+                  >
+                    <FileText className="w-3 h-3 mr-1" />
+                    Summarize
+                  </Button>
+                )}
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-8 px-3 text-xs"
+                  onClick={handleGenerateTasks}
+                  disabled={isProcessing || !message.content}
+                >
+                  <ListTodo className="w-3 h-3 mr-1" />
+                  Tasks
                 </Button>
               </div>
               <div className="flex space-x-1">

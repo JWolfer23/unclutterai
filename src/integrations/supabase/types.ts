@@ -189,6 +189,7 @@ export type Database = {
           preferences: Json | null
           timezone: string | null
           updated_at: string | null
+          wallet_address: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -200,6 +201,7 @@ export type Database = {
           preferences?: Json | null
           timezone?: string | null
           updated_at?: string | null
+          wallet_address?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -211,6 +213,7 @@ export type Database = {
           preferences?: Json | null
           timezone?: string | null
           updated_at?: string | null
+          wallet_address?: string | null
         }
         Relationships: []
       }
@@ -221,12 +224,15 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          importance: string | null
           message_id: string | null
           metadata: Json | null
           priority: Database["public"]["Enums"]["priority_level"] | null
+          score: number | null
           status: Database["public"]["Enums"]["task_status"] | null
           title: string
           updated_at: string | null
+          urgency: string | null
           user_id: string
         }
         Insert: {
@@ -235,12 +241,15 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          importance?: string | null
           message_id?: string | null
           metadata?: Json | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
+          score?: number | null
           status?: Database["public"]["Enums"]["task_status"] | null
           title: string
           updated_at?: string | null
+          urgency?: string | null
           user_id: string
         }
         Update: {
@@ -249,12 +258,15 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          importance?: string | null
           message_id?: string | null
           metadata?: Json | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
+          score?: number | null
           status?: Database["public"]["Enums"]["task_status"] | null
           title?: string
           updated_at?: string | null
+          urgency?: string | null
           user_id?: string
         }
         Relationships: [
