@@ -53,14 +53,17 @@ const AuthPage = () => {
         setLoading(false);
         return;
       }
-    } else if (password.length < 6) {
-      toast({
-        title: "Invalid Password",
-        description: "Password is required.",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
+    } else {
+      // Enforce 12-character minimum for all password operations
+      if (password.length < 12) {
+        toast({
+          title: "Password Too Short",
+          description: "Password must be at least 12 characters long.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
     }
 
     console.log('🎯 Form submission:', { 
@@ -183,7 +186,7 @@ const AuthPage = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder={isSignUp ? "Create a strong password (12+ chars)" : "Enter your password"}
-                minLength={isSignUp ? 12 : 6}
+                minLength={12}
                 maxLength={128}
               />
               {isSignUp && password && (

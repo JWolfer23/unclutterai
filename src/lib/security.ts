@@ -1,7 +1,7 @@
 // Security monitoring and logging utilities
 
 interface SecurityEvent {
-  type: 'auth_attempt' | 'auth_success' | 'auth_failure' | 'biometric_attempt' | 'rate_limit_exceeded';
+  type: 'auth_attempt' | 'auth_success' | 'auth_failure' | 'biometric_attempt' | 'rate_limit_exceeded' | 'security_alert';
   userId?: string;
   timestamp: string;
   metadata?: Record<string, any>;
