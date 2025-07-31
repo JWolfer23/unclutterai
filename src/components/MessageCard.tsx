@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAIAssistant } from "@/hooks/useAIAssistant";
 import { useAuth } from "@/hooks/useAuth";
+import { useAIUsage } from "@/hooks/useAIUsage";
 import { 
   Mail, 
   MessageSquare, 
@@ -48,6 +49,7 @@ interface MessageCardProps {
 const MessageCard = ({ message, onClick, isSelected }: MessageCardProps) => {
   const { summarizeMessage, generateTasks, isProcessing } = useAIAssistant();
   const { user } = useAuth();
+  const { getUsageText, isLimitReached } = useAIUsage();
 
   const handleSummarize = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -189,27 +191,37 @@ const MessageCard = ({ message, onClick, isSelected }: MessageCardProps) => {
                   Reply
                 </Button>
                 {!message.ai_summary && message.content && (
+                  <div className="flex flex-col">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-8 px-3 text-xs" 
+                      onClick={handleSummarize}
+                      disabled={isProcessing || isLimitReached('summary')}
+                    >
+                      <FileText className="w-3 h-3 mr-1" />
+                      Summarize
+                    </Button>
+                    <span className="text-xs text-gray-500 text-center mt-1">
+                      {getUsageText('summary')}
+                    </span>
+                  </div>
+                )}
+                <div className="flex flex-col">
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="h-8 px-3 text-xs" 
-                    onClick={handleSummarize}
-                    disabled={isProcessing}
+                    className="h-8 px-3 text-xs"
+                    onClick={handleGenerateTasks}
+                    disabled={isProcessing || !message.content || isLimitReached('task_generation')}
                   >
-                    <FileText className="w-3 h-3 mr-1" />
-                    Summarize
+                    <ListTodo className="w-3 h-3 mr-1" />
+                    Tasks
                   </Button>
-                )}
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="h-8 px-3 text-xs"
-                  onClick={handleGenerateTasks}
-                  disabled={isProcessing || !message.content}
-                >
-                  <ListTodo className="w-3 h-3 mr-1" />
-                  Tasks
-                </Button>
+                  <span className="text-xs text-gray-500 text-center mt-1">
+                    {getUsageText('task_generation')}
+                  </span>
+                </div>
               </div>
               <div className="flex space-x-1">
                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0">

@@ -2,6 +2,12 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
+const AI_USAGE_LIMITS = {
+  summary: 25,
+  task_generation: 15,
+  scoring: 15,
+};
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -25,16 +31,40 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured');
     }
 
+    // Check rate limits before processing
+    const rateLimitType = action === 'summarize_message' ? 'summary' : 
+                         action === 'generate_tasks' ? 'task_generation' : 'scoring';
+    
+    const isAllowed = await checkRateLimit(data.userId, rateLimitType);
+    if (!isAllowed) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'RATE_LIMIT_EXCEEDED',
+          message: "You've reached your daily AI usage limit. Please check back tomorrow or upgrade."
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let result;
     switch (action) {
       case 'summarize_message':
-        return await summarizeMessage(data, openAIApiKey);
+        result = await summarizeMessage(data, openAIApiKey);
+        break;
       case 'generate_tasks':
-        return await generateTasks(data, openAIApiKey);
+        result = await generateTasks(data, openAIApiKey);
+        break;
       case 'score_task':
-        return await scoreTask(data, openAIApiKey);
+        result = await scoreTask(data, openAIApiKey);
+        break;
       default:
         throw new Error(`Unknown action: ${action}`);
     }
+
+    // Record usage after successful AI call
+    await recordUsage(data.userId, rateLimitType);
+    
+    return result;
   } catch (error) {
     console.error('AI Assistant Error:', error);
     return new Response(
@@ -207,4 +237,43 @@ async function scoreTask(data: any, apiKey: string) {
     JSON.stringify(scoring),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
+}
+
+async function checkRateLimit(userId: string, type: string): Promise<boolean> {
+  // Get usage from last 24 hours
+  const twentyFourHoursAgo = new Date();
+  twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+  const { data, error } = await supabase
+    .from("ai_usage")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("type", type)
+    .gte("used_at", twentyFourHoursAgo.toISOString());
+
+  if (error) {
+    console.error('Rate limit check error:', error);
+    return false; // Fail safe - deny access on error
+  }
+
+  const currentUsage = data?.length || 0;
+  const limit = AI_USAGE_LIMITS[type as keyof typeof AI_USAGE_LIMITS];
+  
+  console.log(`Rate limit check: ${type} - ${currentUsage}/${limit} used`);
+  
+  return currentUsage < limit;
+}
+
+async function recordUsage(userId: string, type: string): Promise<void> {
+  const { error } = await supabase
+    .from("ai_usage")
+    .insert({
+      user_id: userId,
+      type: type,
+      used_at: new Date().toISOString()
+    });
+
+  if (error) {
+    console.error('Failed to record usage:', error);
+  }
 }

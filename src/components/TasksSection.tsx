@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { useAIAssistant } from "@/hooks/useAIAssistant";
+import { useAIUsage } from "@/hooks/useAIUsage";
 import { 
   CheckSquare, 
   ExternalLink, 
@@ -12,7 +14,8 @@ import {
   Mail,
   MessageSquare,
   Twitter,
-  Phone
+  Phone,
+  Target
 } from "lucide-react";
 
 interface Task {
@@ -32,6 +35,8 @@ interface TasksSectionProps {
 }
 
 const TasksSection = ({ onViewSource, onTaskComplete }: TasksSectionProps) => {
+  const { scoreTask, isProcessing } = useAIAssistant();
+  const { getUsageText, isLimitReached } = useAIUsage();
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: "task-1",
@@ -124,6 +129,14 @@ const TasksSection = ({ onViewSource, onTaskComplete }: TasksSectionProps) => {
     onTaskComplete(taskId);
   };
 
+  const handleScoreTask = (taskId: string, summary: string) => {
+    scoreTask({
+      taskId,
+      title: summary,
+      description: summary
+    });
+  };
+
   const generateSummary = () => {
     const sortedTasks = activeTasks.sort((a, b) => {
       const urgencyOrder = { high: 3, medium: 2, low: 1 };
@@ -202,15 +215,32 @@ const TasksSection = ({ onViewSource, onTaskComplete }: TasksSectionProps) => {
                     </div>
                   </div>
                   
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onViewSource(task.messageId)}
-                    className="h-6 px-2 text-xs text-purple-600 hover:text-purple-700"
-                  >
-                    <ExternalLink className="w-3 h-3 mr-1" />
-                    View Source
-                  </Button>
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleScoreTask(task.id, task.summary)}
+                      disabled={isProcessing || isLimitReached('scoring')}
+                      className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700"
+                    >
+                      <Target className="w-3 h-3 mr-1" />
+                      Score
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onViewSource(task.messageId)}
+                      className="h-6 px-2 text-xs text-purple-600 hover:text-purple-700"
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      View
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Usage indicator for scoring */}
+                <div className="text-xs text-gray-500 text-right mt-1">
+                  {getUsageText('scoring')}
                 </div>
               </div>
             </div>
