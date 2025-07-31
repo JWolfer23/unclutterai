@@ -83,97 +83,96 @@ const AIUsageTracker = () => {
     },
   ];
 
-  const getTotalUsed = () => {
-    if (!usage) return 0;
-    return usage.summary + usage.task_generation + usage.scoring;
-  };
-
-  const getTotalLimit = () => {
-    return AI_USAGE_LIMITS.summary + AI_USAGE_LIMITS.task_generation + AI_USAGE_LIMITS.scoring;
-  };
-
-  const isAtLimit = () => {
-    if (!usage) return false;
-    return usage.summary >= AI_USAGE_LIMITS.summary || 
-           usage.task_generation >= AI_USAGE_LIMITS.task_generation || 
-           usage.scoring >= AI_USAGE_LIMITS.scoring;
-  };
-
-  const isNearLimit = () => {
-    if (!usage) return false;
-    const summaryNear = usage.summary >= AI_USAGE_LIMITS.summary * 0.8;
-    const taskNear = usage.task_generation >= AI_USAGE_LIMITS.task_generation * 0.8;
-    const scoringNear = usage.scoring >= AI_USAGE_LIMITS.scoring * 0.8;
-    return summaryNear || taskNear || scoringNear;
-  };
-
-  const getTimeUntilReset = () => {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    
-    const diff = tomorrow.getTime() - now.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${hours}h ${minutes}m`;
-  };
-
   return (
-    <div className="space-y-3">
-      {/* Upgrade prompt banner for hitting limits */}
-      {isAtLimit() && (
-        <Alert className="bg-orange-50 border-orange-200 text-orange-800">
+    <div className="w-full space-y-4">
+      {/* Upgrade prompt banner */}
+      {upgradePrompt && (
+        <Alert variant={upgradePrompt.variant} className="border-l-4">
           <Zap className="h-4 w-4" />
           <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <span className="text-sm">You've hit your daily limit. Upgrade to Premium for 100 summaries/day.</span>
-            <Button size="sm" variant="outline" className="text-xs bg-white hover:bg-orange-50">
-              Upgrade Now
+            <span>{upgradePrompt.message}</span>
+            <Button 
+              size="sm" 
+              variant={upgradePrompt.type === 'hit' ? 'secondary' : 'outline'}
+              className="whitespace-nowrap self-start sm:self-auto"
+              onClick={() => {
+                // TODO: Implement upgrade flow (Stripe/Token vault)
+                console.log('Upgrade clicked');
+              }}
+            >
+              <ArrowUp className="h-3 w-3 mr-1" />
+              Upgrade
             </Button>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Subtle banner for near limits */}
-      {!isAtLimit() && isNearLimit() && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-sm text-blue-700">Running low? Upgrade for more AI power.</p>
-        </div>
-      )}
-
-      {/* Main usage card */}
-      <Card className="bg-white/80 backdrop-blur-md border-white/20">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">AI Usage: {getTotalUsed()}/{getTotalLimit()} Today</p>
-              <p className="text-xs text-gray-600">Resets in {getTimeUntilReset()}</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              {isAtLimit() && (
-                <span className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">
-                  Limit reached
-                </span>
-              )}
-              {!isAtLimit() && isNearLimit() && (
-                <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">
-                  Running low
-                </span>
-              )}
-            </div>
-          </div>
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">AI Usage Today</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {usageItems.map((item) => {
+            const percentage = (item.used / item.limit) * 100;
+            const Icon = item.icon;
+            const isAtLimit = item.used >= item.limit;
+            const isNearLimit = item.used >= item.limit * 0.8;
+            
+            return (
+              <div key={item.type} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Icon className={`h-4 w-4 ${
+                      isAtLimit ? 'text-destructive' : 
+                      isNearLimit ? 'text-orange-500' : 
+                      'text-muted-foreground'
+                    }`} />
+                    <span className="text-sm font-medium">{item.label}</span>
+                    {isAtLimit && (
+                      <span className="text-xs px-2 py-1 bg-destructive/10 text-destructive rounded-full">
+                        Limit reached
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-sm ${
+                    isAtLimit ? 'text-destructive font-medium' : 
+                    isNearLimit ? 'text-orange-500' : 
+                    'text-muted-foreground'
+                  }`}>
+                    {item.used} / {item.limit}
+                  </span>
+                </div>
+                <Progress 
+                  value={percentage} 
+                  className={`h-2 ${
+                    isAtLimit ? '[&>div]:bg-destructive' : 
+                    isNearLimit ? '[&>div]:bg-orange-500' : ''
+                  }`}
+                />
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>Resets at midnight</span>
+                </div>
+              </div>
+            );
+          })}
           
-          {/* Upgrade button */}
-          <div className="mt-3 pt-3 border-t border-gray-200">
+          {/* Upgrade button at bottom */}
+          <div className="pt-4 border-t">
             <Button 
-              size="sm" 
-              variant="outline" 
-              className="w-full text-xs bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border-purple-200"
+              className="w-full" 
+              variant="outline"
+              onClick={() => {
+                // TODO: Implement upgrade flow (Stripe/Token vault)
+                console.log('Upgrade to Premium clicked');
+              }}
             >
-              <span className="mr-1">🔓</span>
-              Upgrade to Premium
+              <Zap className="h-4 w-4 mr-2" />
+              🔓 Upgrade to Premium
             </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Get unlimited AI usage, priority support, and advanced features
+            </p>
           </div>
         </CardContent>
       </Card>

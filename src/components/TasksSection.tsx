@@ -214,14 +214,32 @@ const TasksSection = ({ onViewSource, onTaskComplete }: TasksSectionProps) => {
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-end">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-xs text-gray-500 hover:text-gray-700"
-                  >
-                    ⋯
-                  </Button>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-500">
+                    {getUsageText('scoring')}
+                  </div>
+                  
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleScoreTask(task.id, task.summary)}
+                      disabled={isProcessing || isLimitReached('scoring')}
+                      className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 flex-shrink-0"
+                    >
+                      <Target className="w-3 h-3 mr-1" />
+                      Score
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onViewSource(task.messageId)}
+                      className="h-7 px-2 text-xs text-purple-600 hover:text-purple-700 flex-shrink-0"
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      View
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
