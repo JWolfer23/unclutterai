@@ -12,60 +12,32 @@ const PasswordReset = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [recoveryTokens, setRecoveryTokens] = useState<{accessToken: string, refreshToken: string} | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const handleRecoverySession = async () => {
-      // Check for recovery session from URL hash or search params
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
-      const type = hashParams.get('type') || searchParams.get('type');
-      
-      console.log('Recovery params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
-      
-      if (accessToken && refreshToken && type === 'recovery') {
-        try {
-          // Set the session with the tokens from the recovery link
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          
-          if (error) {
-            console.error('Session error:', error);
-            toast({
-              title: "Invalid reset link",
-              description: "This password reset link is invalid or has expired.",
-              variant: "destructive",
-            });
-            navigate('/auth');
-          } else {
-            console.log('Recovery session set successfully');
-          }
-        } catch (error) {
-          console.error('Recovery error:', error);
-          toast({
-            title: "Invalid reset link",
-            description: "This password reset link is invalid or has expired.",
-            variant: "destructive",
-          });
-          navigate('/auth');
-        }
-      } else if (!accessToken && !refreshToken) {
-        // No tokens found, redirect to auth
-        toast({
-          title: "Invalid reset link",
-          description: "This password reset link is invalid or has expired.",
-          variant: "destructive",
-        });
-        navigate('/auth');
-      }
-    };
-
-    handleRecoverySession();
+    // Check for recovery session from URL hash or search params
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+    const type = hashParams.get('type') || searchParams.get('type');
+    
+    console.log('Recovery params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+    
+    if (accessToken && refreshToken && type === 'recovery') {
+      // Store tokens temporarily instead of setting session immediately
+      setRecoveryTokens({ accessToken, refreshToken });
+    } else {
+      // No valid recovery tokens found
+      toast({
+        title: "Invalid reset link",
+        description: "This password reset link is invalid or has expired.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+    }
   }, [searchParams, navigate, toast]);
 
   const isPasswordValid = password.length >= 12;
@@ -73,6 +45,16 @@ const PasswordReset = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!recoveryTokens) {
+      toast({
+        title: "Invalid session",
+        description: "No valid recovery session found. Please try again.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
     
     if (!isPasswordValid) {
       toast({
@@ -95,6 +77,17 @@ const PasswordReset = () => {
     setLoading(true);
 
     try {
+      // First set the session with recovery tokens
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: recoveryTokens.accessToken,
+        refresh_token: recoveryTokens.refreshToken,
+      });
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      // Then update the password
       const { error } = await supabase.auth.updateUser({ 
         password: password 
       });
