@@ -8,6 +8,50 @@ const AI_USAGE_LIMITS = {
   scoring: 15,
 };
 
+// Enhanced rate limiting with IP tracking
+const rateLimitMap = new Map<string, { count: number; resetTime: number; ips: Set<string> }>()
+
+const checkRateLimit = (identifier: string, ipAddress?: string, maxRequests: number = 20, windowMs: number = 60000): boolean => {
+  const now = Date.now()
+  const current = rateLimitMap.get(identifier)
+  
+  if (!current || now > current.resetTime) {
+    const newEntry = { 
+      count: 1, 
+      resetTime: now + windowMs,
+      ips: new Set(ipAddress ? [ipAddress] : [])
+    }
+    rateLimitMap.set(identifier, newEntry)
+    return true
+  }
+  
+  if (current.count >= maxRequests) {
+    return false
+  }
+  
+  // Track unique IPs for additional security
+  if (ipAddress) {
+    current.ips.add(ipAddress)
+    // Block if too many different IPs are used
+    if (current.ips.size > 3) {
+      console.warn(`Suspicious activity: Multiple IPs for ${identifier}`)
+      return false
+    }
+  }
+  
+  current.count++
+  return true
+}
+
+// Input sanitization
+const sanitizeInput = (input: string, maxLength: number = 5000): string => {
+  if (typeof input !== 'string') return ''
+  return input
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control characters
+    .trim()
+    .substring(0, maxLength)
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -24,12 +68,69 @@ serve(async (req) => {
   }
 
   try {
+    // Get authentication first
+    const authHeader = req.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    if (authError || !user) {
+      console.error('Authentication failed:', authError)
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Get client IP for rate limiting
+    const clientIP = req.headers.get('x-forwarded-for') || 
+                    req.headers.get('x-real-ip') || 
+                    'unknown'
+
+    // Enhanced rate limiting check
+    if (!checkRateLimit(user.id, clientIP, 20, 60000)) { // 20 requests per minute per user
+      return new Response(
+        JSON.stringify({ 
+          error: 'RATE_LIMIT_EXCEEDED',
+          message: "Too many requests. Please try again later."
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { action, data } = await req.json();
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not configured');
     }
+
+    // Validate and sanitize input data
+    if (!data || typeof data !== 'object') {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request data' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Ensure user ID matches authenticated user
+    if (data.userId && data.userId !== user.id) {
+      return new Response(
+        JSON.stringify({ error: 'User ID mismatch' }),
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Set user ID from authenticated user
+    data.userId = user.id;
 
     // Check rate limits before processing
     const rateLimitType = action === 'summarize_message' ? 'summary' : 
@@ -77,6 +178,14 @@ serve(async (req) => {
 async function summarizeMessage(data: any, apiKey: string) {
   const { messageId, content, subject } = data;
 
+  // Sanitize inputs
+  const sanitizedContent = sanitizeInput(content, 10000)
+  const sanitizedSubject = sanitizeInput(subject, 200)
+
+  if (!sanitizedContent) {
+    throw new Error('Invalid content after sanitization')
+  }
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -92,7 +201,7 @@ async function summarizeMessage(data: any, apiKey: string) {
         },
         {
           role: 'user',
-          content: `Please summarize this message:\n\nSubject: ${subject}\n\nContent: ${content}`
+          content: `Please summarize this message:\n\nSubject: ${sanitizedSubject}\n\nContent: ${sanitizedContent}`
         }
       ],
       temperature: 0.3,
@@ -120,6 +229,14 @@ async function summarizeMessage(data: any, apiKey: string) {
 async function generateTasks(data: any, apiKey: string) {
   const { messageId, content, subject, userId } = data;
 
+  // Sanitize inputs
+  const sanitizedContent = sanitizeInput(content, 10000)
+  const sanitizedSubject = sanitizeInput(subject, 200)
+
+  if (!sanitizedContent) {
+    throw new Error('Invalid content after sanitization')
+  }
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -135,7 +252,7 @@ async function generateTasks(data: any, apiKey: string) {
         },
         {
           role: 'user',
-          content: `What should the user do next based on this message?\n\nSubject: ${subject}\n\nContent: ${content}`
+          content: `What should the user do next based on this message?\n\nSubject: ${sanitizedSubject}\n\nContent: ${sanitizedContent}`
         }
       ],
       temperature: 0.4,
@@ -189,6 +306,14 @@ async function generateTasks(data: any, apiKey: string) {
 async function scoreTask(data: any, apiKey: string) {
   const { taskId, title, description } = data;
 
+  // Sanitize inputs
+  const sanitizedTitle = sanitizeInput(title, 200)
+  const sanitizedDescription = sanitizeInput(description, 1000)
+
+  if (!sanitizedTitle) {
+    throw new Error('Invalid title after sanitization')
+  }
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -204,7 +329,7 @@ async function scoreTask(data: any, apiKey: string) {
         },
         {
           role: 'user',
-          content: `Rate this task:\n\nTitle: ${title}\n\nDescription: ${description}`
+          content: `Rate this task:\n\nTitle: ${sanitizedTitle}\n\nDescription: ${sanitizedDescription}`
         }
       ],
       temperature: 0.3,

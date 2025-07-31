@@ -16,6 +16,7 @@ import {
   EyeOff
 } from "lucide-react";
 import { useDailyNotes } from "@/hooks/useDailyNotes";
+import { sanitizeNoteContent } from "@/lib/inputSanitization";
 
 const DailyNotes = () => {
   const {
@@ -183,9 +184,16 @@ const DailyNotes = () => {
           <Textarea
             placeholder="How was your day? What's on your mind?"
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => {
+              const sanitized = sanitizeNoteContent(e.target.value);
+              setContent(sanitized);
+            }}
+            maxLength={10000}
             className="min-h-[200px] bg-white/50 border-white/20 resize-none focus:bg-white/80 transition-colors"
           />
+          <div className="text-xs text-muted-foreground text-right">
+            {content.length}/10,000 characters
+          </div>
         </div>
 
         {/* AI Summary */}

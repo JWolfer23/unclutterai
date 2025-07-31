@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { Fingerprint } from "lucide-react";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
+import { validateEmail, getPasswordStrength } from "@/lib/security";
 
 const AuthPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -28,6 +30,38 @@ const AuthPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Enhanced client-side validation
+    if (!validateEmail(email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (isSignUp) {
+      const { score } = getPasswordStrength(password);
+      if (score < 75) {
+        toast({
+          title: "Password Too Weak",
+          description: "Please choose a stronger password (minimum 12 characters with mixed case, numbers, and symbols).",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+    } else if (password.length < 6) {
+      toast({
+        title: "Invalid Password",
+        description: "Password is required.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     console.log('🎯 Form submission:', { 
       isSignUp, 
@@ -139,16 +173,22 @@ const AuthPage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">
+                Password {isSignUp && <span className="text-xs text-muted-foreground">(minimum 12 characters)</span>}
+              </Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="Enter your password"
-                minLength={6}
+                placeholder={isSignUp ? "Create a strong password (12+ chars)" : "Enter your password"}
+                minLength={isSignUp ? 12 : 6}
+                maxLength={128}
               />
+              {isSignUp && password && (
+                <PasswordStrengthMeter password={password} className="mt-2" />
+              )}
             </div>
             <Button 
               type="submit" 

@@ -5,10 +5,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const challengeStore = new Map<string, { challenge: string, timestamp: number }>()
 const CHALLENGE_TIMEOUT = 5 * 60 * 1000 // 5 minutes
 
-// Rate limiting storage
-const rateLimitStore = new Map<string, { attempts: number, lastAttempt: number }>()
+// Enhanced rate limiting storage with IP tracking
+const rateLimitStore = new Map<string, { attempts: number, lastAttempt: number, ips: Set<string> }>()
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000 // 15 minutes
-const MAX_ATTEMPTS = 5
+const MAX_ATTEMPTS = 3 // Reduced for biometric security
 
 // Clean up expired challenges and rate limits
 function cleanup() {
@@ -25,14 +25,19 @@ function cleanup() {
   }
 }
 
-// Rate limiting check
-function checkRateLimit(identifier: string): boolean {
+// Enhanced rate limiting check with IP tracking
+function checkRateLimit(identifier: string, ipAddress?: string): boolean {
   cleanup()
   const now = Date.now()
   const record = rateLimitStore.get(identifier)
   
   if (!record || now - record.lastAttempt > RATE_LIMIT_WINDOW) {
-    rateLimitStore.set(identifier, { attempts: 1, lastAttempt: now })
+    const newRecord = { 
+      attempts: 1, 
+      lastAttempt: now,
+      ips: new Set(ipAddress ? [ipAddress] : [])
+    }
+    rateLimitStore.set(identifier, newRecord)
     return true
   }
   
@@ -40,9 +45,28 @@ function checkRateLimit(identifier: string): boolean {
     return false
   }
   
+  // Track unique IPs for additional security
+  if (ipAddress) {
+    record.ips.add(ipAddress)
+    // Block if too many different IPs are used
+    if (record.ips.size > 2) {
+      console.warn(`Suspicious biometric activity: Multiple IPs for ${identifier}`)
+      return false
+    }
+  }
+  
   record.attempts++
   record.lastAttempt = now
   return true
+}
+
+// Input validation for biometric data
+function validateBiometricData(data: any): boolean {
+  if (!data || typeof data !== 'object') return false
+  
+  // Check for required WebAuthn fields
+  const requiredFields = ['id', 'response', 'type']
+  return requiredFields.every(field => field in data)
 }
 
 // Enhanced WebAuthn signature verification
@@ -171,11 +195,16 @@ serve(async (req) => {
     const requestBody = await req.json()
     const { action, credentialData, userId, challenge } = requestBody
     
-    // Rate limiting check
-    const rateLimitKey = `${user.id}_${clientIP}`
-    if (!checkRateLimit(rateLimitKey)) {
+    // Enhanced rate limiting check with IP tracking
+    const rateLimitKey = `${user.id}_biometric`
+    if (!checkRateLimit(rateLimitKey, clientIP)) {
       console.warn('Rate limit exceeded for user:', user.id, 'IP:', clientIP)
-      throw new Error('Too many attempts. Please try again later.')
+      throw new Error('Too many biometric attempts. Please try again later.')
+    }
+
+    // Validate biometric data for authentication requests
+    if (action === 'verify' && !validateBiometricData(credentialData)) {
+      throw new Error('Invalid biometric credential data format')
     }
 
     if (action === 'register') {
