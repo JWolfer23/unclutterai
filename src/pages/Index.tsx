@@ -12,6 +12,7 @@ import AuthPage from "@/components/auth/AuthPage";
 import PriorityDashboardCards from "@/components/PriorityDashboardCards";
 import AIUsageTracker from "@/components/AIUsageTracker";
 import { UserStatsOverview } from "@/components/UserStatsOverview";
+import { AIUsageResetTimer } from "@/components/AIUsageResetTimer";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
 
@@ -154,7 +155,10 @@ const Index = () => {
         <PriorityDashboardCards 
           onShowRecoveryDashboard={() => setShowRecoveryDashboard(true)}
         />
-        <UserStatsOverview />
+        <div className="space-y-4">
+          <UserStatsOverview />
+          <AIUsageResetTimer />
+        </div>
         <AIUsageTracker />
       </div>
 
