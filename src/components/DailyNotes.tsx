@@ -141,19 +141,22 @@ const DailyNotes = () => {
         )}
 
         {/* Mood Selection */}
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-600">Mood:</span>
-          {moods.map((mood) => (
-            <Button
-              key={mood.label}
-              variant={selectedMood === mood.label ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setSelectedMood(selectedMood === mood.label ? "" : mood.label)}
-              className="p-2"
-            >
-              <span className="text-base">{mood.emoji}</span>
-            </Button>
-          ))}
+        <div className="flex items-center space-x-2 flex-wrap">
+          <span className="text-sm text-gray-600 flex-shrink-0">Mood:</span>
+          <div className="flex space-x-1 flex-wrap">
+            {moods.map((mood) => (
+              <Button
+                key={mood.label}
+                variant={selectedMood === mood.label ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setSelectedMood(selectedMood === mood.label ? "" : mood.label)}
+                className="h-8 w-8 p-0 flex items-center justify-center flex-shrink-0"
+                title={mood.label}
+              >
+                <span className="text-lg leading-none">{mood.emoji}</span>
+              </Button>
+            ))}
+          </div>
         </div>
 
         <Separator />
