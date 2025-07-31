@@ -10,6 +10,7 @@ import SidebarSection from "@/components/SidebarSection";
 import MessageTabs from "@/components/MessageTabs";
 import AuthPage from "@/components/auth/AuthPage";
 import PriorityDashboardCards from "@/components/PriorityDashboardCards";
+import AIUsageTracker from "@/components/AIUsageTracker";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
 
@@ -148,10 +149,11 @@ const Index = () => {
       <HeaderSection onShowCommandPalette={() => setShowCommandPalette(true)} />
 
       {/* Priority Dashboard Cards - Always at top */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-6">
         <PriorityDashboardCards 
           onShowRecoveryDashboard={() => setShowRecoveryDashboard(true)}
         />
+        <AIUsageTracker />
       </div>
 
       {/* Main Content Grid */}
