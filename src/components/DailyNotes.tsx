@@ -33,6 +33,7 @@ const DailyNotes = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
   const [selectedMood, setSelectedMood] = useState<string>("");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const currentNote = getCurrentNote();
   const availableDates = getAvailableDates();
@@ -91,39 +92,36 @@ const DailyNotes = () => {
     <Card className="bg-white/80 backdrop-blur-md border-white/20">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Daily Notes</CardTitle>
           <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigateDate('prev')}
-              disabled={!availableDates.length || availableDates.indexOf(currentDate) >= availableDates.length - 1}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowCalendar(!showCalendar)}
-            >
-              <CalendarIcon className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigateDate('next')}
-              disabled={!availableDates.length || availableDates.indexOf(currentDate) <= 0}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+            <CardTitle className="text-lg">Daily Notes</CardTitle>
+            {content.trim() && (
+              <Badge variant="secondary" className="text-xs">
+                {selectedMood && moods.find(m => m.label === selectedMood)?.emoji} {content.length} chars
+              </Badge>
+            )}
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1"
+          >
+            {isExpanded ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </Button>
         </div>
-        <p className="text-sm text-gray-500">
-          {formatDate(currentDate)} {isToday && <Badge variant="secondary" className="ml-2">Today</Badge>}
-        </p>
+        {!isExpanded && (
+          <p className="text-sm text-gray-500">
+            {formatDate(currentDate)} {isToday && <Badge variant="secondary" className="ml-2">Today</Badge>}
+          </p>
+        )}
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      {isExpanded && (
+        <CardContent className="space-y-4">
         {showCalendar && (
           <div className="border rounded-lg p-3 bg-gray-50/50">
             <Calendar
@@ -241,7 +239,8 @@ const DailyNotes = () => {
             </div>
           </div>
         )}
-      </CardContent>
+        </CardContent>
+      )}
     </Card>
   );
 };

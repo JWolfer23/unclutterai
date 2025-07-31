@@ -35,7 +35,6 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
       <span className="text-sm text-gray-600 border-b pb-2">
         Welcome, {user?.email?.split('@')[0]}
       </span>
-      <BetaTestButton />
       <Button
         variant="outline" 
         size="sm"
@@ -59,13 +58,6 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
       >
         <Coins className="w-4 h-4 mr-2" />
         Crypto
-      </Button>
-      <Button 
-        size="sm" 
-        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 justify-start"
-      >
-        <Sparkles className="w-4 h-4 mr-2" />
-        AI Compose
       </Button>
       <Button 
         variant="outline" 
@@ -109,9 +101,6 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
               <span className="hidden lg:block text-sm text-gray-600 truncate max-w-48">
                 Welcome, {user?.email}
               </span>
-              <div className="hidden md:block">
-                <BetaTestButton />
-              </div>
               <Button
                 variant="outline" 
                 size="sm"
@@ -129,13 +118,6 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
               >
                 <Coins className="w-4 h-4 lg:mr-2" />
                 <span className="hidden lg:inline">Crypto</span>
-              </Button>
-              <Button 
-                size="sm" 
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 hover:scale-105"
-              >
-                <Sparkles className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">AI Compose</span>
               </Button>
               <Button 
                 variant="outline" 

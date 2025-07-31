@@ -26,10 +26,6 @@ const SidebarSection = ({
         onMessageTypeFilter={onMessageTypeFilter}
         onViewMessage={onViewMessage}
       />
-      <SpamGuard 
-        messages={messages}
-        onMessageAction={onMessageAction}
-      />
       <WalletSection />
       <DailyNotes />
       <AIAssistant />
