@@ -11,6 +11,7 @@ import MessageTabs from "@/components/MessageTabs";
 import AuthPage from "@/components/auth/AuthPage";
 import PriorityDashboardCards from "@/components/PriorityDashboardCards";
 import AIUsageTracker from "@/components/AIUsageTracker";
+import { UserStatsOverview } from "@/components/UserStatsOverview";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
 
@@ -153,6 +154,7 @@ const Index = () => {
         <PriorityDashboardCards 
           onShowRecoveryDashboard={() => setShowRecoveryDashboard(true)}
         />
+        <UserStatsOverview />
         <AIUsageTracker />
       </div>
 
