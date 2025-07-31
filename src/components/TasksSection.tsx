@@ -200,19 +200,23 @@ const TasksSection = ({ onViewSource, onTaskComplete }: TasksSectionProps) => {
                   </Badge>
                 </div>
                 
+                <div className="flex items-center space-x-2 text-xs text-gray-600 mb-2">
+                  <div className="flex items-center space-x-1">
+                    {getPlatformIcon(task.platform)}
+                    <span>{task.platform}</span>
+                  </div>
+                  <span>•</span>
+                  <span>{task.source}</span>
+                  <span>•</span>
+                  <div className="flex items-center space-x-1">
+                    <Clock className="w-3 h-3" />
+                    <span>{task.timestamp}</span>
+                  </div>
+                </div>
+                
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 text-xs text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      {getPlatformIcon(task.platform)}
-                      <span>{task.platform}</span>
-                    </div>
-                    <span>•</span>
-                    <span>{task.source}</span>
-                    <span>•</span>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-3 h-3" />
-                      <span>{task.timestamp}</span>
-                    </div>
+                  <div className="text-xs text-gray-500">
+                    {getUsageText('scoring')}
                   </div>
                   
                   <div className="flex items-center space-x-1">
@@ -221,7 +225,7 @@ const TasksSection = ({ onViewSource, onTaskComplete }: TasksSectionProps) => {
                       variant="ghost"
                       onClick={() => handleScoreTask(task.id, task.summary)}
                       disabled={isProcessing || isLimitReached('scoring')}
-                      className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700"
+                      className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 flex-shrink-0"
                     >
                       <Target className="w-3 h-3 mr-1" />
                       Score
@@ -230,17 +234,12 @@ const TasksSection = ({ onViewSource, onTaskComplete }: TasksSectionProps) => {
                       size="sm"
                       variant="ghost"
                       onClick={() => onViewSource(task.messageId)}
-                      className="h-6 px-2 text-xs text-purple-600 hover:text-purple-700"
+                      className="h-7 px-2 text-xs text-purple-600 hover:text-purple-700 flex-shrink-0"
                     >
                       <ExternalLink className="w-3 h-3 mr-1" />
                       View
                     </Button>
                   </div>
-                </div>
-                
-                {/* Usage indicator for scoring */}
-                <div className="text-xs text-gray-500 text-right mt-1">
-                  {getUsageText('scoring')}
                 </div>
               </div>
             </div>
