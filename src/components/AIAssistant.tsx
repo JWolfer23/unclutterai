@@ -72,16 +72,16 @@ const AIAssistant = () => {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium">Quick Actions</h3>
           </div>
-          <div className="flex space-x-2">
-            <Button variant="ghost" size="sm" className="text-xs">
+          <div className="flex justify-between space-x-2">
+            <Button variant="ghost" size="sm" className="text-xs flex-1">
               <Sparkles className="w-3 h-3 mr-1" />
               Summarize All
             </Button>
-            <Button variant="ghost" size="sm" className="text-xs">
+            <Button variant="ghost" size="sm" className="text-xs flex-1">
               <Zap className="w-3 h-3 mr-1" />
               Draft Responses
             </Button>
-            <Button variant="ghost" size="sm" className="text-xs px-2">
+            <Button variant="ghost" size="sm" className="text-xs px-3">
               ⋯
             </Button>
           </div>
