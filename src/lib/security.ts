@@ -70,9 +70,36 @@ export const validateEmail = (email: string): boolean => {
 };
 
 export const validatePassword = (password: string): boolean => {
-  // At least 8 characters, with uppercase, lowercase, number, and special character
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  // Enhanced password requirements: at least 12 characters, with uppercase, lowercase, number, and special character
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/;
   return passwordRegex.test(password);
+};
+
+// Password strength scoring (0-100)
+export const getPasswordStrength = (password: string): { score: number; feedback: string[] } => {
+  const feedback: string[] = [];
+  let score = 0;
+
+  if (password.length >= 12) score += 25;
+  else feedback.push(`Use at least 12 characters (current: ${password.length})`);
+
+  if (/[a-z]/.test(password)) score += 15;
+  else feedback.push('Add lowercase letters');
+
+  if (/[A-Z]/.test(password)) score += 15;
+  else feedback.push('Add uppercase letters');
+
+  if (/\d/.test(password)) score += 15;
+  else feedback.push('Add numbers');
+
+  if (/[@$!%*?&]/.test(password)) score += 15;
+  else feedback.push('Add special characters (@$!%*?&)');
+
+  // Bonus points for additional complexity
+  if (password.length >= 16) score += 10;
+  if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) score += 5;
+
+  return { score: Math.min(score, 100), feedback };
 };
 
 // Content sanitization
@@ -82,10 +109,11 @@ export const sanitizeHtml = (input: string): string => {
   return div.innerHTML;
 };
 
-// Rate limiting utilities
+// Enhanced rate limiting utilities with progressive penalties
 export class RateLimiter {
-  private attempts: Map<string, { count: number; resetTime: number }> = new Map();
-  private ipAttempts: Map<string, { count: number; resetTime: number }> = new Map();
+  private attempts: Map<string, { count: number; resetTime: number; penalty: number }> = new Map();
+  private ipAttempts: Map<string, { count: number; resetTime: number; penalty: number }> = new Map();
+  private suspiciousIPs: Set<string> = new Set();
 
   constructor(
     private maxAttempts: number = 5,
@@ -95,31 +123,65 @@ export class RateLimiter {
   isAllowed(identifier: string, ipAddress?: string): boolean {
     const now = Date.now();
     
-    // Check identifier-based rate limiting
+    // Check for suspicious IP patterns
+    if (ipAddress && this.suspiciousIPs.has(ipAddress)) {
+      securityMonitor.logEvent({
+        type: 'rate_limit_exceeded',
+        metadata: { identifier: ipAddress, reason: 'suspicious_ip_blocked' }
+      });
+      return false;
+    }
+    
+    // Check identifier-based rate limiting with progressive penalties
     const record = this.attempts.get(identifier);
     if (!record || now > record.resetTime) {
-      this.attempts.set(identifier, { count: 1, resetTime: now + this.windowMs });
+      this.attempts.set(identifier, { count: 1, resetTime: now + this.windowMs, penalty: 0 });
     } else {
-      if (record.count >= this.maxAttempts) {
+      const adjustedLimit = Math.max(1, this.maxAttempts - record.penalty);
+      if (record.count >= adjustedLimit) {
+        // Increase penalty for repeat offenders
+        record.penalty = Math.min(record.penalty + 1, 4);
+        record.resetTime = now + (this.windowMs * Math.pow(2, record.penalty)); // Exponential backoff
+        
         securityMonitor.logEvent({
           type: 'rate_limit_exceeded',
-          metadata: { identifier, attempts: record.count, type: 'identifier' }
+          metadata: { 
+            identifier, 
+            attempts: record.count, 
+            penalty: record.penalty,
+            type: 'identifier_progressive' 
+          }
         });
         return false;
       }
       record.count++;
     }
 
-    // Check IP-based rate limiting if provided
+    // Enhanced IP-based rate limiting
     if (ipAddress) {
       const ipRecord = this.ipAttempts.get(ipAddress);
       if (!ipRecord || now > ipRecord.resetTime) {
-        this.ipAttempts.set(ipAddress, { count: 1, resetTime: now + this.windowMs });
+        this.ipAttempts.set(ipAddress, { count: 1, resetTime: now + this.windowMs, penalty: 0 });
       } else {
-        if (ipRecord.count >= this.maxAttempts * 2) { // More lenient for IP
+        const ipLimit = this.maxAttempts * 3; // More lenient for IP
+        if (ipRecord.count >= ipLimit) {
+          // Mark IP as suspicious after excessive attempts
+          if (ipRecord.count >= ipLimit * 2) {
+            this.suspiciousIPs.add(ipAddress);
+          }
+          
+          ipRecord.penalty = Math.min(ipRecord.penalty + 1, 6);
+          ipRecord.resetTime = now + (this.windowMs * Math.pow(2, ipRecord.penalty));
+          
           securityMonitor.logEvent({
             type: 'rate_limit_exceeded',
-            metadata: { identifier: ipAddress, attempts: ipRecord.count, type: 'ip' }
+            metadata: { 
+              identifier: ipAddress, 
+              attempts: ipRecord.count, 
+              penalty: ipRecord.penalty,
+              type: 'ip_progressive',
+              marked_suspicious: this.suspiciousIPs.has(ipAddress)
+            }
           });
           return false;
         }
@@ -133,7 +195,23 @@ export class RateLimiter {
   reset(identifier: string): void {
     this.attempts.delete(identifier);
   }
+
+  // Clear suspicious IP marking (for administrative use)
+  clearSuspiciousIP(ipAddress: string): void {
+    this.suspiciousIPs.delete(ipAddress);
+    this.ipAttempts.delete(ipAddress);
+  }
+
+  // Get current penalty level for identifier
+  getPenaltyLevel(identifier: string): number {
+    const record = this.attempts.get(identifier);
+    return record?.penalty || 0;
+  }
 }
 
-export const authRateLimiter = new RateLimiter(5, 300000); // 5 attempts per 5 minutes
-export const biometricRateLimiter = new RateLimiter(3, 60000); // 3 attempts per minute
+export const authRateLimiter = new RateLimiter(3, 300000); // 3 attempts per 5 minutes (tightened)
+export const biometricRateLimiter = new RateLimiter(2, 120000); // 2 attempts per 2 minutes (tightened)
+
+// Additional specialized rate limiters
+export const passwordResetRateLimiter = new RateLimiter(2, 900000); // 2 password resets per 15 minutes
+export const apiRateLimiter = new RateLimiter(10, 60000); // 10 API calls per minute

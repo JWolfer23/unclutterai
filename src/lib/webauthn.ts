@@ -26,21 +26,25 @@ export const checkBiometricSupport = async (): Promise<boolean> => {
   }
 };
 
-// Rate limiting for biometric operations
-const rateLimiter = new Map<string, { count: number; lastAttempt: number }>();
-const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_ATTEMPTS = 5;
+// Enhanced rate limiting for biometric operations
+const rateLimiter = new Map<string, { count: number; lastAttempt: number; penalty: number }>();
+const RATE_LIMIT_WINDOW = 120000; // 2 minutes (increased)
+const MAX_ATTEMPTS = 2; // Reduced attempts
+const MAX_PENALTY = 5;
 
 const checkRateLimit = (identifier: string): boolean => {
   const now = Date.now();
   const record = rateLimiter.get(identifier);
   
-  if (!record || now - record.lastAttempt > RATE_LIMIT_WINDOW) {
-    rateLimiter.set(identifier, { count: 1, lastAttempt: now });
+  if (!record || now - record.lastAttempt > RATE_LIMIT_WINDOW * Math.pow(2, record.penalty || 0)) {
+    rateLimiter.set(identifier, { count: 1, lastAttempt: now, penalty: record?.penalty || 0 });
     return true;
   }
   
   if (record.count >= MAX_ATTEMPTS) {
+    // Increase penalty for repeated failures
+    record.penalty = Math.min((record.penalty || 0) + 1, MAX_PENALTY);
+    console.warn(`Biometric rate limit exceeded for ${identifier}, penalty level: ${record.penalty}`);
     return false;
   }
   
@@ -63,14 +67,25 @@ export const registerBiometric = async (userId: string, userName: string) => {
   const deviceInfo = {
     userAgent: navigator.userAgent,
     language: navigator.language,
+    languages: navigator.languages?.slice(0, 3), // First 3 languages
     platform: navigator.platform,
     screenResolution: `${screen.width}x${screen.height}`,
+    colorDepth: screen.colorDepth,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    cookieEnabled: navigator.cookieEnabled,
+    doNotTrack: navigator.doNotTrack,
+    hardwareConcurrency: navigator.hardwareConcurrency,
+    maxTouchPoints: navigator.maxTouchPoints,
     timestamp: Date.now()
   };
   
-  // Create consistent device fingerprint
-  const deviceFingerprint = btoa(JSON.stringify(deviceInfo));
+  // Create secure device fingerprint with hashing
+  const deviceString = JSON.stringify(deviceInfo);
+  const encoder = new TextEncoder();
+  const data = encoder.encode(deviceString);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const deviceFingerprint = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   
   const registrationOptions = {
     rp: {
@@ -128,17 +143,29 @@ export const authenticateWithBiometric = async (credentialId: string, serverChal
     challenge = btoa(String.fromCharCode(...challengeArray));
   }
 
-  // Regenerate device fingerprint for validation
+  // Regenerate device fingerprint for validation (must match registration)
   const deviceInfo = {
     userAgent: navigator.userAgent,
     language: navigator.language,
+    languages: navigator.languages?.slice(0, 3),
     platform: navigator.platform,
     screenResolution: `${screen.width}x${screen.height}`,
+    colorDepth: screen.colorDepth,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    cookieEnabled: navigator.cookieEnabled,
+    doNotTrack: navigator.doNotTrack,
+    hardwareConcurrency: navigator.hardwareConcurrency,
+    maxTouchPoints: navigator.maxTouchPoints,
     timestamp: Date.now()
   };
   
-  const deviceFingerprint = btoa(JSON.stringify(deviceInfo));
+  // Create secure device fingerprint with hashing (same process as registration)
+  const deviceString = JSON.stringify(deviceInfo);
+  const encoder = new TextEncoder();
+  const data = encoder.encode(deviceString);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const deviceFingerprint = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
   const authenticationOptions = {
     challenge,

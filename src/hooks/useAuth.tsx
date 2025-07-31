@@ -51,7 +51,7 @@ export const useAuth = () => {
     }
 
     if (!validatePassword(password)) {
-      const error = new Error('Password does not meet security requirements (minimum 6 characters, mix of letters and numbers)');
+      const error = new Error('Password does not meet security requirements (minimum 12 characters with uppercase, lowercase, numbers, and special characters)');
       console.error('❌ Validation failed: Weak password');
       securityMonitor.logEvent({
         type: 'auth_failure',
