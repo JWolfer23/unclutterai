@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { Fingerprint } from "lucide-react";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { validateEmail, getPasswordStrength } from "@/lib/security";
+import { supabase } from "@/integrations/supabase/client";
 
 const AuthPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -17,6 +19,9 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
   const [biometricSupported, setBiometricSupported] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const { signIn, signUp, signInWithBiometric, isBiometricSupported } = useAuth();
 
   useEffect(() => {
@@ -144,6 +149,50 @@ const AuthPage = () => {
     }
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+
+    if (!validateEmail(resetEmail)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      setResetLoading(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset`,
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Password reset email sent!",
+          description: "Check your inbox for the password reset link.",
+        });
+        setResetDialogOpen(false);
+        setResetEmail("");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100 flex flex-col items-center justify-center p-4 gap-6">
       <Card className="w-full max-w-md bg-white/80 backdrop-blur-md border-white/20 shadow-lg">
@@ -191,6 +240,38 @@ const AuthPage = () => {
               />
               {isSignUp && password && (
                 <PasswordStrengthMeter password={password} className="mt-2" />
+              )}
+              {!isSignUp && (
+                <div className="mt-2">
+                  <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="link" className="text-sm text-purple-600 p-0 h-auto">
+                        Forgot your password?
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Reset your password</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handlePasswordReset} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="resetEmail">Email address</Label>
+                          <Input
+                            id="resetEmail"
+                            type="email"
+                            value={resetEmail}
+                            onChange={(e) => setResetEmail(e.target.value)}
+                            placeholder="Enter your email address"
+                            required
+                          />
+                        </div>
+                        <Button type="submit" className="w-full" disabled={resetLoading}>
+                          {resetLoading ? "Sending..." : "Send reset email"}
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               )}
             </div>
             <Button 
