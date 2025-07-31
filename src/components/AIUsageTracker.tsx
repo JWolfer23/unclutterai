@@ -83,20 +83,101 @@ const AIUsageTracker = () => {
     },
   ];
 
+  const getTotalUsed = () => {
+    if (!usage) return 0;
+    return usage.summary + usage.task_generation + usage.scoring;
+  };
+
+  const getTotalLimit = () => {
+    return AI_USAGE_LIMITS.summary + AI_USAGE_LIMITS.task_generation + AI_USAGE_LIMITS.scoring;
+  };
+
+  const isAtLimit = () => {
+    if (!usage) return false;
+    return usage.summary >= AI_USAGE_LIMITS.summary || 
+           usage.task_generation >= AI_USAGE_LIMITS.task_generation || 
+           usage.scoring >= AI_USAGE_LIMITS.scoring;
+  };
+
+  const isNearLimit = () => {
+    if (!usage) return false;
+    const summaryNear = usage.summary >= AI_USAGE_LIMITS.summary * 0.8;
+    const taskNear = usage.task_generation >= AI_USAGE_LIMITS.task_generation * 0.8;
+    const scoringNear = usage.scoring >= AI_USAGE_LIMITS.scoring * 0.8;
+    return summaryNear || taskNear || scoringNear;
+  };
+
+  const getTimeUntilReset = () => {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const diff = tomorrow.getTime() - now.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${hours}h ${minutes}m`;
+  };
+
   return (
-    <Card className="bg-white/80 backdrop-blur-md border-white/20">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">AI Usage: 3/55 Today</p>
-            <p className="text-xs text-gray-600">Resets in 6h 43m</p>
-          </div>
-          <Button size="sm" variant="outline" className="text-xs">
-            Upgrade to Premium
-          </Button>
+    <div className="space-y-3">
+      {/* Upgrade prompt banner for hitting limits */}
+      {isAtLimit() && (
+        <Alert className="bg-orange-50 border-orange-200 text-orange-800">
+          <Zap className="h-4 w-4" />
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <span className="text-sm">You've hit your daily limit. Upgrade to Premium for 100 summaries/day.</span>
+            <Button size="sm" variant="outline" className="text-xs bg-white hover:bg-orange-50">
+              Upgrade Now
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Subtle banner for near limits */}
+      {!isAtLimit() && isNearLimit() && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-700">Running low? Upgrade for more AI power.</p>
         </div>
-      </CardContent>
-    </Card>
+      )}
+
+      {/* Main usage card */}
+      <Card className="bg-white/80 backdrop-blur-md border-white/20">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">AI Usage: {getTotalUsed()}/{getTotalLimit()} Today</p>
+              <p className="text-xs text-gray-600">Resets in {getTimeUntilReset()}</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              {isAtLimit() && (
+                <span className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full">
+                  Limit reached
+                </span>
+              )}
+              {!isAtLimit() && isNearLimit() && (
+                <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">
+                  Running low
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {/* Upgrade button */}
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="w-full text-xs bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 border-purple-200"
+            >
+              <span className="mr-1">🔓</span>
+              Upgrade to Premium
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
