@@ -329,10 +329,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_ai_dashboard: {
+        Row: {
+          daily_summaries: number | null
+          email: string | null
+          focus_streak: number | null
+          tasks_generated: number | null
+          tokens_earned: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      get_user_weekly_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          email: string
+          daily_summaries: number
+          tasks_generated: number
+          tokens_earned: number
+          focus_streak: number
+        }[]
+      }
     }
     Enums: {
       message_type: "email" | "text" | "social" | "voice"
