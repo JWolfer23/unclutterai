@@ -9,6 +9,7 @@ import EmailSetup from "./pages/EmailSetup";
 import CryptoIntegration from "./pages/CryptoIntegration";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./components/auth/AuthPage";
+import PasswordReset from "./pages/PasswordReset";
 import { useAuth } from "@/hooks/useAuth";
 import { SecurityProvider } from "@/components/SecurityProvider";
 
@@ -30,6 +31,7 @@ const App = () => {
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
+              <Route path="/reset" element={<PasswordReset />} />
               <Route path="/" element={user ? <Index /> : <Navigate to="/auth" replace />} />
               <Route path="/email-setup" element={user ? <EmailSetup /> : <Navigate to="/auth" replace />} />
               <Route path="/crypto-integration" element={user ? <CryptoIntegration /> : <Navigate to="/auth" replace />} />
