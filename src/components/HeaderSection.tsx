@@ -95,8 +95,8 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
                 className="w-full h-full object-contain"
               />
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            <div>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 Unclutter
               </h1>
               <p className="text-xs sm:text-sm text-gray-500">AI Communication Assistant</p>
