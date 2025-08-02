@@ -18,26 +18,59 @@ const PasswordReset = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check for recovery session from URL hash or search params
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
-    const type = hashParams.get('type') || searchParams.get('type');
-    
-    console.log('Recovery params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
-    
-    if (accessToken && refreshToken && type === 'recovery') {
-      // Store tokens temporarily instead of setting session immediately
-      setRecoveryTokens({ accessToken, refreshToken });
-    } else {
-      // No valid recovery tokens found
-      toast({
-        title: "Invalid reset link",
-        description: "This password reset link is invalid or has expired.",
-        variant: "destructive",
-      });
-      navigate('/auth');
-    }
+    const handleRecoverySession = async () => {
+      // Check for recovery session from URL hash or search params
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+      const type = hashParams.get('type') || searchParams.get('type');
+      
+      console.log('Recovery params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+      
+      if (accessToken && refreshToken && type === 'recovery') {
+        try {
+          setLoading(true);
+          // Immediately set the session with the tokens from the recovery link
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          
+          if (error) {
+            console.error('Session error:', error);
+            toast({
+              title: "Invalid reset link",
+              description: "This password reset link is invalid or has expired.",
+              variant: "destructive",
+            });
+            navigate('/auth');
+          } else {
+            console.log('Recovery session set successfully');
+            setRecoveryTokens({ accessToken, refreshToken });
+          }
+        } catch (error) {
+          console.error('Recovery error:', error);
+          toast({
+            title: "Invalid reset link",
+            description: "This password reset link is invalid or has expired.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // No valid recovery tokens found
+        toast({
+          title: "Invalid reset link",
+          description: "This password reset link is invalid or has expired.",
+          variant: "destructive",
+        });
+        navigate('/auth');
+      }
+    };
+
+    handleRecoverySession();
   }, [searchParams, navigate, toast]);
 
   const isPasswordValid = password.length >= 12;
@@ -77,17 +110,7 @@ const PasswordReset = () => {
     setLoading(true);
 
     try {
-      // First set the session with recovery tokens
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: recoveryTokens.accessToken,
-        refresh_token: recoveryTokens.refreshToken,
-      });
-
-      if (sessionError) {
-        throw sessionError;
-      }
-
-      // Then update the password
+      // Update the password (session is already set from useEffect)
       const { error } = await supabase.auth.updateUser({ 
         password: password 
       });
@@ -100,10 +123,14 @@ const PasswordReset = () => {
         });
       } else {
         toast({
-          title: "Password updated successfully",
-          description: "Your password has been updated. You can now sign in with your new password.",
+          title: "Password successfully updated",
+          description: "Redirecting to dashboard...",
         });
-        navigate('/');
+        
+        // Redirect to dashboard after 2 seconds
+        setTimeout(() => {
+          navigate('/');
+        }, 2000);
       }
     } catch (error) {
       toast({
