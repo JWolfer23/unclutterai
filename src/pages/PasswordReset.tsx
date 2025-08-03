@@ -12,28 +12,27 @@ const PasswordReset = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [recoveryTokens, setRecoveryTokens] = useState<{accessToken: string, refreshToken: string} | null>(null);
+  const [sessionSet, setSessionSet] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     const handleRecoverySession = async () => {
-      // Check for recovery session from URL hash or search params
+      // Extract tokens from URL hash or search params
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
       const type = hashParams.get('type') || searchParams.get('type');
       
-      console.log('Recovery params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+      console.log('Recovery params:', { accessToken: !!accessToken, type });
       
-      if (accessToken && refreshToken && type === 'recovery') {
+      if (accessToken && type === 'recovery') {
         try {
           setLoading(true);
-          // Immediately set the session with the tokens from the recovery link
+          // Set the session with the access token from the recovery link
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
-            refresh_token: refreshToken,
+            refresh_token: "", // Not required for password reset
           });
           
           if (error) {
@@ -46,7 +45,7 @@ const PasswordReset = () => {
             navigate('/auth');
           } else {
             console.log('Recovery session set successfully');
-            setRecoveryTokens({ accessToken, refreshToken });
+            setSessionSet(true);
           }
         } catch (error) {
           console.error('Recovery error:', error);
@@ -79,7 +78,7 @@ const PasswordReset = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!recoveryTokens) {
+    if (!sessionSet) {
       toast({
         title: "Invalid session",
         description: "No valid recovery session found. Please try again.",
