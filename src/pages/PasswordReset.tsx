@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,24 +11,20 @@ import { useToast } from "@/hooks/use-toast";
 const PasswordReset = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [sessionSet, setSessionSet] = useState(false);
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     const handleRecoverySession = async () => {
-      // Extract tokens from URL hash or search params
+      // Extract access_token from URL hash
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
-      const type = hashParams.get('type') || searchParams.get('type');
-      
-      console.log('Recovery params:', { accessToken: !!accessToken, type });
+      const accessToken = hashParams.get('access_token');
+      const type = hashParams.get('type');
       
       if (accessToken && type === 'recovery') {
         try {
-          setLoading(true);
           // Set the session with the access token from the recovery link
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -36,7 +32,6 @@ const PasswordReset = () => {
           });
           
           if (error) {
-            console.error('Session error:', error);
             toast({
               title: "Invalid reset link",
               description: "This password reset link is invalid or has expired.",
@@ -44,22 +39,17 @@ const PasswordReset = () => {
             });
             navigate('/auth');
           } else {
-            console.log('Recovery session set successfully');
             setSessionSet(true);
           }
         } catch (error) {
-          console.error('Recovery error:', error);
           toast({
             title: "Invalid reset link",
             description: "This password reset link is invalid or has expired.",
             variant: "destructive",
           });
           navigate('/auth');
-        } finally {
-          setLoading(false);
         }
       } else {
-        // No valid recovery tokens found
         toast({
           title: "Invalid reset link",
           description: "This password reset link is invalid or has expired.",
@@ -67,10 +57,11 @@ const PasswordReset = () => {
         });
         navigate('/auth');
       }
+      setLoading(false);
     };
 
     handleRecoverySession();
-  }, [searchParams, navigate, toast]);
+  }, [navigate, toast]);
 
   const isPasswordValid = password.length >= 12;
   const passwordsMatch = password === confirmPassword;
@@ -126,10 +117,10 @@ const PasswordReset = () => {
           description: "Redirecting to dashboard...",
         });
         
-        // Redirect to dashboard after 2 seconds
+        // Redirect to dashboard after 1 second
         setTimeout(() => {
           navigate('/');
-        }, 2000);
+        }, 1000);
       }
     } catch (error) {
       toast({
