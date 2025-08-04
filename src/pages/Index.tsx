@@ -15,6 +15,7 @@ import { UserStatsOverview } from "@/components/UserStatsOverview";
 import { AIUsageResetTimer } from "@/components/AIUsageResetTimer";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
@@ -120,6 +121,35 @@ const Index = () => {
     }
   };
 
+  const handleZapierTest = async () => {
+    try {
+      const response = await fetch("https://hooks.zapier.com/hooks/catch/12407528/u4zyh06/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        mode: "no-cors",
+        body: JSON.stringify({
+          sender: "justinwolfer@gmail.comi",
+          channel: "Test Channel",
+          preview: "This is a test message from Lovable"
+        }),
+      });
+
+      toast({
+        title: "Zapier Test Sent",
+        description: "The test request was sent to Zapier. Check your Zap's history to confirm it was triggered.",
+      });
+    } catch (error) {
+      console.error("Error sending Zapier test:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send the Zapier test. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Show onboarding for first-time users
   if (onboardingState.showOnboarding && !isOnboardingComplete) {
     return (
@@ -158,6 +188,11 @@ const Index = () => {
         <div className="space-y-4">
           <UserStatsOverview />
           <AIUsageResetTimer />
+          <div className="flex justify-center">
+            <Button onClick={handleZapierTest} variant="outline">
+              Send Zapier Test
+            </Button>
+          </div>
         </div>
         <AIUsageTracker />
       </div>
