@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import logoDark from "@/assets/logo-dark.png";
 
 interface HeaderSectionProps {
   onShowCommandPalette: () => void;
@@ -62,7 +63,7 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
       </Button>
       <Button 
         size="sm" 
-        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 justify-start"
+        className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 justify-start"
       >
         <Sparkles className="w-4 h-4 mr-2" />
         AI Compose
@@ -88,18 +89,18 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
         <div className="flex justify-between items-center py-4">
           {/* Logo Section */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden border-2 border-purple-200/50 bg-white/50">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden">
               <img 
-                src="/lovable-uploads/064ee60b-3850-4faa-abe4-7aefeedf9961.png" 
-                alt="Unclutter Logo"
+                src={logoDark} 
+                alt="Unclutter AI Logo"
                 className="w-full h-full object-contain"
               />
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
                 Unclutter
               </h1>
-              <p className="text-xs sm:text-sm text-gray-500">AI Communication Assistant</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">AI Communication Assistant</p>
             </div>
           </div>
 
@@ -132,7 +133,7 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
               </Button>
               <Button 
                 size="sm" 
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 hover:scale-105"
+                className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 transition-all duration-200 hover:scale-105"
               >
                 <Sparkles className="w-4 h-4 lg:mr-2" />
                 <span className="hidden lg:inline">AI Compose</span>
