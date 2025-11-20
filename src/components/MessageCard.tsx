@@ -114,10 +114,10 @@ const MessageCard = ({ message, onClick, isSelected }: MessageCardProps) => {
 
   return (
     <Card 
-      className={`cursor-pointer transition-all duration-200 hover:shadow-lg border-white/20 ${
+      className={`cursor-pointer transition-all duration-200 hover:shadow-lg glass-card ${
         isSelected 
-          ? 'bg-purple-50/80 border-purple-200 shadow-md' 
-          : 'bg-white/60 hover:bg-white/80'
+          ? 'border-purple-500/50 shadow-md' 
+          : 'hover:border-cyan-500/30'
       }`}
       onClick={onClick}
     >

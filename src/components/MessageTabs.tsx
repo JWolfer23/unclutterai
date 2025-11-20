@@ -78,7 +78,7 @@ const MessageTabs = ({
   };
 
   return (
-    <Card className="bg-white/80 backdrop-blur-md border-white/20">
+    <Card className="glass-card">
       <CardContent className="p-6">
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">

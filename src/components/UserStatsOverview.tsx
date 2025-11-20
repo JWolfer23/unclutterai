@@ -27,7 +27,7 @@ const StatCard = ({ icon, label, value, isLoading }: StatCardProps) => {
   }
 
   return (
-    <Card className="animate-fade-in hover-scale transition-all duration-200">
+    <Card className="glass-card animate-fade-in hover-scale transition-all duration-200">
       <CardContent className="p-6">
         <div className="flex items-center space-x-3">
           <span className="text-2xl">{icon}</span>

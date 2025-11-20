@@ -89,7 +89,7 @@ const DailyNotes = () => {
   const isToday = currentDate === new Date().toISOString().split('T')[0];
 
   return (
-    <Card className="bg-white/80 backdrop-blur-md border-white/20">
+    <Card className="glass-card">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Daily Notes</CardTitle>

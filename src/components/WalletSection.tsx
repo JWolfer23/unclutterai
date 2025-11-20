@@ -26,7 +26,7 @@ const WalletSection = () => {
 
   if (isLoading) {
     return (
-      <Card className="bg-white/80 backdrop-blur-md border-white/20">
+      <Card className="glass-card">
         <CardContent className="p-6">
           <div className="animate-pulse space-y-4">
             <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -38,7 +38,7 @@ const WalletSection = () => {
   }
 
   return (
-    <Card className="bg-white/80 backdrop-blur-md border-white/20">
+    <Card className="glass-card">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center space-x-2">
           <Wallet className="w-5 h-5 text-blue-600" />
