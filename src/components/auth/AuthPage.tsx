@@ -11,6 +11,7 @@ import { Fingerprint } from "lucide-react";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { validateEmail, getPasswordStrength } from "@/lib/security";
 import { supabase } from "@/integrations/supabase/client";
+import logoDark from "@/assets/logo-dark.png";
 
 const AuthPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -194,20 +195,20 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100 flex flex-col items-center justify-center p-4 gap-6">
-      <Card className="w-full max-w-md bg-white/80 backdrop-blur-md border-white/20 shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-background via-purple-50 to-cyan-50 dark:from-background dark:via-purple-950/20 dark:to-cyan-950/20 flex flex-col items-center justify-center p-4 gap-6">
+      <Card className="w-full max-w-md glass-card">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-purple-200/50 bg-white/50 mx-auto mb-4">
+          <div className="w-16 h-16 rounded-xl overflow-hidden mx-auto mb-4">
             <img 
-              src="/lovable-uploads/064ee60b-3850-4faa-abe4-7aefeedf9961.png" 
-              alt="Unclutter Logo"
+              src={logoDark} 
+              alt="Unclutter AI Logo"
               className="w-full h-full object-contain"
             />
           </div>
-          <CardTitle className="text-2xl bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+          <CardTitle className="text-2xl bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
             Welcome to UnclutterAI
           </CardTitle>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             {isSignUp ? "Create your account" : "Sign in to your account"}
           </p>
         </CardHeader>
@@ -276,7 +277,7 @@ const AuthPage = () => {
             </div>
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+              className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
               disabled={loading}
             >
               {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}

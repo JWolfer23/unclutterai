@@ -22,10 +22,10 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
       {/* Priority Cards - Mobile first layout */}
       <div className="flex flex-col md:flex-row gap-4 w-full">
         {/* Focus Score Card */}
-        <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 shadow-lg flex-1">
+        <Card className="glass-card flex-1 bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
@@ -57,7 +57,7 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
         </Card>
 
         {/* UCT Tokens Card */}
-        <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 shadow-lg flex-1">
+        <Card className="glass-card flex-1 bg-gradient-to-r from-amber-500/10 to-orange-500/10">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
@@ -73,7 +73,7 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
         </Card>
 
         {/* Community Ranking Card */}
-        <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 shadow-lg flex-1">
+        <Card className="glass-card flex-1 bg-gradient-to-r from-emerald-500/10 to-teal-500/10">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center">

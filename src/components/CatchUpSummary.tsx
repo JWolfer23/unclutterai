@@ -90,7 +90,7 @@ const CatchUpSummary = ({
 
         <div className="space-y-6">
           {/* Enhanced Focus Summary */}
-          <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+          <Card className="glass-card bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
             <CardContent className="p-6">
               <div className="text-center mb-4">
                 <div className="text-lg font-semibold text-gray-900 mb-2">
@@ -130,7 +130,7 @@ const CatchUpSummary = ({
 
           {/* High Priority Messages Preview */}
           {highPriorityMessages.length > 0 && (
-            <Card>
+            <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center space-x-2">
                   <AlertTriangle className="w-5 h-5 text-red-600" />
@@ -163,7 +163,7 @@ const CatchUpSummary = ({
           )}
 
           {/* Enhanced Action Plan */}
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle className="text-lg flex items-center space-x-2">
                 <Star className="w-5 h-5 text-purple-600" />
@@ -174,7 +174,7 @@ const CatchUpSummary = ({
               {!showActionPlan ? (
                 <Button 
                   onClick={() => setShowActionPlan(true)}
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                  className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
                 >
                   <Target className="w-4 h-4 mr-2" />
                   Generate Action Plan
@@ -225,7 +225,7 @@ const CatchUpSummary = ({
           <div className="flex space-x-3">
             <Button 
               onClick={onClose}
-              className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+              className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
             >
               <Zap className="w-4 h-4 mr-2" />
               Start Catch Up

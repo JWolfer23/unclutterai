@@ -127,7 +127,7 @@ const StatsOverview = ({ onMessageTypeFilter, onViewMessage }: StatsOverviewProp
 
   return (
     <div className="space-y-6">
-      <Card className="bg-white/80 backdrop-blur-md border-white/20">
+      <Card className="glass-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Overview</CardTitle>
         </CardHeader>

@@ -125,7 +125,7 @@ const FocusScoreCard = () => {
     <>
       {/* Active Focus Mode Card */}
       {isFocusActive && (
-        <Card className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-none mb-4">
+        <Card className="glass-card bg-gradient-to-r from-cyan-500 to-purple-600 text-white border-none mb-4">
           <CardContent className="p-4">
             <div className="text-center">
               <div className="text-sm font-medium mb-1 flex items-center justify-center space-x-2">

@@ -47,7 +47,7 @@ const AIAssistant = () => {
   return (
     <div className="space-y-6">
       {/* AI Insights */}
-      <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200/50">
+      <Card className="glass-card bg-gradient-to-br from-purple-500/10 to-indigo-500/10">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center space-x-2 text-lg">
             <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
@@ -77,7 +77,7 @@ const AIAssistant = () => {
       </Card>
 
       {/* Quick Actions */}
-      <Card className="bg-white/80 backdrop-blur-md border-white/20">
+      <Card className="glass-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Quick Actions</CardTitle>
         </CardHeader>
@@ -96,7 +96,7 @@ const AIAssistant = () => {
       </Card>
 
       {/* AI Status */}
-      <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200/50">
+      <Card className="glass-card bg-gradient-to-br from-green-500/10 to-emerald-500/10">
         <CardContent className="p-4">
           <div className="flex items-center space-x-3">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
