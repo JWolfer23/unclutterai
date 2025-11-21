@@ -1,84 +1,45 @@
-import { ReactNode } from "react";
+import { platformsByCategory } from "@/config/platforms";
 
-interface PlatformConfig {
-  id: string;
-  name: string;
-  description?: string;
-  icon?: ReactNode;
+interface ConnectedPlatformsProps {
+  connectedPlatforms: string[];
 }
 
-interface PlatformToggleProps {
-  platform: PlatformConfig;
-  isConnected: boolean;
-  onToggle: (platformId: string) => void;
-}
+const ConnectedPlatforms = ({ connectedPlatforms }: ConnectedPlatformsProps) => {
+  if (connectedPlatforms.length === 0) return null;
 
-const PlatformToggle = ({ platform, isConnected, onToggle }: PlatformToggleProps) => {
-  const handleClick = () => {
-    onToggle(platform.id);
-  };
+  // Get all platforms
+  const allPlatforms = [
+    ...platformsByCategory.phone,
+    ...platformsByCategory.messaging,
+    ...platformsByCategory.email,
+    ...platformsByCategory.social,
+  ];
+
+  // Filter to show only connected ones
+  const connected = allPlatforms.filter((p) =>
+    connectedPlatforms.includes(p.id)
+  );
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className="
-        w-full flex items-center justify-between
-        rounded-[20px]
-        bg-white 
-        px-4 py-3.5
-        border border-gray-200
-        shadow-[0_8px_24px_rgba(15,23,42,0.04)]
-        hover:shadow-[0_12px_32px_rgba(15,23,42,0.10)]
-        transition-all duration-150
-        active:scale-[0.98]
-        text-left
-      "
-    >
-      {/* Left side: icon + name + description */}
-      <div className="flex items-center gap-3 min-w-0">
-        {/* Icon bubble */}
-        <div
-          className="
-            h-10 w-10 flex items-center justify-center 
-            rounded-xl
-            bg-gradient-to-br from-white to-gray-50
-            border border-gray-200
-            shadow-inner
-          "
-        >
-          {platform.icon ? (
-            platform.icon
-          ) : (
-            <span className="text-sm font-semibold text-gray-500">{platform.name.charAt(0)}</span>
-          )}
-        </div>
-
-        <div className="space-y-0.5 overflow-hidden">
-          <p className="text-sm font-semibold text-gray-900 truncate">{platform.name}</p>
-          {platform.description && <p className="text-xs text-gray-500 truncate">{platform.description}</p>}
-        </div>
+    <div className="text-center space-y-3">
+      <p className="text-sm font-medium text-gray-600">Connected Platforms</p>
+      <div className="flex flex-wrap justify-center gap-2">
+        {connected.map((platform) => (
+          <div
+            key={platform.id}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-200 shadow-sm"
+          >
+            <div className="w-4 h-4 flex items-center justify-center">
+              {platform.icon}
+            </div>
+            <span className="text-xs font-medium text-gray-700">
+              {platform.name}
+            </span>
+          </div>
+        ))}
       </div>
-
-      {/* Right: iOS-style toggle */}
-      <div
-        className={`
-          relative inline-flex h-6 w-11 items-center rounded-full
-          transition-colors duration-200 ease-out
-          ${isConnected ? "bg-emerald-500" : "bg-gray-300"}
-        `}
-        aria-hidden="true"
-      >
-        <span
-          className={`
-            inline-block h-5 w-5 transform rounded-full bg-white
-            shadow-sm transition-transform duration-200 ease-out
-            ${isConnected ? "translate-x-[20px]" : "translate-x-[2px]"}
-          `}
-        />
-      </div>
-    </button>
+    </div>
   );
 };
 
-export default PlatformToggle;
+export default ConnectedPlatforms;
