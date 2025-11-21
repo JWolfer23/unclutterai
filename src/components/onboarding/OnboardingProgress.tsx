@@ -4,30 +4,30 @@ interface OnboardingProgressProps {
 }
 
 const OnboardingProgress = ({ currentStep, totalSteps }: OnboardingProgressProps) => {
-  const clampedStep = Math.max(1, Math.min(currentStep, totalSteps));
-  const progress = (clampedStep / totalSteps) * 100;
+  const percentage = (currentStep / totalSteps) * 100;
 
   return (
-    <div className="space-y-2">
-      {/* Bar */}
-      <div
-        className="w-full"
-        role="progressbar"
-        aria-valuemin={1}
-        aria-valuemax={totalSteps}
-        aria-valuenow={clampedStep}
-      >
-        <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-          <div
-            className="h-2 rounded-full bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 transition-all duration-300 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+    <div className="w-full mt-1 mb-4">
+      {/* Track */}
+      <div className="h-2 w-full rounded-full bg-white/15 backdrop-blur-lg overflow-hidden relative">
+        {/* Glow behind the bar */}
+        <div
+          className="absolute inset-0 rounded-full bg-gradient-to-r from-[#A855F7]/20 to-[#3B82F6]/20 blur-md"
+          style={{
+            opacity: percentage > 0 ? 1 : 0,
+          }}
+        />
+
+        {/* Fill */}
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-[#A855F7] to-[#3B82F6] transition-all duration-500 ease-out"
+          style={{ width: `${percentage}%` }}
+        />
       </div>
 
-      {/* Label */}
-      <p className="text-xs font-medium text-gray-500 text-center">
-        Step {clampedStep} of {totalSteps}
+      {/* Step text */}
+      <p className="text-center text-xs font-semibold text-white/70 mt-2 tracking-wide">
+        Step {currentStep} of {totalSteps}
       </p>
     </div>
   );
