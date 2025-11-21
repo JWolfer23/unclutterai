@@ -1,14 +1,15 @@
-
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sparkles, Search, LogOut, Coins, Menu } from "lucide-react";
+
 import BetaTestButton from "./BetaTestButton";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState } from "react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logoDark from "@/assets/logo-new.png";
+import { fadeInUp } from "@/ui/styles";
 
 interface HeaderSectionProps {
   onShowCommandPalette: () => void;
@@ -32,50 +33,55 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
   };
 
   const MobileMenu = () => (
-    <div className="flex flex-col space-y-3 p-4">
-      <span className="text-sm text-gray-600 border-b pb-2">
-        Welcome, {user?.email?.split('@')[0]}
+    <div className="flex flex-col space-y-3 p-4 pt-6">
+      <span className="text-sm text-slate-300 border-b border-white/10 pb-2">
+        Welcome, <span className="font-semibold">{user?.email?.split("@")[0]}</span>
       </span>
+
       <BetaTestButton />
+
       <Button
-        variant="outline" 
+        variant="ghost"
         size="sm"
         onClick={() => {
           onShowCommandPalette();
           setIsMenuOpen(false);
         }}
-        className="justify-start"
+        className="justify-start text-slate-100 hover:bg-white/5"
       >
         <Search className="w-4 h-4 mr-2" />
         Search
       </Button>
-      <Button 
-        variant="outline" 
+
+      <Button
+        variant="ghost"
         size="sm"
         onClick={() => {
-          navigate('/crypto-integration');
+          navigate("/crypto-integration");
           setIsMenuOpen(false);
         }}
-        className="justify-start"
+        className="justify-start text-slate-100 hover:bg-white/5"
       >
         <Coins className="w-4 h-4 mr-2" />
         Crypto
       </Button>
-      <Button 
-        size="sm" 
-        className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 justify-start"
+
+      <Button
+        size="sm"
+        className="justify-start h-9 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
       >
         <Sparkles className="w-4 h-4 mr-2" />
         AI Compose
       </Button>
-      <Button 
-        variant="outline" 
-        size="sm" 
+
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => {
           handleSignOut();
           setIsMenuOpen(false);
         }}
-        className="justify-start"
+        className="justify-start text-slate-200 hover:bg-white/5"
       >
         <LogOut className="w-4 h-4 mr-2" />
         Sign Out
@@ -85,62 +91,70 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
 
   return (
     <header className="sticky top-4 z-50 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto unclutter-header">
+      <div className={`max-w-7xl mx-auto unclutter-header ${fadeInUp}`}>
         {/* Logo */}
-        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
-          <img 
-            src={logoDark} 
-            alt="Unclutter AI Logo"
-            className="w-full h-full object-contain"
+        <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 bg-black/40 border border-white/10 flex items-center justify-center">
+          <img
+            src={logoDark}
+            alt="UnclutterAI Logo"
+            className="w-6 h-6 object-contain"
           />
         </div>
 
-        {/* Title & Subtitle */}
+        {/* Title + subtitle */}
         <div className="flex-1 min-w-0">
-          <h1 className="unclutter-header-title bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
-            Unclutter
+          <h1 className="unclutter-header-title bg-gradient-to-r from-cyan-400 via-sky-400 to-purple-500 bg-clip-text text-transparent">
+            UnclutterAI
           </h1>
-          <p className="unclutter-header-subtitle hidden sm:block">AI Communication Assistant</p>
+          <p className="unclutter-header-subtitle hidden sm:block">
+            One inbox, one assistant, zero chaos
+          </p>
         </div>
 
-        {/* Desktop Navigation */}
+        {/* Desktop actions */}
         {!isMobile && (
           <div className="flex items-center gap-2">
             <Button
-              variant="ghost" 
+              variant="ghost"
               size="sm"
               onClick={onShowCommandPalette}
-              className="h-9 px-3 hover:bg-white/5"
+              className="h-9 px-3 text-slate-100 hover:bg-white/8"
             >
-              <Search className="w-4 h-4" />
+              <Search className="w-4 h-4 mr-1" />
+              <span className="hidden md:inline text-xs opacity-70">Search</span>
             </Button>
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               size="sm"
-              onClick={() => navigate('/crypto-integration')}
-              className="h-9 px-3 hover:bg-white/5 hidden md:flex"
+              onClick={() => navigate("/crypto-integration")}
+              className="h-9 px-3 text-slate-100 hover:bg-white/8 hidden md:flex"
             >
-              <Coins className="w-4 h-4" />
+              <Coins className="w-4 h-4 mr-1" />
+              <span className="text-xs opacity-80">UCT / Crypto</span>
             </Button>
-            <Button 
-              size="sm" 
-              className="h-9 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
+
+            <Button
+              size="sm"
+              className="h-9 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 shadow-md shadow-purple-500/30"
             >
               <Sparkles className="w-4 h-4 mr-2" />
               <span className="hidden lg:inline">AI Compose</span>
+              <span className="inline lg:hidden text-xs">Compose</span>
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleSignOut}
-              className="h-9 px-3 hover:bg-white/5 hidden sm:flex"
+              className="h-9 px-3 text-slate-200 hover:bg-white/8 hidden sm:flex"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4 mr-1" />
             </Button>
           </div>
         )}
 
-        {/* Mobile Menu Button */}
+        {/* Mobile menu trigger */}
         {isMobile && (
           <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <SheetTrigger asChild>
@@ -148,7 +162,16 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
                 <Menu className="w-4 h-4" />
               </button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-80 bg-[#05060a] border-white/10">
+            <SheetContent
+              side="right"
+              className="
+                w-80
+                bg-black/85
+                border-l border-white/10
+                backdrop-blur-2xl
+                text-slate-50
+              "
+            >
               <MobileMenu />
             </SheetContent>
           </Sheet>
