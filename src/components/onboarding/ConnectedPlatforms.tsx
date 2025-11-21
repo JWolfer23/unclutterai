@@ -1,6 +1,4 @@
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
 import { platformsByCategory } from "@/config/platforms";
 
@@ -24,19 +22,22 @@ const ConnectedPlatforms = ({ connectedPlatforms }: ConnectedPlatformsProps) => 
   };
 
   return (
-    <Card className="bg-white/60 backdrop-blur-md border-white/20">
-      <CardContent className="pt-6">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Connected Platforms</h3>
+    <div className="mt-6">
+      <div className="bg-white/70 backdrop-blur-md border border-white/40 rounded-[20px] shadow-sm p-5">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Connected Platforms</h3>
         <div className="flex flex-wrap gap-2">
           {connectedPlatforms.map(platformId => (
-            <Badge key={platformId} variant="secondary" className="bg-green-100 text-green-700">
-              <CheckCircle2 className="w-3 h-3 mr-1" />
-              {getPlatformName(platformId)}
-            </Badge>
+            <div 
+              key={platformId} 
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full text-sm font-medium text-green-700"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{getPlatformName(platformId)}</span>
+            </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
