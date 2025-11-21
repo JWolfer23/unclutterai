@@ -48,6 +48,7 @@ const OnboardingFlow = ({ onComplete, onConnect }: OnboardingFlowProps) => {
   };
 
   const handleCompleteSetup = () => {
+    // After last step, show completion
     setIsComplete(true);
     toast({
       title: "🚀 Setup Complete!",
@@ -60,39 +61,50 @@ const OnboardingFlow = ({ onComplete, onConnect }: OnboardingFlowProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50/30 to-white flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-2xl">
         {!isComplete ? (
           <>
-            <div className="text-center space-y-4">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                👋 Welcome to UnclutterAI
-              </h1>
-              <p className="text-gray-600 text-lg">
-                Give me 5 minutes, and you can delete the rest of your messaging apps.
-              </p>
-              <p className="text-gray-500">
-                We're going to connect everything that distracts you — so we can declutter your life. One feed, one assistant, zero chaos.
-              </p>
+            {/* Top intro copy - shown on first step */}
+            {currentStep === 1 && (
+              <div className="text-center space-y-4 mb-8">
+                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
+                  Give me 5 minutes, and you can delete the rest of your messaging apps.
+                </h1>
+                <p className="text-base sm:text-lg text-gray-700 max-w-xl mx-auto">
+                  We're going to connect everything that distracts you — so we can declutter your life. One feed, one assistant, zero chaos.
+                </p>
+                <p className="text-lg font-semibold text-gray-800">
+                  Let's begin.
+                </p>
+              </div>
+            )}
+
+            {/* Onboarding Card */}
+            <div className="bg-white rounded-[24px] shadow-[0_8px_30px_rgba(0,0,0,0.08)] p-6 sm:p-8 space-y-6">
+              {/* Progress bar at top of card */}
+              <OnboardingProgress currentStep={currentStep} totalSteps={stepConfig.length} />
+
+              {/* Step content */}
+              <OnboardingStepCard
+                currentStep={currentStep}
+                connectedPlatforms={connectedPlatforms}
+                onTogglePlatform={handleTogglePlatform}
+                onNextStep={handleNextStep}
+                onComplete={handleCompleteSetup}
+              />
             </div>
 
-            <OnboardingProgress progress={progress} />
-
-            <OnboardingStepCard
-              currentStep={currentStep}
-              connectedPlatforms={connectedPlatforms}
-              onTogglePlatform={handleTogglePlatform}
-              onNextStep={handleNextStep}
-              onComplete={handleCompleteSetup}
-            />
-
+            {/* Connected platforms display */}
             <ConnectedPlatforms connectedPlatforms={connectedPlatforms} />
           </>
         ) : (
-          <OnboardingComplete 
-            connectedPlatforms={connectedPlatforms}
-            onFinish={handleFinish}
-          />
+          <div className="bg-white rounded-[24px] shadow-[0_8px_30px_rgba(0,0,0,0.08)] p-6 sm:p-8">
+            <OnboardingComplete 
+              connectedPlatforms={connectedPlatforms}
+              onFinish={handleFinish}
+            />
+          </div>
         )}
       </div>
     </div>

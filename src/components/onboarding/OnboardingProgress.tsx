@@ -1,19 +1,26 @@
-
 import { Progress } from "@/components/ui/progress";
 
 interface OnboardingProgressProps {
-  progress: number;
+  currentStep: number;
+  totalSteps: number;
 }
 
-const OnboardingProgress = ({ progress }: OnboardingProgressProps) => {
+const OnboardingProgress = ({ currentStep, totalSteps }: OnboardingProgressProps) => {
+  const progress = (currentStep / totalSteps) * 100;
+  
   return (
-    <div className="text-center space-y-4">
-      <p className="text-gray-600 font-medium">Let's begin.</p>
-      
-      <div className="space-y-2">
-        <Progress value={progress} className="h-3" />
-        <p className="text-sm text-gray-500">Step {Math.ceil(progress / 25)} of 4</p>
+    <div className="space-y-2">
+      <div className="relative">
+        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-[#8B5CF6] to-[#A855F7] transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
       </div>
+      <p className="text-center text-sm font-medium text-gray-600">
+        Step {currentStep} of {totalSteps}
+      </p>
     </div>
   );
 };
