@@ -1,33 +1,61 @@
+import { ReactNode } from "react";
 
-import { Switch } from "@/components/ui/switch";
-import { Platform } from "@/config/platforms";
+interface PlatformConfig {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: ReactNode;
+}
 
 interface PlatformToggleProps {
-  platform: Platform;
+  platform: PlatformConfig;
   isConnected: boolean;
   onToggle: (platformId: string) => void;
 }
 
 const PlatformToggle = ({ platform, isConnected, onToggle }: PlatformToggleProps) => {
+  const handleClick = () => {
+    onToggle(platform.id);
+  };
+
   return (
-    <div className="flex items-center justify-between p-4 rounded-[16px] border border-gray-200/50 bg-white shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] hover:bg-gray-50/50 transition-colors">
-      <div className="flex items-center space-x-3">
-        <div className={`w-11 h-11 rounded-full ${platform.color} flex items-center justify-center text-white shadow-sm`}>
-          {platform.icon}
-        </div>
-        <div>
-          <h3 className="font-semibold text-gray-900 text-[15px]">{platform.name}</h3>
-          {platform.description && (
-            <p className="text-[13px] text-gray-600">{platform.description}</p>
+    <button
+      type="button"
+      onClick={handleClick}
+      className="w-full flex items-center justify-between rounded-2xl bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)] border border-gray-100 px-4 py-3.5 transition-transform transition-shadow duration-150 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(15,23,42,0.12)]"
+    >
+      {/* Left: Icon + Text */}
+      <div className="flex items-center gap-3 text-left">
+        {/* Icon bubble */}
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 border border-gray-200 shadow-inner">
+          {platform.icon ? (
+            platform.icon
+          ) : (
+            <span className="text-sm font-semibold text-gray-500">{platform.name.charAt(0)}</span>
           )}
         </div>
+
+        {/* Name + description */}
+        <div className="space-y-0.5">
+          <p className="text-sm font-semibold text-gray-900">{platform.name}</p>
+          {platform.description && <p className="text-xs text-gray-500">{platform.description}</p>}
+        </div>
       </div>
-      <Switch 
-        checked={isConnected}
-        onCheckedChange={() => onToggle(platform.id)}
-        className="data-[state=checked]:bg-white data-[state=unchecked]:bg-gray-200 [&>span]:bg-[#0A0A0A] [&>span]:shadow-md"
-      />
-    </div>
+
+      {/* Right: iOS-style toggle */}
+      <div
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+          isConnected ? "bg-emerald-500" : "bg-gray-300"
+        }`}
+        aria-hidden="true"
+      >
+        <span
+          className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-150 ${
+            isConnected ? "translate-x-[20px]" : "translate-x-[2px]"
+          }`}
+        />
+      </div>
+    </button>
   );
 };
 
