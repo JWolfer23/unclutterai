@@ -1,25 +1,33 @@
-import { Progress } from "@/components/ui/progress";
-
 interface OnboardingProgressProps {
   currentStep: number;
   totalSteps: number;
 }
 
 const OnboardingProgress = ({ currentStep, totalSteps }: OnboardingProgressProps) => {
-  const progress = (currentStep / totalSteps) * 100;
-  
+  const clampedStep = Math.max(1, Math.min(currentStep, totalSteps));
+  const progress = (clampedStep / totalSteps) * 100;
+
   return (
     <div className="space-y-2">
-      <div className="relative">
-        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-[#8B5CF6] to-[#A855F7] transition-all duration-500 ease-out"
+      {/* Bar */}
+      <div
+        className="w-full"
+        role="progressbar"
+        aria-valuemin={1}
+        aria-valuemax={totalSteps}
+        aria-valuenow={clampedStep}
+      >
+        <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+          <div
+            className="h-2 rounded-full bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 transition-all duration-300 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
-      <p className="text-center text-sm font-medium text-gray-600">
-        Step {currentStep} of {totalSteps}
+
+      {/* Label */}
+      <p className="text-xs font-medium text-gray-500 text-center">
+        Step {clampedStep} of {totalSteps}
       </p>
     </div>
   );
