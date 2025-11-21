@@ -49,7 +49,7 @@
     /* Extended color system */
     --glass-border: 0 0% 100% / 0.08;
     --glass-bg: 220 20% 5% / 0.6;
-    
+
     --sidebar-background: 220 20% 4%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 266 83% 65%;
@@ -117,10 +117,17 @@
 
   /* GLOBAL BACKGROUND - Dark iOS gradient */
   body {
-    background: linear-gradient(to bottom right, #0B0B0D, #0F0F11, #111111);
+    background: linear-gradient(to bottom right, #0b0b0d, #0f0f11, #111111);
     background-attachment: fixed;
     color: hsl(var(--foreground));
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "SF Pro Display",
+      "SF Pro Text",
+      system-ui,
+      sans-serif;
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -141,7 +148,7 @@
     border: 1px solid transparent;
     background-clip: padding-box;
     position: relative;
-    box-shadow: 
+    box-shadow:
       0 8px 32px -4px rgba(0, 0, 0, 0.5),
       0 0 0 1px rgba(255, 255, 255, 0.03) inset;
     backdrop-filter: blur(40px) saturate(180%);
@@ -150,13 +157,15 @@
   }
 
   .glass-card::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     border-radius: 20px;
     padding: 1px;
     background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(59, 130, 246, 0.3));
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
@@ -203,7 +212,7 @@
     background: rgba(0, 0, 0, 0.6);
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 
+    box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.4),
       0 0 0 1px rgba(255, 255, 255, 0.05) inset;
     backdrop-filter: blur(40px) saturate(180%);
@@ -257,7 +266,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 
+    box-shadow:
       0 8px 16px -4px rgba(0, 0, 0, 0.3),
       0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   }
@@ -317,7 +326,7 @@
     font-size: 14px;
     font-weight: 600;
     letter-spacing: -0.01em;
-    box-shadow: 
+    box-shadow:
       0 4px 12px -2px rgba(168, 85, 247, 0.4),
       0 0 0 1px rgba(255, 255, 255, 0.1) inset;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -332,7 +341,7 @@
 
   .btn-primary:active {
     transform: scale(0.98);
-    box-shadow: 
+    box-shadow:
       0 2px 8px -2px rgba(168, 85, 247, 0.4),
       0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   }
@@ -361,5 +370,17 @@
 
   .btn-secondary:active {
     transform: scale(0.98);
+  }
+}
+@layer utilities {
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
