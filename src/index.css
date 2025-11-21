@@ -97,8 +97,17 @@
     @apply border-border;
   }
 
+  /* GLOBAL BACKGROUND */
   body {
-    @apply bg-background text-foreground;
+    background: radial-gradient(circle at top left, #111322 0, #05060a 40%, #000000 100%);
+    color: #ffffff;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro", "Inter", sans-serif;
+  }
+
+  /* Remove grey body background from main container if any */
+  .main-container,
+  .app-root {
+    background: transparent !important;
   }
 }
 
