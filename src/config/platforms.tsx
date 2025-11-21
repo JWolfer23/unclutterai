@@ -167,5 +167,13 @@ export const stepConfig = [
     description: "We'll summarise unread emails, highlight what matters, and let you clear your inbox in one tap.",
     category: 'email' as const,
     platforms: platformsByCategory.email
+  },
+  {
+    step: 4,
+    title: "Link Social Media",
+    subtitle: "We'll monitor DMs, comments, and requests — so you never miss what matters.",
+    description: "Your social notifications, all in one place. Respond instantly without switching between apps.",
+    category: 'social' as const,
+    platforms: platformsByCategory.social
   }
 ];
