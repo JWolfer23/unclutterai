@@ -1,5 +1,4 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
 
@@ -10,44 +9,57 @@ interface OnboardingCompleteProps {
 
 const OnboardingComplete = ({ connectedPlatforms, onFinish }: OnboardingCompleteProps) => {
   return (
-    <Card className="bg-white/80 backdrop-blur-md border-white/20 shadow-lg">
-      <CardHeader className="text-center">
-        <div className="w-20 h-20 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 flex items-center justify-center mx-auto mb-4 text-green-600">
-          <CheckCircle2 className="w-10 h-10" />
-        </div>
-        <CardTitle className="text-2xl">🎉 You're all set.</CardTitle>
-        <p className="text-gray-600">Sit back while we sync your world.</p>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-lg border border-purple-200">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-purple-600" />
-            <span className="font-medium text-purple-800">What happens next:</span>
-          </div>
-          <div className="space-y-2 text-sm text-purple-700">
-            <p>• We're syncing your {connectedPlatforms.length} connected platforms</p>
-            <p>• Your entire digital life will be in one place</p>
-            <p>• Everything will be summarised, prioritised, and easy to act on</p>
-          </div>
-        </div>
+    <div className="space-y-6 text-center">
+      {/* Large green check icon */}
+      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center mx-auto shadow-lg">
+        <CheckCircle2 className="w-14 h-14 text-green-600" />
+      </div>
 
-        <div className="text-center">
-          <p className="text-sm text-gray-600 mb-4">
-            Next time you open UnclutterAI, your entire digital life will be in one place — summarised, prioritised, and easy to act on.
-          </p>
-          
-          <Button 
-            onClick={onFinish}
-            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            size="lg"
-          >
-            Start Using UnclutterAI
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
+      {/* Heading */}
+      <div className="space-y-2">
+        <h2 className="text-3xl font-bold text-gray-900">🎉 You're all set.</h2>
+        <p className="text-lg text-gray-600">Sit back while we sync your world.</p>
+      </div>
+
+      {/* Purple info card */}
+      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-200 text-left">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-5 h-5 text-purple-600" />
+          <span className="font-semibold text-purple-900">✨ What happens next:</span>
         </div>
-      </CardContent>
-    </Card>
+        <ul className="space-y-2 text-sm text-purple-800">
+          <li className="flex items-start">
+            <span className="mr-2">•</span>
+            <span>We're syncing your {connectedPlatforms.length} connected platforms</span>
+          </li>
+          <li className="flex items-start">
+            <span className="mr-2">•</span>
+            <span>Your entire digital life will be in one place</span>
+          </li>
+          <li className="flex items-start">
+            <span className="mr-2">•</span>
+            <span>Everything will be summarised, prioritised, and easy to act on</span>
+          </li>
+          <li className="flex items-start">
+            <span className="mr-2">•</span>
+            <span>You'll get a daily digest of what actually matters</span>
+          </li>
+          <li className="flex items-start">
+            <span className="mr-2">•</span>
+            <span>Reply to everything from one unified inbox</span>
+          </li>
+        </ul>
+      </div>
+
+      {/* CTA Button */}
+      <Button 
+        onClick={onFinish}
+        className="w-full h-12 bg-gradient-to-r from-[#3B82F6] to-[#A855F7] hover:from-[#2563EB] hover:to-[#9333EA] text-white font-semibold rounded-xl shadow-lg transition-all"
+      >
+        Start Using UnclutterAI
+        <ArrowRight className="w-5 h-5 ml-2" />
+      </Button>
+    </div>
   );
 };
 

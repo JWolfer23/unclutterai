@@ -1,7 +1,6 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight, Info } from "lucide-react";
 import PlatformToggle from "./PlatformToggle";
 import { stepConfig } from "@/config/platforms";
 
@@ -32,64 +31,67 @@ const OnboardingStepCard = ({
   const isLastStep = currentStep === stepConfig.length;
 
   return (
-    <Card className="bg-white/80 backdrop-blur-md border-white/20 shadow-lg">
-      <CardHeader className="text-center">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-100 to-indigo-100 flex items-center justify-center mx-auto mb-4 text-purple-600">
-          <span className="text-2xl font-bold">{currentStep}</span>
-        </div>
-        <CardTitle className="text-xl">{stepData.title}</CardTitle>
-        <p className="text-gray-600 text-sm">{stepData.subtitle}</p>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <div className="space-y-3">
-          {stepData.platforms.map(platform => (
-            <PlatformToggle
-              key={platform.id}
-              platform={platform}
-              isConnected={connectedPlatforms.includes(platform.id)}
-              onToggle={onTogglePlatform}
-            />
-          ))}
-        </div>
+    <div className="space-y-6">
+      {/* Step header */}
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl font-bold text-gray-900">{stepData.title}</h2>
+        <p className="text-base text-gray-600">{stepData.subtitle}</p>
+      </div>
 
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="w-4 h-4 text-green-600" />
-            <span className="text-sm font-medium text-green-800">What you'll get:</span>
+      {/* Platform toggles */}
+      <div className="space-y-3">
+        {stepData.platforms.map(platform => (
+          <PlatformToggle
+            key={platform.id}
+            platform={platform}
+            isConnected={connectedPlatforms.includes(platform.id)}
+            onToggle={onTogglePlatform}
+          />
+        ))}
+      </div>
+
+      {/* Info box - "What you'll get" */}
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-4 border border-green-200">
+        <div className="flex items-start gap-3">
+          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Info className="w-3 h-3 text-white" />
           </div>
-          <p className="text-sm text-green-700">{stepData.description}</p>
+          <div>
+            <p className="text-sm font-semibold text-green-900 mb-1">What you'll get:</p>
+            <p className="text-sm text-green-800">{stepData.description}</p>
+          </div>
         </div>
+      </div>
 
-        <div className="flex gap-3">
+      {/* Action buttons */}
+      <div className="flex gap-3">
+        <Button 
+          onClick={isLastStep ? onComplete : onNextStep}
+          className="flex-1 h-12 bg-gradient-to-r from-[#3B82F6] to-[#A855F7] hover:from-[#2563EB] hover:to-[#9333EA] text-white font-semibold rounded-xl shadow-lg transition-all"
+          disabled={!hasConnections && currentStep === 1}
+        >
+          {isLastStep ? 'Complete Setup' : 'Continue'}
+          <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+        
+        {!isLastStep && (
           <Button 
-            onClick={isLastStep ? onComplete : onNextStep}
-            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-            size="lg"
-            disabled={!hasConnections}
+            variant="outline" 
+            onClick={onNextStep}
+            className="px-6 h-12 rounded-xl border-gray-300 text-gray-700 hover:bg-gray-50"
           >
-            {isLastStep ? 'Complete Setup' : 'Continue'}
-            <ArrowRight className="w-4 h-4 ml-2" />
+            Skip
           </Button>
-          
-          {!isLastStep && (
-            <Button 
-              variant="outline" 
-              onClick={onNextStep}
-              className="px-6"
-            >
-              Skip
-            </Button>
-          )}
-        </div>
-
-        {hasConnections && (
-          <div className="text-center text-sm text-green-600">
-            ✓ {connectedInStep} platform{connectedInStep > 1 ? 's' : ''} selected
-          </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Connection counter */}
+      {hasConnections && (
+        <div className="text-center text-sm text-green-600 font-medium">
+          ✓ {connectedInStep} platform{connectedInStep > 1 ? 's' : ''} selected
+        </div>
+      )}
+    </div>
   );
 };
 
