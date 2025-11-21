@@ -195,9 +195,9 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-gradient-to-br from-[hsl(220,20%,8%)] to-[hsl(220,20%,5%)] border border-white/10 rounded-[28px] shadow-[0_0_80px_-12px_rgba(168,85,247,0.5),0_20px_60px_-8px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-        <CardHeader className="text-center pt-10 pb-6 space-y-4">
+    <div className="min-h-screen bg-[hsl(220,20%,6%)] flex flex-col items-center justify-center p-4">
+      <Card className="w-full max-w-[420px] bg-gradient-to-br from-[hsl(220,20%,8%)] to-[hsl(220,20%,5%)] border border-white/10 rounded-[28px] shadow-[0_0_80px_-12px_rgba(168,85,247,0.5),0_20px_60px_-8px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+        <CardHeader className="text-center pt-12 pb-8 space-y-4">
           {/* Logo on dark rounded square */}
           <div className="w-20 h-20 rounded-[20px] bg-gradient-to-br from-[hsl(220,20%,12%)] to-[hsl(220,20%,8%)] border border-white/10 shadow-lg mx-auto flex items-center justify-center p-3">
             <img 
@@ -219,9 +219,9 @@ const AuthPage = () => {
         </CardHeader>
         
         <CardContent className="px-8 pb-10">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email Input */}
-            <div className="space-y-2">
+            <div>
               <Input
                 id="email"
                 type="email"
@@ -229,12 +229,12 @@ const AuthPage = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Enter your email"
-                className="h-12 bg-white border-0 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] rounded-xl text-gray-900 placeholder:text-gray-400 font-medium"
+                className="h-12 bg-white border-0 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] rounded-[16px] text-gray-900 placeholder:text-gray-500 font-medium"
               />
             </div>
             
             {/* Password Input */}
-            <div className="space-y-2">
+            <div>
               <Input
                 id="password"
                 type="password"
@@ -244,7 +244,7 @@ const AuthPage = () => {
                 placeholder={isSignUp ? "Create a strong password (12+ chars)" : "Enter your password"}
                 minLength={12}
                 maxLength={128}
-                className="h-12 bg-white border-0 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] rounded-xl text-gray-900 placeholder:text-gray-400 font-medium"
+                className="h-12 bg-white border-0 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] rounded-[16px] text-gray-900 placeholder:text-gray-500 font-medium"
               />
               {isSignUp && password && (
                 <PasswordStrengthMeter password={password} className="mt-2" />
@@ -252,7 +252,7 @@ const AuthPage = () => {
               
               {/* Forgot Password Link */}
               {!isSignUp && (
-                <div className="mt-2">
+                <div className="mt-3">
                   <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
                     <DialogTrigger asChild>
                       <button type="button" className="text-sm text-[#8B5CF6] hover:text-[#A855F7] font-semibold transition-colors">
@@ -288,7 +288,7 @@ const AuthPage = () => {
             {/* Primary Sign In Button */}
             <Button 
               type="submit" 
-              className="w-full h-12 bg-gradient-to-r from-[#3B82F6] to-[#A855F7] hover:from-[#2563EB] hover:to-[#9333EA] text-white font-semibold rounded-xl shadow-lg shadow-purple-500/25 transition-all hover:shadow-xl hover:shadow-purple-500/30"
+              className="w-full h-12 bg-gradient-to-r from-[#3B82F6] to-[#A855F7] hover:from-[#2563EB] hover:to-[#9333EA] text-white font-semibold rounded-[16px] shadow-lg shadow-purple-500/25 transition-all hover:shadow-xl hover:shadow-purple-500/30 mt-6"
               disabled={loading}
             >
               {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
@@ -312,7 +312,7 @@ const AuthPage = () => {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-12 bg-white hover:bg-gray-50 border-0 rounded-xl text-gray-900 font-semibold shadow-md transition-all"
+                className="w-full h-12 bg-white hover:bg-gray-50 border-0 rounded-[16px] text-gray-900 font-semibold shadow-md transition-all"
                 onClick={handleBiometricSignIn}
                 disabled={biometricLoading}
               >
