@@ -26,7 +26,9 @@ export default {
     			foreground: 'hsl(var(--foreground))',
     			primary: {
     				DEFAULT: 'hsl(var(--primary))',
-    				foreground: 'hsl(var(--primary-foreground))'
+    				foreground: 'hsl(var(--primary-foreground))',
+    				'gradient-start': 'hsl(var(--primary-gradient-start))',
+    				'gradient-end': 'hsl(var(--primary-gradient-end))'
     			},
     			secondary: {
     				DEFAULT: 'hsl(var(--secondary))',
@@ -42,7 +44,11 @@ export default {
     			},
     			accent: {
     				DEFAULT: 'hsl(var(--accent))',
-    				foreground: 'hsl(var(--accent-foreground))'
+    				foreground: 'hsl(var(--accent-foreground))',
+    				cyan: 'hsl(var(--accent-cyan))',
+    				yellow: 'hsl(var(--accent-yellow))',
+    				orange: 'hsl(var(--accent-orange))',
+    				green: 'hsl(var(--accent-green))'
     			},
     			popover: {
     				DEFAULT: 'hsl(var(--popover))',
@@ -51,18 +57,6 @@ export default {
     			card: {
     				DEFAULT: 'hsl(var(--card))',
     				foreground: 'hsl(var(--card-foreground))'
-    			},
-    			cyan: {
-    				DEFAULT: 'hsl(var(--cyan))',
-    				400: 'hsl(189 100% 60%)',
-    				500: 'hsl(189 100% 56%)',
-    				600: 'hsl(189 100% 48%)'
-    			},
-    			purple: {
-    				DEFAULT: 'hsl(var(--purple))',
-    				500: 'hsl(271 81% 58%)',
-    				600: 'hsl(271 81% 56%)',
-    				700: 'hsl(271 81% 48%)'
     			},
     			sidebar: {
     				DEFAULT: 'hsl(var(--sidebar-background))',
@@ -104,7 +98,11 @@ export default {
     		},
     		fontFamily: {
     			sans: [
-    				'ui-sans-serif',
+    				'Inter',
+    				'-apple-system',
+    				'BlinkMacSystemFont',
+    				'SF Pro Display',
+    				'SF Pro Text',
     				'system-ui',
     				'sans-serif',
     				'Apple Color Emoji',
