@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import OnboardingProgress from "./OnboardingProgress";
@@ -17,16 +16,13 @@ const OnboardingFlow = ({ onComplete, onConnect }: OnboardingFlowProps) => {
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
   const [isComplete, setIsComplete] = useState(false);
 
-  const progress = (currentStep / stepConfig.length) * 100;
-
   const handleTogglePlatform = (platformId: string) => {
-    setConnectedPlatforms(prev => {
+    setConnectedPlatforms((prev) => {
       const isConnected = prev.includes(platformId);
-      const newPlatforms = isConnected 
-        ? prev.filter(p => p !== platformId)
+      const newPlatforms = isConnected
+        ? prev.filter((p) => p !== platformId)
         : [...prev, platformId];
-      
-      // Call onConnect for newly connected platforms
+
       if (!isConnected) {
         onConnect(platformId);
         toast({
@@ -34,24 +30,23 @@ const OnboardingFlow = ({ onComplete, onConnect }: OnboardingFlowProps) => {
           description: `Successfully connected ${platformId}`,
         });
       }
-      
+
       return newPlatforms;
     });
   };
 
   const handleNextStep = () => {
     if (currentStep < stepConfig.length) {
-      setCurrentStep(prev => prev + 1);
+      setCurrentStep((prev) => prev + 1);
     } else {
       setIsComplete(true);
     }
   };
 
   const handleCompleteSetup = () => {
-    // After last step, show completion
     setIsComplete(true);
     toast({
-      title: "🚀 Setup Complete!",
+      title: "🚀 Setup complete",
       description: "Your digital life is now unified in one place.",
     });
   };
@@ -61,31 +56,34 @@ const OnboardingFlow = ({ onComplete, onConnect }: OnboardingFlowProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-purple-100/40 to-purple-50/20 flex items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-2xl space-y-6">
         {!isComplete ? (
           <>
-            {/* Top intro copy - shown on first step */}
+            {/* Hero copy only on first step */}
             {currentStep === 1 && (
-              <div className="text-center space-y-3 mb-8">
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight px-4">
-                  Give me 5 minutes, and you can delete the rest of your messaging apps.
+              <div className="text-center space-y-3 mb-4">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-50 leading-tight px-2">
+                  Give me 5 minutes, and you can delete the rest of your
+                  messaging apps.
                 </h1>
-                <p className="text-base sm:text-lg text-gray-700 max-w-2xl mx-auto px-4">
-                  We're going to connect everything that distracts you — so we can declutter your life. One feed, one assistant, zero chaos.
+                <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto px-2">
+                  We'll connect everything that distracts you — so we can
+                  declutter your life. One feed, one assistant, zero chaos.
                 </p>
-                <p className="text-base sm:text-lg font-semibold text-gray-800 pt-2">
-                  Let's begin.
+                <p className="text-base sm:text-lg font-semibold text-slate-200 pt-1">
+                  Let&apos;s begin.
                 </p>
               </div>
             )}
 
-            {/* Onboarding Card */}
-            <div className="bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.06),0_2px_8px_rgba(0,0,0,0.04)] p-6 sm:p-8 space-y-6">
-              {/* Progress bar at top of card */}
-              <OnboardingProgress currentStep={currentStep} totalSteps={stepConfig.length} />
+            {/* Main onboarding glass card */}
+            <div className="glass-card glass-card--primary">
+              <OnboardingProgress
+                currentStep={currentStep}
+                totalSteps={stepConfig.length}
+              />
 
-              {/* Step content */}
               <OnboardingStepCard
                 currentStep={currentStep}
                 connectedPlatforms={connectedPlatforms}
@@ -95,12 +93,16 @@ const OnboardingFlow = ({ onComplete, onConnect }: OnboardingFlowProps) => {
               />
             </div>
 
-            {/* Connected platforms display */}
-            <ConnectedPlatforms connectedPlatforms={connectedPlatforms} />
+            {/* Connected platforms summary (secondary glass card) */}
+            {connectedPlatforms.length > 0 && (
+              <div className="glass-card">
+                <ConnectedPlatforms connectedPlatforms={connectedPlatforms} />
+              </div>
+            )}
           </>
         ) : (
-          <div className="bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.06),0_2px_8px_rgba(0,0,0,0.04)] p-6 sm:p-8">
-            <OnboardingComplete 
+          <div className="glass-card glass-card--primary">
+            <OnboardingComplete
               connectedPlatforms={connectedPlatforms}
               onFinish={handleFinish}
             />
