@@ -112,13 +112,41 @@
 }
 
 @layer utilities {
+  /* GENERIC GLASS CARD FOR DASHBOARD */
   .glass-card {
-    background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
-    border-radius: 20px;
+    background: radial-gradient(circle at top left, #15172a 0, #05060a 55%, #000000 100%);
+    border-radius: 26px;
     border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 22px 55px rgba(0,0,0,0.9);
     backdrop-filter: blur(22px);
-    box-shadow: 0 18px 45px rgba(0,0,0,0.7);
+    -webkit-backdrop-filter: blur(22px);
     padding: 18px 20px;
+  }
+
+  /* Slightly emphasized main card (for Focus Score) */
+  .glass-card--primary {
+    border-color: rgba(106,61,248,0.9);
+    box-shadow:
+      0 0 40px rgba(106,61,248,0.55),
+      0 26px 60px rgba(0,0,0,0.95);
+  }
+
+  /* Card title + text */
+  .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  .card-main {
+    font-size: 32px;
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  .card-label {
+    font-size: 13px;
+    color: rgba(255,255,255,0.68);
   }
 
   /* TOP NAV / HEADER */
