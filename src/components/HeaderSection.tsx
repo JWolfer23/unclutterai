@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import logoDark from "@/assets/logo-dark.png";
+import logoDark from "@/assets/logo-new.png";
 
 interface HeaderSectionProps {
   onShowCommandPalette: () => void;
