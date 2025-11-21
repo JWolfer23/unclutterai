@@ -189,4 +189,34 @@
     justify-content: center;
     color: rgba(255,255,255,0.7);
   }
+
+  /* METRIC ICON BLOCKS */
+  .metric-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 16px 32px rgba(0,0,0,0.85);
+  }
+
+  /* gradients per card */
+  .metric-icon--focus {
+    background-image: linear-gradient(135deg, #3ac7ff, #6a3df8);
+  }
+
+  .metric-icon--tokens {
+    background-image: linear-gradient(135deg, #ffb44a, #ff7a2a);
+  }
+
+  .metric-icon--community {
+    background-image: linear-gradient(135deg, #30e8a1, #0da36f);
+  }
+
+  /* icon glyph inside */
+  .metric-icon__glyph {
+    font-size: 28px;
+    color: #ffffff;
+  }
 }
