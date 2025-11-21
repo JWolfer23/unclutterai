@@ -84,84 +84,75 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
   );
 
   return (
-    <header className="glass-card sticky top-0 z-50 border-b-0">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
-          {/* Logo Section */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden">
-              <img 
-                src={logoDark} 
-                alt="Unclutter AI Logo"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
-                Unclutter
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">AI Communication Assistant</p>
-            </div>
-          </div>
-
-          {/* Desktop Navigation */}
-          {!isMobile ? (
-            <div className="flex items-center space-x-3 lg:space-x-6">
-              <span className="hidden lg:block text-sm text-gray-600 truncate max-w-48">
-                Welcome, {user?.email}
-              </span>
-              <div className="hidden md:block">
-                <BetaTestButton />
-              </div>
-              <Button
-                variant="outline" 
-                size="sm"
-                onClick={onShowCommandPalette}
-                className="transition-all duration-200 hover:scale-105 hidden sm:flex"
-              >
-                <Search className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Search</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => navigate('/crypto-integration')}
-                className="transition-all duration-200 hover:scale-105 hidden md:flex"
-              >
-                <Coins className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Crypto</span>
-              </Button>
-              <Button 
-                size="sm" 
-                className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 transition-all duration-200 hover:scale-105"
-              >
-                <Sparkles className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">AI Compose</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSignOut}
-                className="transition-all duration-200 hover:scale-105 hidden sm:flex"
-              >
-                <LogOut className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Sign Out</span>
-              </Button>
-            </div>
-          ) : (
-            /* Mobile Menu */
-            <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="p-2">
-                  <Menu className="w-4 h-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-80">
-                <MobileMenu />
-              </SheetContent>
-            </Sheet>
-          )}
+    <header className="sticky top-4 z-50 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto unclutter-header">
+        {/* Logo */}
+        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+          <img 
+            src={logoDark} 
+            alt="Unclutter AI Logo"
+            className="w-full h-full object-contain"
+          />
         </div>
+
+        {/* Title & Subtitle */}
+        <div className="flex-1 min-w-0">
+          <h1 className="unclutter-header-title bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
+            Unclutter
+          </h1>
+          <p className="unclutter-header-subtitle hidden sm:block">AI Communication Assistant</p>
+        </div>
+
+        {/* Desktop Navigation */}
+        {!isMobile && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost" 
+              size="sm"
+              onClick={onShowCommandPalette}
+              className="h-9 px-3 hover:bg-white/5"
+            >
+              <Search className="w-4 h-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => navigate('/crypto-integration')}
+              className="h-9 px-3 hover:bg-white/5 hidden md:flex"
+            >
+              <Coins className="w-4 h-4" />
+            </Button>
+            <Button 
+              size="sm" 
+              className="h-9 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              <span className="hidden lg:inline">AI Compose</span>
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleSignOut}
+              className="h-9 px-3 hover:bg-white/5 hidden sm:flex"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Mobile Menu Button */}
+        {isMobile && (
+          <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <SheetTrigger asChild>
+              <button className="unclutter-header-menu">
+                <Menu className="w-4 h-4" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80 bg-[#05060a] border-white/10">
+              <MobileMenu />
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
     </header>
   );
