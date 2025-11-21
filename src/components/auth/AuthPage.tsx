@@ -11,7 +11,7 @@ import { Fingerprint } from "lucide-react";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { validateEmail, getPasswordStrength } from "@/lib/security";
 import { supabase } from "@/integrations/supabase/client";
-import logoDark from "@/assets/logo-dark.png";
+import logoNew from "@/assets/logo-new.png";
 
 const AuthPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -195,27 +195,33 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-purple-50 to-cyan-50 dark:from-background dark:via-purple-950/20 dark:to-cyan-950/20 flex flex-col items-center justify-center p-4 gap-6">
-      <Card className="w-full max-w-md glass-card">
-        <CardHeader className="text-center">
-          <div className="w-16 h-16 rounded-xl overflow-hidden mx-auto mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col items-center justify-center p-4">
+      <Card className="w-full max-w-md bg-gradient-to-br from-[hsl(220,20%,8%)] to-[hsl(220,20%,5%)] border border-white/10 rounded-[28px] shadow-[0_0_80px_-12px_rgba(168,85,247,0.5),0_20px_60px_-8px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+        <CardHeader className="text-center pt-10 pb-6 space-y-4">
+          {/* Logo on dark rounded square */}
+          <div className="w-20 h-20 rounded-[20px] bg-gradient-to-br from-[hsl(220,20%,12%)] to-[hsl(220,20%,8%)] border border-white/10 shadow-lg mx-auto flex items-center justify-center p-3">
             <img 
-              src={logoDark} 
+              src={logoNew} 
               alt="Unclutter AI Logo"
               className="w-full h-full object-contain"
             />
           </div>
-          <CardTitle className="text-2xl bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
-            Welcome to UnclutterAI
-          </CardTitle>
-          <p className="text-muted-foreground">
-            {isSignUp ? "Create your account" : "Sign in to your account"}
-          </p>
+          
+          {/* Heading with gradient */}
+          <div className="space-y-2">
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-[#3B82F6] via-[#8B5CF6] to-[#A855F7] bg-clip-text text-transparent leading-tight">
+              Welcome to UnclutterAI
+            </CardTitle>
+            <p className="text-sm text-white/60 font-medium">
+              {isSignUp ? "Create your account" : "Sign in to your account"}
+            </p>
+          </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        
+        <CardContent className="px-8 pb-10">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email Input */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -223,12 +229,12 @@ const AuthPage = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Enter your email"
+                className="h-12 bg-white border-0 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] rounded-xl text-gray-900 placeholder:text-gray-400 font-medium"
               />
             </div>
+            
+            {/* Password Input */}
             <div className="space-y-2">
-              <Label htmlFor="password">
-                Password {isSignUp && <span className="text-xs text-muted-foreground">(minimum 12 characters)</span>}
-              </Label>
               <Input
                 id="password"
                 type="password"
@@ -238,17 +244,20 @@ const AuthPage = () => {
                 placeholder={isSignUp ? "Create a strong password (12+ chars)" : "Enter your password"}
                 minLength={12}
                 maxLength={128}
+                className="h-12 bg-white border-0 shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)] rounded-xl text-gray-900 placeholder:text-gray-400 font-medium"
               />
               {isSignUp && password && (
                 <PasswordStrengthMeter password={password} className="mt-2" />
               )}
+              
+              {/* Forgot Password Link */}
               {!isSignUp && (
                 <div className="mt-2">
                   <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="link" className="text-sm text-purple-600 p-0 h-auto">
+                      <button type="button" className="text-sm text-[#8B5CF6] hover:text-[#A855F7] font-semibold transition-colors">
                         Forgot your password?
-                      </Button>
+                      </button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                       <DialogHeader>
@@ -275,48 +284,56 @@ const AuthPage = () => {
                 </div>
               )}
             </div>
+            
+            {/* Primary Sign In Button */}
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
+              className="w-full h-12 bg-gradient-to-r from-[#3B82F6] to-[#A855F7] hover:from-[#2563EB] hover:to-[#9333EA] text-white font-semibold rounded-xl shadow-lg shadow-purple-500/25 transition-all hover:shadow-xl hover:shadow-purple-500/30"
               disabled={loading}
             >
               {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
             </Button>
           </form>
           
+          {/* Face ID Section */}
           {!isSignUp && biometricSupported && (
-            <div className="mt-4">
+            <div className="mt-6 space-y-4">
+              {/* Divider */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-200" />
+                  <span className="w-full border-t border-white/10" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
+                  <span className="bg-[hsl(220,20%,6%)] px-3 text-white/40">Or continue with</span>
                 </div>
               </div>
+              
+              {/* Face ID Button */}
               <Button
                 type="button"
                 variant="outline"
-                className="w-full mt-4 border-purple-200 hover:bg-purple-50"
+                className="w-full h-12 bg-white hover:bg-gray-50 border-0 rounded-xl text-gray-900 font-semibold shadow-md transition-all"
                 onClick={handleBiometricSignIn}
                 disabled={biometricLoading}
               >
-                <Fingerprint className="w-4 h-4 mr-2" />
+                <Fingerprint className="w-5 h-5 mr-2" />
                 {biometricLoading ? "Authenticating..." : "Sign in with Face ID"}
               </Button>
             </div>
           )}
-          <div className="mt-4 text-center">
-            <Button
-              variant="link"
+          
+          {/* Sign Up Link */}
+          <div className="mt-6 text-center">
+            <button
+              type="button"
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-purple-600"
+              className="text-sm text-white/70 font-medium"
             >
               {isSignUp 
-                ? "Already have an account? Sign in" 
-                : "Don't have an account? Sign up"
+                ? <>Already have an account? <span className="text-[#8B5CF6] font-bold hover:text-[#A855F7] transition-colors">Sign in</span></> 
+                : <>Don't have an account? <span className="text-[#8B5CF6] font-bold hover:text-[#A855F7] transition-colors">Sign up</span></>
               }
-            </Button>
+            </button>
           </div>
         </CardContent>
       </Card>
