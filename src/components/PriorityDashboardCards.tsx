@@ -4,41 +4,55 @@ import { TrendingUp, Coins, Trophy } from "lucide-react";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
 import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useTokens } from "@/hooks/useTokens";
+import { dashboardCard, cardHover, fadeInUp } from "@/ui/styles";
 
 interface PriorityDashboardCardsProps {
   onShowRecoveryDashboard: () => void;
 }
 
-const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCardsProps) => {
+const PriorityDashboardCards = ({
+  onShowRecoveryDashboard,
+}: PriorityDashboardCardsProps) => {
   const { focusScore } = useFocusSessions();
   const { currentStreak } = useFocusStreaks();
   const { balance } = useTokens();
 
-  // Calculate today's earnings (mock for now - could be tracked in a separate table)
+  // TODO: wire this to real data when ready
   const todayEarnings = 47;
+
+  const communityPercent = Math.max(
+    1,
+    Math.min(99, Math.ceil((100 - focusScore) / 5))
+  );
 
   return (
     <div className="w-full mb-6">
-      {/* Priority Cards - Mobile first layout */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
         {/* Focus Score Card - Primary emphasis */}
-        <Card className="glass-card glass-card--primary">
+        <Card
+          className={`${dashboardCard} ${cardHover} ${fadeInUp} md:col-span-1`}
+        >
           <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
+              {/* Icon block */}
               <div className="metric-icon metric-icon--focus">
                 <TrendingUp className="metric-icon__glyph" />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
+
+              {/* Text block */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-2 gap-3">
                   <h3 className="card-title">Focus Score</h3>
-                  <button
+                  <Button
+                    size="sm"
                     onClick={onShowRecoveryDashboard}
-                    className="btn-primary text-xs px-3 py-1.5"
+                    className="btn-primary text-[11px] px-3 py-1.5"
                   >
                     Schedule
-                  </button>
+                  </Button>
                 </div>
-                <div className="flex items-baseline space-x-2">
+
+                <div className="flex items-baseline gap-2">
                   <span className="card-main bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
                     {focusScore}%
                   </span>
@@ -46,8 +60,11 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
                     +3%
                   </span>
                 </div>
+
                 <p className="card-label mt-1">
-                  {currentStreak > 0 ? `🔥 ${currentStreak} day streak` : "↗ Improving"}
+                  {currentStreak > 0
+                    ? `🔥 ${currentStreak} day streak`
+                    : "↗ Improving"}
                 </p>
               </div>
             </div>
@@ -55,15 +72,20 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
         </Card>
 
         {/* UCT Tokens Card */}
-        <Card className="glass-card">
+        <Card className={`${dashboardCard} ${cardHover} ${fadeInUp}`}>
           <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
               <div className="metric-icon metric-icon--tokens">
                 <Coins className="metric-icon__glyph" />
               </div>
-              <div className="flex-1">
+
+              <div className="flex-1 min-w-0">
                 <h3 className="card-title">UCT Tokens Earned</h3>
-                <p className="card-main">{balance.toLocaleString()}</p>
+                <p className="card-main">
+                  {balance.toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
                 <p className="card-label mt-1">+{todayEarnings} today</p>
               </div>
             </div>
@@ -71,16 +93,22 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
         </Card>
 
         {/* Community Ranking Card */}
-        <Card className="glass-card">
+        <Card className={`${dashboardCard} ${cardHover} ${fadeInUp}`}>
           <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
               <div className="metric-icon metric-icon--community">
                 <Trophy className="metric-icon__glyph" />
               </div>
-              <div className="flex-1">
+
+              <div className="flex-1 min-w-0">
                 <h3 className="card-title">Community Ranking</h3>
-                <p className="card-main">Top {Math.ceil((100 - focusScore) / 5)}%</p>
-                <p className="card-label mt-1">↗ {currentStreak > 0 ? `+${currentStreak}% this week` : '+2% this week'}</p>
+                <p className="card-main">Top {communityPercent}%</p>
+                <p className="card-label mt-1">
+                  ↗{" "}
+                  {currentStreak > 0
+                    ? `+${currentStreak}% this week`
+                    : "+2% this week"}
+                </p>
               </div>
             </div>
           </CardContent>
