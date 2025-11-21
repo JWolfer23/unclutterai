@@ -219,4 +219,19 @@
     font-size: 28px;
     color: #ffffff;
   }
+
+  /* TEXT HIERARCHY */
+  .text-secondary {
+    color: rgba(255,255,255,0.68);
+  }
+
+  .text-muted {
+    color: rgba(255,255,255,0.45);
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+  }
 }
