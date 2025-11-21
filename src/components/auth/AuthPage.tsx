@@ -11,7 +11,7 @@ import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { validateEmail, getPasswordStrength } from "@/lib/security";
 import { supabase } from "@/integrations/supabase/client";
 import logoNew from "@/assets/logo-new.png";
-import { fadeInUp, dashboardCard, cardHover, primaryButton, secondaryButton } from "@/ui/styles";
+import { fadeInUp, primaryGradientButton, whiteSurfaceButton } from "@/ui/styles";
 
 const AuthPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -256,7 +256,7 @@ const AuthPage = () => {
             )}
 
             {/* Sign In / Sign up Button */}
-            <button type="submit" className={`${primaryButton} w-full h-12 mt-6`} disabled={loading}>
+            <button type="submit" className={`${primaryGradientButton} mt-6`} disabled={loading}>
               {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
             </button>
           </form>
@@ -272,7 +272,7 @@ const AuthPage = () => {
 
               <button
                 type="button"
-                className={`${secondaryButton} w-full h-12 flex items-center justify-center gap-2`}
+                className={`${whiteSurfaceButton} gap-2`}
                 onClick={handleBiometricSignIn}
                 disabled={biometricLoading}
               >
