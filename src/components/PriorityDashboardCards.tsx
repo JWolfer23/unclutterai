@@ -25,8 +25,8 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
         <Card className="glass-card glass-card--primary flex-1">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-white" />
+              <div className="metric-icon metric-icon--focus">
+                <TrendingUp className="metric-icon__glyph" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
@@ -60,13 +60,29 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
         <Card className="glass-card flex-1">
           <CardContent className="p-6">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 flex items-center justify-center">
-                <Coins className="w-6 h-6 text-white" />
+              <div className="metric-icon metric-icon--tokens">
+                <Coins className="metric-icon__glyph" />
               </div>
               <div className="flex-1">
                 <h3 className="card-title">UCT Tokens Earned</h3>
                 <p className="card-main">{balance.toLocaleString()}</p>
                 <p className="card-label">+{todayEarnings} today</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Community Ranking Card */}
+        <Card className="glass-card flex-1">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="metric-icon metric-icon--community">
+                <Trophy className="metric-icon__glyph" />
+              </div>
+              <div className="flex-1">
+                <h3 className="card-title">Community Ranking</h3>
+                <p className="card-main">Top {Math.ceil((100 - focusScore) / 5)}%</p>
+                <p className="card-label">↗ {currentStreak > 0 ? `+${currentStreak}% this week` : '+2% this week'}</p>
               </div>
             </div>
           </CardContent>
