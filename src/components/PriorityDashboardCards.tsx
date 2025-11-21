@@ -31,14 +31,12 @@ const PriorityDashboardCards = ({ onShowRecoveryDashboard }: PriorityDashboardCa
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <h3 className="card-title">Focus Score</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
                     onClick={onShowRecoveryDashboard}
-                    className="ml-2 h-7 px-3 text-xs text-cyan-400 hover:text-cyan-300 hover:bg-white/5"
+                    className="btn-primary"
                   >
                     Schedule
-                  </Button>
+                  </button>
                 </div>
                 <div className="flex items-baseline space-x-2">
                   <span className="card-main bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">

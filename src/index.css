@@ -234,4 +234,36 @@
     font-weight: 600;
     color: #ffffff;
   }
+
+  /* PRIMARY BUTTON / CTA */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+
+    background-image: linear-gradient(135deg, #3ac7ff, #6a3df8, #a146ff);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    box-shadow: 0 14px 30px rgba(0,0,0,0.9);
+    transition: transform 0.12s ease-out, box-shadow 0.12s ease-out, filter 0.12s ease-out;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+    box-shadow:
+      0 18px 40px rgba(0,0,0,1),
+      0 0 32px rgba(106,61,248,0.65);
+  }
+
+  .btn-primary:active {
+    transform: translateY(1px) scale(0.97);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.9);
+  }
 }
