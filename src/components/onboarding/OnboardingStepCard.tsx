@@ -34,8 +34,8 @@ const OnboardingStepCard = ({
     <div className="space-y-6">
       {/* Step header */}
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-gray-900">{stepData.title}</h2>
-        <p className="text-base text-gray-600">{stepData.subtitle}</p>
+        <h2 className="text-[26px] sm:text-[28px] font-bold text-[#0A0A0A] leading-tight">{stepData.title}</h2>
+        <p className="text-[16px] sm:text-[17px] font-medium text-[#555555]">{stepData.subtitle}</p>
       </div>
 
       {/* Platform toggles */}
@@ -51,14 +51,14 @@ const OnboardingStepCard = ({
       </div>
 
       {/* Info box - "What you'll get" */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-4 border border-green-200">
+      <div className="bg-[#E0FBE2] rounded-[20px] p-5 border border-green-300/60">
         <div className="flex items-start gap-3">
-          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Info className="w-3 h-3 text-white" />
+          <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+            <Info className="w-3.5 h-3.5 text-white" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-green-900 mb-1">What you'll get:</p>
-            <p className="text-sm text-green-800">{stepData.description}</p>
+            <p className="text-sm font-bold text-green-900 mb-1">What you'll get:</p>
+            <p className="text-sm font-medium text-green-800/80">{stepData.description}</p>
           </div>
         </div>
       </div>
@@ -67,18 +67,20 @@ const OnboardingStepCard = ({
       <div className="flex gap-3">
         <Button 
           onClick={isLastStep ? onComplete : onNextStep}
-          className="flex-1 h-12 bg-gradient-to-r from-[#3B82F6] to-[#A855F7] hover:from-[#2563EB] hover:to-[#9333EA] text-white font-semibold rounded-xl shadow-lg transition-all"
+          className="flex-1 h-12 bg-gradient-to-r from-[#3B82F6] to-[#A855F7] hover:from-[#2563EB] hover:to-[#9333EA] text-white font-semibold rounded-[16px] shadow-md transition-all"
           disabled={!hasConnections && currentStep === 1}
         >
-          {isLastStep ? 'Complete Setup' : 'Continue'}
-          <ArrowRight className="w-4 h-4 ml-2" />
+          <span className="flex items-center justify-center gap-2 w-full">
+            {isLastStep ? 'Complete Setup' : 'Continue'}
+            <ArrowRight className="w-4 h-4" />
+          </span>
         </Button>
         
         {!isLastStep && (
           <Button 
             variant="outline" 
             onClick={onNextStep}
-            className="px-6 h-12 rounded-xl border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="px-6 h-12 rounded-[16px] border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50"
           >
             Skip
           </Button>
