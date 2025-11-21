@@ -13,7 +13,11 @@ interface PlatformToggleProps {
   onToggle: (platformId: string) => void;
 }
 
-const PlatformToggle = ({ platform, isConnected, onToggle }: PlatformToggleProps) => {
+const PlatformToggle = ({
+  platform,
+  isConnected,
+  onToggle,
+}: PlatformToggleProps) => {
   const handleClick = () => {
     onToggle(platform.id);
   };
@@ -24,39 +28,46 @@ const PlatformToggle = ({ platform, isConnected, onToggle }: PlatformToggleProps
       onClick={handleClick}
       className="
         w-full flex items-center justify-between
-        rounded-[20px]
-        bg-white 
+        rounded-2xl
+        bg-white/5
         px-4 py-3.5
-        border border-gray-200
-        shadow-[0_8px_24px_rgba(15,23,42,0.04)]
-        hover:shadow-[0_12px_32px_rgba(15,23,42,0.10)]
+        border border-white/12
+        shadow-[0_10px_30px_rgba(0,0,0,0.45)]
+        hover:shadow-[0_14px_40px_rgba(0,0,0,0.65)]
         transition-all duration-150
         active:scale-[0.98]
         text-left
       "
     >
-      {/* Left side: icon + name + description */}
+      {/* Left: icon + text */}
       <div className="flex items-center gap-3 min-w-0">
-        {/* Icon bubble */}
         <div
           className="
-            h-10 w-10 flex items-center justify-center 
+            h-10 w-10 flex items-center justify-center
             rounded-xl
-            bg-gradient-to-br from-white to-gray-50
-            border border-gray-200
+            bg-gradient-to-br from-slate-900 to-slate-800
+            border border-white/10
             shadow-inner
           "
         >
           {platform.icon ? (
             platform.icon
           ) : (
-            <span className="text-sm font-semibold text-gray-500">{platform.name.charAt(0)}</span>
+            <span className="text-sm font-semibold text-slate-100">
+              {platform.name.charAt(0)}
+            </span>
           )}
         </div>
 
         <div className="space-y-0.5 overflow-hidden">
-          <p className="text-sm font-semibold text-gray-900 truncate">{platform.name}</p>
-          {platform.description && <p className="text-xs text-gray-500 truncate">{platform.description}</p>}
+          <p className="text-sm font-semibold text-slate-50 truncate">
+            {platform.name}
+          </p>
+          {platform.description && (
+            <p className="text-xs text-slate-300 truncate">
+              {platform.description}
+            </p>
+          )}
         </div>
       </div>
 
@@ -65,7 +76,7 @@ const PlatformToggle = ({ platform, isConnected, onToggle }: PlatformToggleProps
         className={`
           relative inline-flex h-6 w-11 items-center rounded-full
           transition-colors duration-200 ease-out
-          ${isConnected ? "bg-emerald-500" : "bg-gray-300"}
+          ${isConnected ? "bg-emerald-500" : "bg-slate-500/70"}
         `}
         aria-hidden="true"
       >
