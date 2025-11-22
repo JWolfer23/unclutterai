@@ -1,18 +1,20 @@
+// src/components/home/ModeGrid.tsx
 import {
   ArrowUpRight,
-  FileText,
+  Newspaper,
   GraduationCap,
   HeartPulse,
-  Briefcase,
-  DollarSign,
+  BriefcaseBusiness,
+  CircleDollarSign,
   MessageCircle,
-  SlidersHorizontal,
+  Coins,
   Users,
   Bitcoin,
+  SlidersHorizontal,
   Activity,
 } from "lucide-react";
 
-export type ModeKey =
+type ModeId =
   | "focus"
   | "news"
   | "learning"
@@ -20,181 +22,187 @@ export type ModeKey =
   | "career"
   | "wealth"
   | "communication"
-  | "customize-ai-1"
+  | "uctTokens"
   | "community"
   | "crypto"
-  | "customize-ai-2"
-  | "ai-usage";
+  | "customize"
+  | "aiUsage";
 
 interface ModeGridProps {
-  activeMode: ModeKey;
-  onSelectMode: (mode: ModeKey) => void;
+  onSelectMode: (modeId: ModeId) => void;
 }
 
-type ModeDefinition = {
-  key: ModeKey;
+interface ModeDefinition {
+  id: ModeId;
   label: string;
-  icon: React.ElementType;
-  // Gradient used for the outline and glow
-  gradientClass: string;
-};
+  icon: React.ComponentType<{ className?: string }>;
+  gradientFrom: string;
+  gradientTo: string;
+}
 
 const MODES: ModeDefinition[] = [
   {
-    key: "focus",
+    id: "focus",
     label: "Focus Mode",
     icon: ArrowUpRight,
-    gradientClass: "from-[#ec4899] via-[#a855f7] to-[#22d3ee]",
+    gradientFrom: "from-[#ec4899]",
+    gradientTo: "to-[#8b5cf6]",
   },
   {
-    key: "news",
+    id: "news",
     label: "News Mode",
-    icon: FileText,
-    gradientClass: "from-[#38bdf8] to-[#6366f1]",
+    icon: Newspaper,
+    gradientFrom: "from-[#38bdf8]",
+    gradientTo: "to-[#6366f1]",
   },
   {
-    key: "learning",
+    id: "learning",
     label: "Learning Mode",
     icon: GraduationCap,
-    gradientClass: "from-[#22c55e] to-[#0ea5e9]",
+    gradientFrom: "from-[#22d3ee]",
+    gradientTo: "to-[#4ade80]",
   },
   {
-    key: "health",
+    id: "health",
     label: "Health Mode",
     icon: HeartPulse,
-    gradientClass: "from-[#4ade80] to-[#22c55e]",
+    gradientFrom: "from-[#4ade80]",
+    gradientTo: "to-[#22c55e]",
   },
   {
-    key: "career",
+    id: "career",
     label: "Career Mode",
-    icon: Briefcase,
-    gradientClass: "from-[#22d3ee] to-[#6366f1]",
+    icon: BriefcaseBusiness,
+    gradientFrom: "from-[#34d399]",
+    gradientTo: "to-[#22c55e]",
   },
   {
-    key: "wealth",
+    id: "wealth",
     label: "Wealth Mode",
-    icon: DollarSign,
-    gradientClass: "from-[#facc15] to-[#f97316]",
+    icon: CircleDollarSign,
+    gradientFrom: "from-[#facc15]",
+    gradientTo: "to-[#fb923c]",
   },
   {
-    key: "communication",
+    id: "communication",
     label: "Communication Mode",
     icon: MessageCircle,
-    gradientClass: "from-[#a855f7] to-[#6366f1]",
+    gradientFrom: "from-[#e879f9]",
+    gradientTo: "to-[#6366f1]",
   },
   {
-    key: "customize-ai-1",
-    label: "Customize AI",
-    icon: SlidersHorizontal,
-    gradientClass: "from-[#38bdf8] to-[#22d3ee]",
+    id: "uctTokens",
+    label: "UCT Tokens Earned",
+    icon: Coins,
+    gradientFrom: "from-[#38bdf8]",
+    gradientTo: "to-[#22c55e]",
   },
   {
-    key: "community",
+    id: "community",
     label: "Community Ranking",
     icon: Users,
-    gradientClass: "from-[#f97316] to-[#ec4899]",
+    gradientFrom: "from-[#a855f7]",
+    gradientTo: "to-[#ec4899]",
   },
   {
-    key: "crypto",
+    id: "crypto",
     label: "Crypto Hub",
     icon: Bitcoin,
-    gradientClass: "from-[#eab308] to-[#f97316]",
+    gradientFrom: "from-[#facc15]",
+    gradientTo: "to-[#fb923c]",
   },
   {
-    key: "customize-ai-2",
+    id: "customize",
     label: "Customize AI",
     icon: SlidersHorizontal,
-    gradientClass: "from-[#22d3ee] to-[#6366f1]",
+    gradientFrom: "from-[#38bdf8]",
+    gradientTo: "to-[#6366f1]",
   },
   {
-    key: "ai-usage",
+    id: "aiUsage",
     label: "AI Usage",
     icon: Activity,
-    gradientClass: "from-[#a855f7] to-[#22c55e]",
+    gradientFrom: "from-[#a855f7]",
+    gradientTo: "to-[#22d3ee]",
   },
 ];
 
-const ModeGrid = ({ activeMode, onSelectMode }: ModeGridProps) => {
+const ModeGrid = ({ onSelectMode }: ModeGridProps) => {
   return (
-    <div className="min-h-screen bg-[#020617] text-white flex flex-col items-center px-4 pb-10 pt-10 sm:pt-16">
-      {/* Logo + Title */}
-      <div className="flex flex-col items-center mb-8 sm:mb-10">
-        <div className="relative mb-6">
-          {/* Outer glow ring */}
-          <div className="absolute inset-0 rounded-[32px] bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.35),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(236,72,153,0.35),_transparent_60%)] blur-xl" />
-          {/* Icon block */}
-          <div className="relative w-28 h-28 rounded-[32px] bg-[radial-gradient(circle_at_top,_#22d3ee,_#0f172a),radial-gradient(circle_at_bottom,_#a855f7,_#020617)] border border-white/10 shadow-[0_0_40px_rgba(59,130,246,0.6)] flex items-center justify-center">
-            <div className="w-12 h-12 rounded-2xl border border-white/15 flex items-center justify-center">
-              {/* Simple three-line glyph to echo the logo */}
-              <div className="space-y-1.5 w-7">
-                <div className="h-[2px] rounded-full bg-white/90" />
-                <div className="h-[2px] rounded-full bg-white/80 w-5" />
-                <div className="h-[2px] rounded-full bg-white/70 w-4" />
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="mt-8 grid grid-cols-3 gap-4 px-4 pb-10 sm:max-w-md sm:mx-auto">
+      {MODES.map((mode) => {
+        const Icon = mode.icon;
 
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
-          unclutter<span className="text-white/80">AI</span>
-        </h1>
-        <p className="mt-2 text-xs sm:text-sm tracking-[0.35em] text-white/55 uppercase">
-          Choose your mode
-        </p>
-      </div>
-
-      {/* 12-button neon outline grid */}
-      <div className="w-full max-w-md sm:max-w-lg grid grid-cols-3 gap-3 sm:gap-4">
-        {MODES.map((mode) => {
-          const Icon = mode.icon;
-          const isActive = mode.key === activeMode;
-
-          return (
-            <button
-              key={mode.key}
-              type="button"
-              onClick={() => onSelectMode(mode.key)}
-              className={`
-                group relative overflow-hidden rounded-[26px] p-[2px]
-                bg-gradient-to-br ${mode.gradientClass}
-                transition-transform duration-150
-                active:scale-95
-                ${isActive ? "shadow-[0_0_30px_rgba(59,130,246,0.7)]" : "shadow-[0_0_16px_rgba(15,23,42,0.8)]"}
-              `}
+        return (
+          <button
+            key={mode.id}
+            type="button"
+            onClick={() => onSelectMode(mode.id)}
+            className={`
+              group relative overflow-hidden rounded-[28px] p-[2px]
+              bg-gradient-to-br ${mode.gradientFrom} ${mode.gradientTo}
+              shadow-[0_0_35px_rgba(59,130,246,0.35)]
+              transition-transform duration-200 ease-out
+              active:scale-[0.97]
+            `}
+          >
+            {/* Inner dark tile */}
+            <div
+              className="
+                flex h-28 flex-col items-center justify-center
+                rounded-[24px]
+                bg-black/75
+                backdrop-blur-2xl
+                border border-white/10
+                relative
+                overflow-hidden
+              "
             >
-              {/* Inner dark card */}
+              {/* Soft halo behind icon */}
               <div
                 className={`
-                  relative flex flex-col items-center justify-center
-                  rounded-[24px] bg-black/70
-                  px-2 py-4 sm:px-3 sm:py-5
-                  backdrop-blur-xl
-                  border border-white/5
-                  transition-all duration-200
-                  group-hover:bg-black/55
+                  pointer-events-none absolute inset-0 opacity-60
+                  bg-radial from-white/15 via-transparent to-transparent
+                  group-hover:opacity-90 transition-opacity duration-300
                 `}
-              >
-                {/* Soft inner glow on hover */}
-                <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <div className="absolute inset-[-40%] bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.20),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(168,85,247,0.22),_transparent_60%)]" />
-                </div>
+                style={{
+                  background:
+                    "radial-gradient(circle at 50% 10%, rgba(255,255,255,0.18), transparent 55%)",
+                }}
+              />
 
-                <Icon
-                  className={`
-                    relative z-10 h-6 w-6 sm:h-7 sm:w-7 text-white
-                    transition-transform duration-200
-                    group-hover:scale-110
-                  `}
-                  strokeWidth={1.7}
-                />
-                <span className="relative z-10 mt-2 text-[11px] sm:text-xs font-medium text-white/90 text-center leading-tight">
-                  {mode.label}
-                </span>
+              {/* Icon circle with outline */}
+              <div
+                className="
+                  relative mb-3 flex h-10 w-10 items-center justify-center
+                  rounded-2xl border border-white/60
+                  bg-black/40
+                  shadow-[0_0_20px_rgba(148,163,184,0.45)]
+                  group-hover:shadow-[0_0_28px_rgba(148,163,184,0.8)]
+                  transition-shadow duration-300
+                "
+              >
+                <Icon className="h-5 w-5 text-white" />
               </div>
-            </button>
-          );
-        })}
-      </div>
+
+              {/* Label */}
+              <span className="relative mt-0.5 text-[13px] font-medium text-white text-center leading-tight">
+                {mode.label}
+              </span>
+            </div>
+
+            {/* Glow ring on press */}
+            <div
+              className="
+                pointer-events-none absolute inset-0 rounded-[28px]
+                opacity-0 group-active:opacity-100
+                transition-opacity duration-150
+                ring-2 ring-white/40
+              "
+            />
+          </button>
+        );
+      })}
     </div>
   );
 };
