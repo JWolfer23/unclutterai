@@ -4,7 +4,7 @@ interface PlatformConfig {
   id: string;
   name: string;
   description?: string;
-  icon?: ReactNode;
+  icon?: ReactNode; // can be a React element OR a string name
 }
 
 interface PlatformToggleProps {
@@ -13,13 +13,24 @@ interface PlatformToggleProps {
   onToggle: (platformId: string) => void;
 }
 
-const PlatformToggle = ({
-  platform,
-  isConnected,
-  onToggle,
-}: PlatformToggleProps) => {
+const PlatformToggle = ({ platform, isConnected, onToggle }: PlatformToggleProps) => {
   const handleClick = () => {
     onToggle(platform.id);
+  };
+
+  // Safely render icon:
+  // - if it's a React node → render it
+  // - if it's a string (e.g. "MessageCircle") → ignore and use first letter fallback
+  const renderIcon = () => {
+    if (!platform.icon || typeof platform.icon === "string") {
+      return (
+        <span className="text-sm font-semibold text-white/70">
+          {platform.name.charAt(0)}
+        </span>
+      );
+    }
+
+    return platform.icon;
   };
 
   return (
@@ -28,45 +39,34 @@ const PlatformToggle = ({
       onClick={handleClick}
       className="
         w-full flex items-center justify-between
-        rounded-2xl
-        bg-white/5
+        rounded-2xl bg-[#0b0c10]
         px-4 py-3.5
-        border border-white/12
-        shadow-[0_10px_30px_rgba(0,0,0,0.45)]
-        hover:shadow-[0_14px_40px_rgba(0,0,0,0.65)]
+        border border-white/10
+        shadow-[0_18px_45px_rgba(0,0,0,0.65)]
+        hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(0,0,0,0.85)]
         transition-all duration-150
-        active:scale-[0.98]
-        text-left
       "
     >
-      {/* Left: icon + text */}
-      <div className="flex items-center gap-3 min-w-0">
+      {/* Left: Icon + Text */}
+      <div className="flex items-center gap-3 text-left">
+        {/* Icon bubble */}
         <div
           className="
-            h-10 w-10 flex items-center justify-center
+            flex h-10 w-10 items-center justify-center
             rounded-xl
             bg-gradient-to-br from-slate-900 to-slate-800
             border border-white/10
-            shadow-inner
+            shadow-[0_0_18px_rgba(15,23,42,0.8)]
           "
         >
-          {platform.icon ? (
-            platform.icon
-          ) : (
-            <span className="text-sm font-semibold text-slate-100">
-              {platform.name.charAt(0)}
-            </span>
-          )}
+          {renderIcon()}
         </div>
 
-        <div className="space-y-0.5 overflow-hidden">
-          <p className="text-sm font-semibold text-slate-50 truncate">
-            {platform.name}
-          </p>
+        {/* Name + description */}
+        <div className="space-y-0.5">
+          <p className="text-sm font-semibold text-white">{platform.name}</p>
           {platform.description && (
-            <p className="text-xs text-slate-300 truncate">
-              {platform.description}
-            </p>
+            <p className="text-xs text-white/55">{platform.description}</p>
           )}
         </div>
       </div>
@@ -75,15 +75,15 @@ const PlatformToggle = ({
       <div
         className={`
           relative inline-flex h-6 w-11 items-center rounded-full
-          transition-colors duration-200 ease-out
-          ${isConnected ? "bg-emerald-500" : "bg-slate-500/70"}
+          transition-colors duration-150
+          ${isConnected ? "bg-emerald-400" : "bg-slate-600"}
         `}
         aria-hidden="true"
       >
         <span
           className={`
             inline-block h-5 w-5 transform rounded-full bg-white
-            shadow-sm transition-transform duration-200 ease-out
+            shadow-sm transition-transform duration-150
             ${isConnected ? "translate-x-[20px]" : "translate-x-[2px]"}
           `}
         />
