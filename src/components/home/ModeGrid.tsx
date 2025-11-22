@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import logoDark from "@/assets/logo-new.png";
 
-type ModeId =
+export type ModeId =
   | "focus"
   | "news"
   | "learning"
