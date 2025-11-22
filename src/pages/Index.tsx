@@ -16,56 +16,8 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 
-import logoNew from "@/assets/logo-new.png";
-import {
-  ArrowUpRight,
-  Newspaper,
-  GraduationCap,
-  HeartPulse,
-  Briefcase,
-  DollarSign,
-  MessageCircle,
-  Sliders,
-  Users2,
-  Bitcoin,
-  Sparkles,
-} from "lucide-react";
-
-// Types for the 12 modes
-type ModeId =
-  | "focus"
-  | "news"
-  | "learning"
-  | "health"
-  | "career"
-  | "wealth"
-  | "communication"
-  | "customize1"
-  | "community"
-  | "crypto"
-  | "customize2"
-  | "aiusage";
-
-// Config for the 12 neon buttons
-const modes: {
-  id: ModeId;
-  label: string;
-  color: string;
-  icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  { id: "focus", label: "Focus Mode", icon: ArrowUpRight, color: "from-purple-500 to-pink-500" },
-  { id: "news", label: "News Mode", icon: Newspaper, color: "from-cyan-400 to-blue-500" },
-  { id: "learning", label: "Learning Mode", icon: GraduationCap, color: "from-cyan-400 to-teal-400" },
-  { id: "health", label: "Health Mode", icon: HeartPulse, color: "from-teal-400 to-green-400" },
-  { id: "career", label: "Career Mode", icon: Briefcase, color: "from-blue-400 to-green-400" },
-  { id: "wealth", label: "Wealth Mode", icon: DollarSign, color: "from-yellow-400 to-amber-500" },
-  { id: "communication", label: "Communication Mode", icon: MessageCircle, color: "from-purple-400 to-fuchsia-500" },
-  { id: "customize1", label: "Customize AI", icon: Sliders, color: "from-cyan-400 to-blue-400" },
-  { id: "community", label: "Community Ranking", icon: Users2, color: "from-purple-400 to-pink-500" },
-  { id: "crypto", label: "Crypto Hub", icon: Bitcoin, color: "from-yellow-400 to-orange-500" },
-  { id: "customize2", label: "Customize AI", icon: Sliders, color: "from-cyan-400 to-blue-500" },
-  { id: "aiusage", label: "AI Usage", icon: Sparkles, color: "from-purple-400 to-fuchsia-500" },
-];
+// NEW: Home screen component
+import ModeGrid, { type ModeId } from "@/components/home/ModeGrid";
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
@@ -181,17 +133,12 @@ const Index = () => {
     }
   };
 
-  // NEW: mode selection handler
+  // Mode selection handler
   const handleSelectMode = (modeId: ModeId) => {
-    setSelectedMode(modeId);
-
-    if (modeId !== "focus") {
-      const mode = modes.find((m) => m.id === modeId);
-      toast({
-        title: mode?.label ?? "Mode",
-        description: "This mode is coming soon. For now, try Focus Mode.",
-      });
+    if (modeId === "focus") {
+      setSelectedMode("focus");
     }
+    // Other modes handled by ModeGrid's internal banner
   };
 
   // Show onboarding for first-time users
@@ -219,46 +166,7 @@ const Index = () => {
     sentiment: msg.sentiment || "neutral",
   }));
 
-  // ---------- VIEW 1: Neon 12-button home screen ----------
-
-  const renderModesHome = () => (
-    <div className="min-h-screen w-full flex flex-col items-center px-6 py-10 text-white bg-gradient-to-b from-black via-slate-950 to-slate-900">
-      {/* Logo + title */}
-      <div className="flex flex-col items-center mb-10">
-        <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-cyan-400/20 via-purple-600/30 to-pink-500/20 backdrop-blur-xl flex items-center justify-center border border-white/10 shadow-[0_0_40px_rgba(59,130,246,0.6)]">
-          <img src={logoNew} className="w-14 h-14 opacity-90" alt="UnclutterAI logo" />
-        </div>
-
-        <h1 className="text-4xl font-bold mt-6 tracking-tight">unclutterAI</h1>
-        <p className="text-xs text-white/60 tracking-[0.25em] mt-2">
-          CHOOSE YOUR MODE
-        </p>
-      </div>
-
-      {/* Grid of 12 modes */}
-      <div className="grid grid-cols-3 gap-5 w-full max-w-md">
-        {modes.map((mode) => {
-          const Icon = mode.icon;
-          return (
-            <button
-              key={mode.id}
-              onClick={() => handleSelectMode(mode.id)}
-              className={`rounded-3xl p-5 flex flex-col items-center justify-center bg-slate-950/80 border border-white/10 shadow-[0_0_35px_rgba(0,0,0,0.9)] bg-gradient-to-br ${mode.color} bg-opacity-5 backdrop-blur-xl transition-all hover:scale-105 active:scale-100`}
-            >
-              <div className="w-10 h-10 rounded-2xl border border-white/30 flex items-center justify-center mb-3">
-                <Icon className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xs font-medium text-white/85 text-center leading-tight">
-                {mode.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  // ---------- VIEW 2: Existing dashboard (Focus Mode) ----------
+  // ---------- VIEW: Focus Mode Dashboard ----------
 
   const renderFocusDashboard = () => (
     <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-white">
@@ -339,7 +247,12 @@ const Index = () => {
   );
 
   // ---------- FINAL RENDER ----------
-  return selectedMode === "focus" ? renderFocusDashboard() : renderModesHome();
+  if (selectedMode === "focus") {
+    return renderFocusDashboard();
+  }
+
+  // Show mode selection home screen
+  return <ModeGrid onSelectMode={handleSelectMode} />;
 };
 
 export default Index;
