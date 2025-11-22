@@ -14,8 +14,9 @@ import { UserStatsOverview } from "@/components/UserStatsOverview";
 import { AIUsageResetTimer } from "@/components/AIUsageResetTimer";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
-import logoNew from "@/assets/logo-new.png";
+import { Button } from "@/components/ui/button";
 
+import logoNew from "@/assets/logo-new.png";
 import {
   ArrowUpRight,
   Newspaper,
@@ -25,11 +26,12 @@ import {
   DollarSign,
   MessageCircle,
   Sliders,
-  Users,
+  Users2,
   Bitcoin,
-  Activity,
+  Sparkles,
 } from "lucide-react";
 
+// Types for the 12 modes
 type ModeId =
   | "focus"
   | "news"
@@ -38,11 +40,32 @@ type ModeId =
   | "career"
   | "wealth"
   | "communication"
-  | "customize-ai"
-  | "community-ranking"
-  | "crypto-hub"
-  | "customize"
-  | "ai-usage";
+  | "customize1"
+  | "community"
+  | "crypto"
+  | "customize2"
+  | "aiusage";
+
+// Config for the 12 neon buttons
+const modes: {
+  id: ModeId;
+  label: string;
+  color: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { id: "focus", label: "Focus Mode", icon: ArrowUpRight, color: "from-purple-500 to-pink-500" },
+  { id: "news", label: "News Mode", icon: Newspaper, color: "from-cyan-400 to-blue-500" },
+  { id: "learning", label: "Learning Mode", icon: GraduationCap, color: "from-cyan-400 to-teal-400" },
+  { id: "health", label: "Health Mode", icon: HeartPulse, color: "from-teal-400 to-green-400" },
+  { id: "career", label: "Career Mode", icon: Briefcase, color: "from-blue-400 to-green-400" },
+  { id: "wealth", label: "Wealth Mode", icon: DollarSign, color: "from-yellow-400 to-amber-500" },
+  { id: "communication", label: "Communication Mode", icon: MessageCircle, color: "from-purple-400 to-fuchsia-500" },
+  { id: "customize1", label: "Customize AI", icon: Sliders, color: "from-cyan-400 to-blue-400" },
+  { id: "community", label: "Community Ranking", icon: Users2, color: "from-purple-400 to-pink-500" },
+  { id: "crypto", label: "Crypto Hub", icon: Bitcoin, color: "from-yellow-400 to-orange-500" },
+  { id: "customize2", label: "Customize AI", icon: Sliders, color: "from-cyan-400 to-blue-500" },
+  { id: "aiusage", label: "AI Usage", icon: Sparkles, color: "from-purple-400 to-fuchsia-500" },
+];
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
@@ -58,50 +81,34 @@ const Index = () => {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showRecoveryDashboard, setShowRecoveryDashboard] = useState(false);
 
-  // 🌟 NEW: which "mode" is active (null = show 12-icon grid)
+  // NEW: which mode is selected (null = show neon grid)
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
 
   const {
     state: onboardingState,
     completeOnboarding,
     connectPlatform,
+    skipOnboarding,
     requiresPlatform,
     isOnboardingComplete,
   } = useOnboarding();
 
-  // ---------- AUTH / ONBOARDING ----------
-
+  // Show loading spinner while checking auth
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4" />
-          <p className="text-slate-300">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-gray-300">Loading...</p>
         </div>
       </div>
     );
   }
 
+  // Show auth page if not authenticated
   if (!user) {
     return <AuthPage />;
   }
-
-  if (onboardingState.showOnboarding && !isOnboardingComplete) {
-    return (
-      <OnboardingFlow
-        onComplete={completeOnboarding}
-        onConnect={(platform) => {
-          connectPlatform(platform);
-          toast({
-            title: "🎉 Connected!",
-            description: `${platform} is now connected and ready to use.`,
-          });
-        }}
-      />
-    );
-  }
-
-  // ---------- HELPERS ----------
 
   const handleMessageAction = (
     messageId: number,
@@ -112,10 +119,10 @@ const Index = () => {
       unsubscribe: "📧 Unsubscribed successfully",
       safe: "✅ Sender marked as safe",
       quarantine: "🗂️ Message moved to quarantine",
-    } as const;
+    };
 
     toast({
-      title: "Action complete",
+      title: "Action Complete",
       description: actionMessages[action],
     });
   };
@@ -143,14 +150,25 @@ const Index = () => {
     const message = messages.find((m) => m.id === messageId.toString());
     if (message) {
       setSelectedMessage(message);
-      const el = document.getElementById(`message-${messageId}`);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      const messageElement = document.getElementById(`message-${messageId}`);
+      if (messageElement) {
+        messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     }
+  };
+
+  const handleConnect = (platform: string) => {
+    connectPlatform(platform);
+    setShowContextualPrompt(null);
+    toast({
+      title: "🎉 Connected!",
+      description: `${platform} is now connected and ready to use.`,
+    });
   };
 
   const handleCommand = (command: string) => {
     toast({
-      title: "✨ Command executed",
+      title: "✨ Command Executed",
       description: `Processing: ${command}`,
     });
   };
@@ -163,46 +181,7 @@ const Index = () => {
     }
   };
 
-  const formattedMessages = messages.map((msg, index) => ({
-    id: index + 1,
-    originalId: msg.id,
-    type: msg.type,
-    from: msg.sender_name,
-    avatar: msg.sender_avatar || "/placeholder.svg",
-    subject: msg.subject,
-    preview:
-      msg.preview ||
-      (msg.content ? msg.content.substring(0, 100) + "..." : ""),
-    time: new Date(msg.received_at || msg.created_at).toLocaleString(),
-    priority: msg.priority || "medium",
-    platform: msg.platform,
-    tasks: [],
-    sentiment: msg.sentiment || "neutral",
-  }));
-
-  // ---------- 12-BUTTON MODE GRID ----------
-
-  const modes: {
-    id: ModeId;
-    label: string;
-    Icon: React.ComponentType<any>;
-    border: string;
-    glow: string;
-  }[] = [
-    { id: "focus", label: "Focus Mode", Icon: ArrowUpRight, border: "border-fuchsia-500", glow: "shadow-[0_0_40px_rgba(236,72,153,0.45)]" },
-    { id: "news", label: "News Mode", Icon: Newspaper, border: "border-cyan-400", glow: "shadow-[0_0_40px_rgba(56,189,248,0.45)]" },
-    { id: "learning", label: "Learning Mode", Icon: GraduationCap, border: "border-teal-400", glow: "shadow-[0_0_40px_rgba(45,212,191,0.45)]" },
-    { id: "health", label: "Health Mode", Icon: HeartPulse, border: "border-emerald-400", glow: "shadow-[0_0_40px_rgba(52,211,153,0.45)]" },
-    { id: "career", label: "Career Mode", Icon: Briefcase, border: "border-sky-400", glow: "shadow-[0_0_40px_rgba(56,189,248,0.45)]" },
-    { id: "wealth", label: "Wealth Mode", Icon: DollarSign, border: "border-amber-400", glow: "shadow-[0_0_40px_rgba(251,191,36,0.45)]" },
-    { id: "communication", label: "Communication Mode", Icon: MessageCircle, border: "border-cyan-400", glow: "shadow-[0_0_40px_rgba(56,189,248,0.45)]" },
-    { id: "customize-ai", label: "Customize AI", Icon: Sliders, border: "border-sky-400", glow: "shadow-[0_0_40px_rgba(56,189,248,0.45)]" },
-    { id: "community-ranking", label: "Community Ranking", Icon: Users, border: "border-fuchsia-500", glow: "shadow-[0_0_40px_rgba(236,72,153,0.45)]" },
-    { id: "crypto-hub", label: "Crypto Hub", Icon: Bitcoin, border: "border-amber-400", glow: "shadow-[0_0_40px_rgba(251,191,36,0.45)]" },
-    { id: "customize", label: "Customize AI", Icon: Sliders, border: "border-sky-400", glow: "shadow-[0_0_40px_rgba(56,189,248,0.45)]" },
-    { id: "ai-usage", label: "AI Usage", Icon: Activity, border: "border-fuchsia-500", glow: "shadow-[0_0_40px_rgba(236,72,153,0.45)]" },
-  ];
-
+  // NEW: mode selection handler
   const handleSelectMode = (modeId: ModeId) => {
     setSelectedMode(modeId);
 
@@ -215,79 +194,91 @@ const Index = () => {
     }
   };
 
+  // Show onboarding for first-time users
+  if (onboardingState.showOnboarding && !isOnboardingComplete) {
+    return (
+      <OnboardingFlow onComplete={completeOnboarding} onConnect={handleConnect} />
+    );
+  };
+
+  // Convert Supabase messages to the format expected by existing components
+
+  const formattedMessages = messages.map((msg, index) => ({
+    id: index + 1,
+    originalId: msg.id,
+    type: msg.type,
+    from: msg.sender_name,
+    avatar: msg.sender_avatar || "/placeholder.svg",
+    subject: msg.subject,
+    preview:
+      msg.preview || (msg.content ? msg.content.substring(0, 100) + "..." : ""),
+    time: new Date(msg.received_at || msg.created_at).toLocaleString(),
+    priority: msg.priority || "medium",
+    platform: msg.platform,
+    tasks: [],
+    sentiment: msg.sentiment || "neutral",
+  }));
+
+  // ---------- VIEW 1: Neon 12-button home screen ----------
+
   const renderModesHome = () => (
-    <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-slate-50 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md space-y-10">
-        {/* Logo + title */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-24 h-24 rounded-[32px] bg-gradient-to-br from-cyan-500 to-fuchsia-500 flex items-center justify-center shadow-[0_0_80px_rgba(56,189,248,0.55)]">
-            <div className="w-16 h-16 rounded-[24px] bg-black/80 flex items-center justify-center border border-white/10">
-              <img
-                src={logoNew}
-                alt="UnclutterAI Logo"
-                className="w-10 h-10 object-contain"
-              />
-            </div>
-          </div>
-          <div className="text-center space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-white">
-              unclutterAI
-            </h1>
-            <p className="text-[11px] uppercase tracking-[0.25em] text-slate-400">
-              CHOOSE YOUR MODE
-            </p>
-          </div>
+    <div className="min-h-screen w-full flex flex-col items-center px-6 py-10 text-white bg-gradient-to-b from-black via-slate-950 to-slate-900">
+      {/* Logo + title */}
+      <div className="flex flex-col items-center mb-10">
+        <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-cyan-400/20 via-purple-600/30 to-pink-500/20 backdrop-blur-xl flex items-center justify-center border border-white/10 shadow-[0_0_40px_rgba(59,130,246,0.6)]">
+          <img src={logoNew} className="w-14 h-14 opacity-90" alt="UnclutterAI logo" />
         </div>
 
-        {/* 12-button grid */}
-        <div className="grid grid-cols-3 gap-3">
-          {modes.map(({ id, label, Icon, border, glow }) => (
+        <h1 className="text-4xl font-bold mt-6 tracking-tight">unclutterAI</h1>
+        <p className="text-xs text-white/60 tracking-[0.25em] mt-2">
+          CHOOSE YOUR MODE
+        </p>
+      </div>
+
+      {/* Grid of 12 modes */}
+      <div className="grid grid-cols-3 gap-5 w-full max-w-md">
+        {modes.map((mode) => {
+          const Icon = mode.icon;
+          return (
             <button
-              key={id}
-              onClick={() => handleSelectMode(id)}
-              className={`
-                group flex flex-col items-center justify-center
-                rounded-3xl border ${border}
-                bg-slate-950/70
-                ${glow}
-                px-2 py-3
-                transition-transform transition-shadow duration-150
-                hover:-translate-y-0.5
-                active:scale-[0.97]
-              `}
+              key={mode.id}
+              onClick={() => handleSelectMode(mode.id)}
+              className={`rounded-3xl p-5 flex flex-col items-center justify-center bg-slate-950/80 border border-white/10 shadow-[0_0_35px_rgba(0,0,0,0.9)] bg-gradient-to-br ${mode.color} bg-opacity-5 backdrop-blur-xl transition-all hover:scale-105 active:scale-100`}
             >
-              <div className="w-10 h-10 rounded-2xl border border-current flex items-center justify-center mb-2 text-white">
-                <Icon className="w-5 h-5 text-current" />
+              <div className="w-10 h-10 rounded-2xl border border-white/30 flex items-center justify-center mb-3">
+                <Icon className="w-5 h-5 text-white" />
               </div>
-              <span className="text-[11px] font-medium text-slate-100 text-center leading-snug">
-                {label}
+              <span className="text-xs font-medium text-white/85 text-center leading-tight">
+                {mode.label}
               </span>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </div>
   );
 
-  // ---------- FOCUS MODE DASHBOARD (your existing layout) ----------
+  // ---------- VIEW 2: Existing dashboard (Focus Mode) ----------
 
   const renderFocusDashboard = () => (
-    <>
+    <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-white">
+      {/* Header bar */}
       <HeaderSection onShowCommandPalette={() => setShowCommandPalette(true)} />
 
-      {/* Back to modes */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
-        <button
-          type="button"
+      {/* "Back to modes" CTA */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-white/70 hover:text-white hover:bg-white/5 px-2"
           onClick={() => setSelectedMode(null)}
-          className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
         >
-          ← All modes
-        </button>
+          ← All Modes
+        </Button>
       </div>
 
-      {/* Priority cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+      {/* Priority dashboard cards */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 space-y-6">
         <PriorityDashboardCards
           onShowRecoveryDashboard={() => setShowRecoveryDashboard(true)}
         />
@@ -298,8 +289,8 @@ const Index = () => {
         <AIUsageTracker />
       </div>
 
-      {/* Main grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 pt-4">
+      {/* Main Content Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <SidebarSection
             onMessageTypeFilter={handleMessageTypeFilter}
@@ -311,7 +302,7 @@ const Index = () => {
           <div className="lg:col-span-3 space-y-6">
             {messagesLoading ? (
               <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
               </div>
             ) : (
               <MessageTabs
@@ -327,30 +318,13 @@ const Index = () => {
           </div>
         </div>
       </div>
-    </>
-  );
 
-  // ---------- FINAL RENDER ----------
-  return renderModesHome();
-
-  // (temporarily comment out everything below)
-  /*
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900">
-      {selectedMode === "focus" ? renderFocusDashboard() : renderModesHome()}
-
+      {/* Modals */}
       {showContextualPrompt && (
         <ContextualSetupPrompt
           platform={showContextualPrompt.platform}
           feature={showContextualPrompt.feature}
-          onConnect={(platform) => {
-            connectPlatform(platform);
-            setShowContextualPrompt(null);
-            toast({
-              title: "🎉 Connected!",
-              description: `${platform} is now connected and ready to use.`,
-            });
-          }}
+          onConnect={handleConnect}
           onDismiss={() => setShowContextualPrompt(null)}
         />
       )}
@@ -363,7 +337,9 @@ const Index = () => {
       />
     </div>
   );
-  */
+
+  // ---------- FINAL RENDER ----------
+  return selectedMode === "focus" ? renderFocusDashboard() : renderModesHome();
 };
 
 export default Index;
