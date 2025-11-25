@@ -6,6 +6,9 @@ import CommandPalette from "@/components/onboarding/CommandPalette";
 import HeaderSection from "@/components/HeaderSection";
 import AuthPage from "@/components/auth/AuthPage";
 import PriorityDashboardCards from "@/components/PriorityDashboardCards";
+import { UserStatsOverview } from "@/components/UserStatsOverview";
+import { AIUsageResetTimer } from "@/components/AIUsageResetTimer";
+import AIUsageTracker from "@/components/AIUsageTracker";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
 import logoNew from "@/assets/logo-new.png";
@@ -306,6 +309,20 @@ const Index = () => {
         >
           ← All modes
         </button>
+      </div>
+
+      {/* Your AI Stats */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <h2 className="text-2xl font-semibold text-white mb-4">Your AI Stats</h2>
+        <UserStatsOverview />
+      </div>
+
+      {/* AI Usage Today */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <AIUsageResetTimer />
+        <div className="mt-4">
+          <AIUsageTracker />
+        </div>
       </div>
 
       {/* Priority dashboard cards */}
