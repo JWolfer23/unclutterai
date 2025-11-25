@@ -184,46 +184,46 @@ const MessageCard = ({ message, onClick, isSelected }: MessageCardProps) => {
             )}
 
             {/* Quick Actions */}
-            <div className="flex items-center justify-between">
-              <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button size="sm" variant="ghost" className="h-8 px-3 text-xs">
                   <Reply className="w-3 h-3 mr-1" />
                   Reply
                 </Button>
                 {!message.ai_summary && message.content && (
-                  <div className="flex flex-col">
+                  <div className="flex flex-col items-center">
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className="h-8 px-3 text-xs" 
+                      className="h-8 px-3 text-xs whitespace-nowrap" 
                       onClick={handleSummarize}
                       disabled={isProcessing || isLimitReached('summary')}
                     >
                       <FileText className="w-3 h-3 mr-1" />
                       Summarize
                     </Button>
-                    <span className="text-xs text-gray-500 text-center mt-1">
+                    <span className="text-[10px] text-gray-500 text-center mt-0.5 whitespace-nowrap">
                       {getUsageText('summary')}
                     </span>
                   </div>
                 )}
-                <div className="flex flex-col">
+                <div className="flex flex-col items-center">
                   <Button 
                     size="sm" 
                     variant="ghost" 
-                    className="h-8 px-3 text-xs"
+                    className="h-8 px-3 text-xs whitespace-nowrap"
                     onClick={handleGenerateTasks}
                     disabled={isProcessing || !message.content || isLimitReached('task_generation')}
                   >
                     <ListTodo className="w-3 h-3 mr-1" />
                     Tasks
                   </Button>
-                  <span className="text-xs text-gray-500 text-center mt-1">
+                  <span className="text-[10px] text-gray-500 text-center mt-0.5 whitespace-nowrap">
                     {getUsageText('task_generation')}
                   </span>
                 </div>
               </div>
-              <div className="flex space-x-1">
+              <div className="flex space-x-1 flex-shrink-0">
                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
                   <Archive className="w-3 h-3" />
                 </Button>
