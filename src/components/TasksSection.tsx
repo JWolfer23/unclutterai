@@ -187,35 +187,35 @@ const TasksSection = ({ onViewSource, onTaskComplete }: TasksSectionProps) => {
               <Checkbox
                 checked={task.completed}
                 onCheckedChange={() => handleTaskComplete(task.id)}
-                className="mt-0.5"
+                className="mt-0.5 flex-shrink-0"
               />
               
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <p className="text-sm font-medium text-gray-900 break-words flex-1">
                     {task.summary}
                   </p>
-                  <Badge className={`text-xs ${getUrgencyColor(task.urgency)}`}>
+                  <Badge className={`text-xs flex-shrink-0 ${getUrgencyColor(task.urgency)}`}>
                     {task.urgency}
                   </Badge>
                 </div>
                 
-                <div className="flex items-center space-x-2 text-xs text-gray-600 mb-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-600 mb-2">
                   <div className="flex items-center space-x-1">
                     {getPlatformIcon(task.platform)}
                     <span>{task.platform}</span>
                   </div>
                   <span>•</span>
-                  <span>{task.source}</span>
+                  <span className="truncate">{task.source}</span>
                   <span>•</span>
                   <div className="flex items-center space-x-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{task.timestamp}</span>
+                    <Clock className="w-3 h-3 flex-shrink-0" />
+                    <span className="whitespace-nowrap">{task.timestamp}</span>
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-gray-500">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="text-[10px] text-gray-500 whitespace-nowrap">
                     {getUsageText('scoring')}
                   </div>
                   
