@@ -68,7 +68,7 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
 
       <Button
         size="sm"
-        className="justify-start h-9 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
+        className="justify-start h-9 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600"
       >
         <Sparkles className="w-4 h-4 mr-2" />
         AI Compose
@@ -103,11 +103,11 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
 
         {/* Title + subtitle */}
         <div className="flex-1 min-w-0">
-          <h1 className="unclutter-header-title bg-gradient-to-r from-cyan-400 via-sky-400 to-purple-500 bg-clip-text text-transparent">
-            UnclutterAI
+          <h1 className="unclutter-header-title text-[#A855F7]">
+            unclutterAI
           </h1>
           <p className="unclutter-header-subtitle hidden sm:block">
-            One inbox, one assistant, zero chaos
+            Less Noise. More Clarity. One App.
           </p>
         </div>
 
@@ -136,7 +136,7 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
 
             <Button
               size="sm"
-              className="h-9 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 shadow-md shadow-purple-500/30"
+              className="h-9 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 shadow-md shadow-purple-500/30"
             >
               <Sparkles className="w-4 h-4 mr-2" />
               <span className="hidden lg:inline">AI Compose</span>

@@ -53,10 +53,10 @@ const PriorityDashboardCards = ({
                 </div>
 
                 <div className="flex items-baseline gap-2">
-                  <span className="card-main bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+                  <span className="card-main bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                     {focusScore}%
                   </span>
-                  <span className="text-sm text-green-400 font-semibold">
+                  <span className="text-sm text-purple-400 font-semibold">
                     +3%
                   </span>
                 </div>
