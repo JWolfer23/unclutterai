@@ -187,7 +187,7 @@ const Index = () => {
 
   // Mode selection from the home grid
   const handleSelectMode = (modeId: ModeId) => {
-    if (modeId === "focus") {
+    if (modeId === "aiUsage") {
       setSelectedMode("focus");
       return;
     }
@@ -195,7 +195,7 @@ const Index = () => {
     const mode = modes.find((m) => m.id === modeId);
     toast({
       title: mode?.label ?? "Mode",
-      description: "This mode is coming soon. For now, try Focus Mode.",
+      description: "This mode is coming soon.",
     });
   };
 
