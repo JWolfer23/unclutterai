@@ -41,6 +41,44 @@ export type Database = {
         }
         Relationships: []
       }
+      focus_session_notes: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          mode: string
+          session_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          mode: string
+          session_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          mode?: string
+          session_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "focus_session_notes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "focus_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       focus_sessions: {
         Row: {
           actual_minutes: number | null
