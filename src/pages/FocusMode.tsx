@@ -5,13 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
-import { useTasks } from "@/hooks/useTasks";
 import { toast } from "@/hooks/use-toast";
 
 const FocusMode = () => {
   const navigate = useNavigate();
   const { startSession, endSession, addInterruption, activeSession } = useFocusSessions();
-  const { tasks } = useTasks();
 
   const [taskInput, setTaskInput] = useState("");
   const [selectedTask, setSelectedTask] = useState<string>("");
@@ -193,30 +191,40 @@ const FocusMode = () => {
           <div className="mb-8">
             <label className="block text-sm font-semibold mb-3 flex items-center gap-2">
               <Target className="w-4 h-4 text-purple-400" />
-              What will you focus on?
+              Select a task or type below
             </label>
             
-            {tasks && tasks.length > 0 ? (
-              <Select value={selectedTask} onValueChange={setSelectedTask} disabled={isActive}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                  <SelectValue placeholder="Select a task or type below..." />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-white/10">
-                  {tasks.map((task) => (
-                    <SelectItem key={task.id} value={task.id} className="text-white">
-                      {task.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : null}
+            <Select value={selectedTask} onValueChange={setSelectedTask} disabled={isActive}>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                <SelectValue placeholder="Select a task or type below" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-white/10">
+                <SelectItem value="learning" className="text-white">
+                  Learning Mode
+                </SelectItem>
+                <SelectItem value="health" className="text-white">
+                  Health Mode
+                </SelectItem>
+                <SelectItem value="career" className="text-white">
+                  Career Mode
+                </SelectItem>
+                <SelectItem value="wealth" className="text-white">
+                  Wealth Mode
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <label className="block text-sm font-semibold mt-6 mb-3 flex items-center gap-2">
+              <Target className="w-4 h-4 text-purple-400" />
+              Input your goal for the focus session
+            </label>
             
             <Input
               value={taskInput}
               onChange={(e) => setTaskInput(e.target.value)}
-              placeholder="Or type a new task..."
+              placeholder="e.g., Finish writing portfolio summary, complete course lesson, stretch, review investments"
               disabled={isActive}
-              className="mt-2 bg-white/5 border-white/10 text-white placeholder:text-slate-500"
+              className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
             />
           </div>
 
