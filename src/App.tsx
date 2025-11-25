@@ -10,6 +10,15 @@ import CryptoIntegration from "./pages/CryptoIntegration";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./components/auth/AuthPage";
 import PasswordReset from "./pages/PasswordReset";
+import NewsMode from "./pages/NewsMode";
+import LearningMode from "./pages/LearningMode";
+import HealthMode from "./pages/HealthMode";
+import CareerMode from "./pages/CareerMode";
+import WealthMode from "./pages/WealthMode";
+import CommunicationMode from "./pages/CommunicationMode";
+import UCTTokens from "./pages/UCTTokens";
+import CommunityRanking from "./pages/CommunityRanking";
+import CustomizeAI from "./pages/CustomizeAI";
 import { useAuth } from "@/hooks/useAuth";
 import { SecurityProvider } from "@/components/SecurityProvider";
 
@@ -35,6 +44,18 @@ const App = () => {
               <Route path="/" element={user ? <Index /> : <Navigate to="/auth" replace />} />
               <Route path="/email-setup" element={user ? <EmailSetup /> : <Navigate to="/auth" replace />} />
               <Route path="/crypto-integration" element={user ? <CryptoIntegration /> : <Navigate to="/auth" replace />} />
+              
+              {/* Mode Routes */}
+              <Route path="/news" element={user ? <NewsMode /> : <Navigate to="/auth" replace />} />
+              <Route path="/learning" element={user ? <LearningMode /> : <Navigate to="/auth" replace />} />
+              <Route path="/health" element={user ? <HealthMode /> : <Navigate to="/auth" replace />} />
+              <Route path="/career" element={user ? <CareerMode /> : <Navigate to="/auth" replace />} />
+              <Route path="/wealth" element={user ? <WealthMode /> : <Navigate to="/auth" replace />} />
+              <Route path="/communication" element={user ? <CommunicationMode /> : <Navigate to="/auth" replace />} />
+              <Route path="/uct-tokens" element={user ? <UCTTokens /> : <Navigate to="/auth" replace />} />
+              <Route path="/community" element={user ? <CommunityRanking /> : <Navigate to="/auth" replace />} />
+              <Route path="/customize" element={user ? <CustomizeAI /> : <Navigate to="/auth" replace />} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

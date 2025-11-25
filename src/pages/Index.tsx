@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import ContextualSetupPrompt from "@/components/onboarding/ContextualSetupPrompt";
@@ -44,6 +45,7 @@ type ModeId =
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
 
   const [showContextualPrompt, setShowContextualPrompt] = useState<{
     platform: string;
@@ -187,16 +189,33 @@ const Index = () => {
 
   // Mode selection from the home grid
   const handleSelectMode = (modeId: ModeId) => {
+    // Route mapping for each mode
+    const routes: Record<ModeId, string> = {
+      focus: "/", // Keep as placeholder, not directly accessible
+      news: "/news",
+      learning: "/learning",
+      health: "/health",
+      career: "/career",
+      wealth: "/wealth",
+      communication: "/communication",
+      uctTokens: "/uct-tokens",
+      community: "/community",
+      crypto: "/crypto-integration",
+      customize: "/customize",
+      aiUsage: "", // Special case - opens dashboard
+    };
+
+    // AI Usage button opens the dashboard
     if (modeId === "aiUsage") {
       setSelectedMode("focus");
       return;
     }
 
-    const mode = modes.find((m) => m.id === modeId);
-    toast({
-      title: mode?.label ?? "Mode",
-      description: "This mode is coming soon.",
-    });
+    // Navigate to the appropriate route
+    const route = routes[modeId];
+    if (route) {
+      navigate(route);
+    }
   };
 
   // Show onboarding for first-time users
