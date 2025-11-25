@@ -13,23 +13,27 @@ const CryptoIntegration = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-transparent text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            size="sm"
+        <div className="mb-8">
+          <button
             onClick={() => navigate("/")}
-            className="p-2"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
           >
             <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-primary">Crypto Integration</h1>
-            <p className="text-muted-foreground">
-              Gamify your productivity with tokenized rewards and blockchain-backed features
-            </p>
+            Back to Home
+          </button>
+          <div className="flex items-center gap-4">
+            <div className="metric-icon metric-icon--tokens">
+              <Coins className="metric-icon__glyph" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Crypto Integration</h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Gamify your productivity with tokenized rewards and blockchain-backed features
+              </p>
+            </div>
           </div>
         </div>
 
