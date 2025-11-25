@@ -12,13 +12,13 @@ interface StatCardProps {
 const StatCard = ({ icon, label, value, isLoading }: StatCardProps) => {
   if (isLoading) {
     return (
-      <Card className="animate-fade-in">
+      <Card className="animate-fade-in bg-black/40 border-white/10 backdrop-blur-xl">
         <CardContent className="p-6">
           <div className="flex items-center space-x-3">
             <span className="text-2xl">{icon}</span>
             <div className="space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-4 w-20 bg-white/10" />
+              <Skeleton className="h-8 w-16 bg-white/10" />
             </div>
           </div>
         </CardContent>
@@ -27,13 +27,13 @@ const StatCard = ({ icon, label, value, isLoading }: StatCardProps) => {
   }
 
   return (
-    <Card className="glass-card animate-fade-in hover-scale transition-all duration-200">
+    <Card className="glass-card animate-fade-in hover-scale transition-all duration-200 bg-black/40 border-white/10 backdrop-blur-xl">
       <CardContent className="p-6">
         <div className="flex items-center space-x-3">
           <span className="text-2xl">{icon}</span>
           <div>
-            <p className="text-sm text-muted-foreground font-medium">{label}</p>
-            <p className={`text-2xl font-bold ${value === 0 ? 'text-muted-foreground' : 'text-foreground'}`}>
+            <p className="text-sm text-white/60 font-medium">{label}</p>
+            <p className={`text-2xl font-bold ${value === 0 ? 'text-white/40' : 'text-white'}`}>
               {value.toLocaleString()}
             </p>
           </div>
@@ -71,7 +71,7 @@ export const UserStatsOverview = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-foreground">Your AI Stats</h2>
+      <h2 className="text-xl font-semibold text-white">Your AI Stats</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => (
           <StatCard

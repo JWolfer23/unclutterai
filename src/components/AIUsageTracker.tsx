@@ -48,12 +48,12 @@ const AIUsageTracker = () => {
 
   if (isLoading) {
     return (
-      <Card className="w-full">
+      <Card className="w-full bg-black/40 border-white/10 backdrop-blur-xl">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">AI Usage Today</CardTitle>
+          <CardTitle className="text-lg font-semibold text-white">AI Usage Today</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-muted-foreground">Loading usage data...</div>
+          <div className="text-sm text-white/60">Loading usage data...</div>
         </CardContent>
       </Card>
     );
@@ -87,14 +87,14 @@ const AIUsageTracker = () => {
     <div className="w-full space-y-4">
       {/* Upgrade prompt banner */}
       {upgradePrompt && (
-        <Alert variant={upgradePrompt.variant} className="border-l-4">
-          <Zap className="h-4 w-4" />
-          <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <Alert variant={upgradePrompt.variant} className="border-l-4 border-purple-500/50 bg-purple-500/10 backdrop-blur-xl">
+          <Zap className="h-4 w-4 text-purple-400" />
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-white">
             <span>{upgradePrompt.message}</span>
             <Button 
               size="sm" 
               variant={upgradePrompt.type === 'hit' ? 'secondary' : 'outline'}
-              className="whitespace-nowrap self-start sm:self-auto"
+              className="whitespace-nowrap self-start sm:self-auto bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 border-0 text-white"
               onClick={() => {
                 // TODO: Implement upgrade flow (Stripe/Token vault)
                 console.log('Upgrade clicked');
@@ -107,9 +107,9 @@ const AIUsageTracker = () => {
         </Alert>
       )}
 
-      <Card className="w-full">
+      <Card className="w-full bg-black/40 border-white/10 backdrop-blur-xl">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">AI Usage Today</CardTitle>
+          <CardTitle className="text-lg font-semibold text-white">AI Usage Today</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {usageItems.map((item) => {
@@ -123,33 +123,34 @@ const AIUsageTracker = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Icon className={`h-4 w-4 ${
-                      isAtLimit ? 'text-destructive' : 
-                      isNearLimit ? 'text-orange-500' : 
-                      'text-muted-foreground'
+                      isAtLimit ? 'text-pink-400' : 
+                      isNearLimit ? 'text-purple-400' : 
+                      'text-white/60'
                     }`} />
-                    <span className="text-sm font-medium">{item.label}</span>
+                    <span className="text-sm font-medium text-white">{item.label}</span>
                     {isAtLimit && (
-                      <span className="text-xs px-2 py-1 bg-destructive/10 text-destructive rounded-full">
+                      <span className="text-xs px-2 py-1 bg-pink-500/20 text-pink-400 rounded-full border border-pink-500/30">
                         Limit reached
                       </span>
                     )}
                   </div>
                   <span className={`text-sm ${
-                    isAtLimit ? 'text-destructive font-medium' : 
-                    isNearLimit ? 'text-orange-500' : 
-                    'text-muted-foreground'
+                    isAtLimit ? 'text-pink-400 font-medium' : 
+                    isNearLimit ? 'text-purple-400' : 
+                    'text-white/60'
                   }`}>
                     {item.used} / {item.limit}
                   </span>
                 </div>
                 <Progress 
                   value={percentage} 
-                  className={`h-2 ${
-                    isAtLimit ? '[&>div]:bg-destructive' : 
-                    isNearLimit ? '[&>div]:bg-orange-500' : ''
+                  className={`h-2 bg-white/10 ${
+                    isAtLimit ? '[&>div]:bg-gradient-to-r [&>div]:from-pink-500 [&>div]:to-purple-500' : 
+                    isNearLimit ? '[&>div]:bg-gradient-to-r [&>div]:from-purple-500 [&>div]:to-pink-400' : 
+                    '[&>div]:bg-gradient-to-r [&>div]:from-purple-600 [&>div]:to-pink-500'
                   }`}
                 />
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1 text-xs text-white/50">
                   <Clock className="h-3 w-3" />
                   <span>Resets at midnight</span>
                 </div>
@@ -158,10 +159,9 @@ const AIUsageTracker = () => {
           })}
           
           {/* Upgrade button at bottom */}
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t border-white/10">
             <Button 
-              className="w-full" 
-              variant="outline"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white border-0 shadow-lg shadow-purple-500/30" 
               onClick={() => {
                 // TODO: Implement upgrade flow (Stripe/Token vault)
                 console.log('Upgrade to Premium clicked');
@@ -170,7 +170,7 @@ const AIUsageTracker = () => {
               <Zap className="h-4 w-4 mr-2" />
               🔓 Upgrade to Premium
             </Button>
-            <p className="text-xs text-muted-foreground text-center mt-2">
+            <p className="text-xs text-white/50 text-center mt-2">
               Get unlimited AI usage, priority support, and advanced features
             </p>
           </div>

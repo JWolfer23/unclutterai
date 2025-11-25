@@ -94,13 +94,13 @@ export const AIUsageResetTimer = () => {
 
   if (!timeLeft) {
     return (
-      <Card className="bg-card/50 border-border/50">
+      <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
         <CardContent className="p-3">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-purple-400" />
             <div>
-              <p className="text-xs text-muted-foreground">Reset in</p>
-              <p className="text-sm font-medium text-foreground">Loading...</p>
+              <p className="text-xs text-white/60">Reset in</p>
+              <p className="text-sm font-medium text-white">Loading...</p>
             </div>
           </div>
         </CardContent>
@@ -123,13 +123,13 @@ export const AIUsageResetTimer = () => {
   const isNearReset = timeLeft.hours === 0 && timeLeft.minutes < 30;
 
   return (
-    <Card className="bg-card/50 border-border/50">
+    <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
       <CardContent className="p-3">
         <div className="flex items-center gap-2">
-          <Clock className={`h-4 w-4 text-muted-foreground ${isNearReset ? 'pulse' : ''}`} />
+          <Clock className={`h-4 w-4 text-purple-400 ${isNearReset ? 'pulse' : ''}`} />
           <div>
-            <p className="text-xs text-muted-foreground">Reset in</p>
-            <p className={`text-sm font-medium text-foreground ${isNearReset ? 'pulse' : ''}`}>
+            <p className="text-xs text-white/60">Reset in</p>
+            <p className={`text-sm font-medium text-white ${isNearReset ? 'pulse' : ''}`}>
               {formatTime()}
             </p>
           </div>
