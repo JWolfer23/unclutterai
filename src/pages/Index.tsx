@@ -311,6 +311,13 @@ const Index = () => {
         </button>
       </div>
 
+      {/* Priority dashboard cards */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8">
+        <PriorityDashboardCards
+          onShowRecoveryDashboard={() => setShowRecoveryDashboard(true)}
+        />
+      </div>
+
       {/* Your AI Stats */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         <h2 className="text-2xl font-semibold text-white mb-4">Your AI Stats</h2>
@@ -323,13 +330,6 @@ const Index = () => {
         <div className="mt-4">
           <AIUsageTracker />
         </div>
-      </div>
-
-      {/* Priority dashboard cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8">
-        <PriorityDashboardCards
-          onShowRecoveryDashboard={() => setShowRecoveryDashboard(true)}
-        />
       </div>
 
       {/* Modals */}
