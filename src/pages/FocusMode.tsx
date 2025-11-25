@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
 import { toast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 
 const FocusMode = () => {
   const navigate = useNavigate();
@@ -20,6 +22,8 @@ const FocusMode = () => {
   const [sessionComplete, setSessionComplete] = useState(false);
   const [tokensEarned, setTokensEarned] = useState(0);
   const [interruptions, setInterruptions] = useState(0);
+  const [sessionNote, setSessionNote] = useState("");
+  const [noteSaved, setNoteSaved] = useState(false);
 
   // Timer countdown logic
   useEffect(() => {
@@ -123,6 +127,62 @@ const FocusMode = () => {
     });
   };
 
+  const handleSaveNote = async () => {
+    if (!sessionNote.trim()) {
+      toast({
+        title: "Note Required",
+        description: "Please write something before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedTask) {
+      toast({
+        title: "Mode Required",
+        description: "Please select a mode for this note.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("focus_session_notes")
+        .insert({
+          user_id: user.id,
+          session_id: activeSession?.id || null,
+          mode: selectedTask,
+          content: sessionNote,
+        });
+
+      if (error) throw error;
+
+      setNoteSaved(true);
+      const modeNames: Record<string, string> = {
+        learning: "Learning Mode",
+        health: "Health Mode",
+        career: "Career Mode",
+        wealth: "Wealth Mode",
+      };
+
+      toast({
+        title: "✅ Note Saved",
+        description: `Note saved to ${modeNames[selectedTask]}`,
+      });
+    } catch (error) {
+      console.error("Error saving note:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save note. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -174,6 +234,34 @@ const FocusMode = () => {
               Back to Dashboard
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Notes Section - After Session Complete */}
+      {sessionComplete && (
+        <div className="max-w-2xl mx-auto glass-card">
+          <h2 className="text-xl font-semibold text-white mb-4">Notes from your session</h2>
+          
+          <Textarea
+            value={sessionNote}
+            onChange={(e) => setSessionNote(e.target.value)}
+            placeholder="Reflect on what you learned, completed, or discovered during this session…"
+            disabled={noteSaved}
+            className="min-h-[150px] bg-white/5 border-purple-500/30 text-white placeholder:text-slate-500 mb-4"
+          />
+
+          {!noteSaved ? (
+            <Button onClick={handleSaveNote} className="btn-primary">
+              Save Note
+            </Button>
+          ) : (
+            <p className="text-emerald-400 text-sm font-medium">
+              ✅ Note saved to {selectedTask === "learning" ? "Learning Mode" : 
+                selectedTask === "health" ? "Health Mode" : 
+                selectedTask === "career" ? "Career Mode" : 
+                "Wealth Mode"}
+            </p>
+          )}
         </div>
       )}
 
