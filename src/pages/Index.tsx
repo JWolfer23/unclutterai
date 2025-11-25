@@ -191,7 +191,7 @@ const Index = () => {
   const handleSelectMode = (modeId: ModeId) => {
     // Route mapping for each mode
     const routes: Record<ModeId, string> = {
-      focus: "/", // Keep as placeholder, not directly accessible
+      focus: "/focus",
       news: "/news",
       learning: "/learning",
       health: "/health",

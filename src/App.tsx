@@ -19,6 +19,7 @@ import CommunicationMode from "./pages/CommunicationMode";
 import UCTTokens from "./pages/UCTTokens";
 import CommunityRanking from "./pages/CommunityRanking";
 import CustomizeAI from "./pages/CustomizeAI";
+import FocusMode from "./pages/FocusMode";
 import { useAuth } from "@/hooks/useAuth";
 import { SecurityProvider } from "@/components/SecurityProvider";
 
@@ -46,6 +47,7 @@ const App = () => {
               <Route path="/crypto-integration" element={user ? <CryptoIntegration /> : <Navigate to="/auth" replace />} />
               
               {/* Mode Routes */}
+              <Route path="/focus" element={user ? <FocusMode /> : <Navigate to="/auth" replace />} />
               <Route path="/news" element={user ? <NewsMode /> : <Navigate to="/auth" replace />} />
               <Route path="/learning" element={user ? <LearningMode /> : <Navigate to="/auth" replace />} />
               <Route path="/health" element={user ? <HealthMode /> : <Navigate to="/auth" replace />} />
