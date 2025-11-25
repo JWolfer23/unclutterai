@@ -70,12 +70,14 @@ export const useOnboarding = () => {
             }));
           }
           // If it's a fresh user (no onboarding completed), ensure they see onboarding
+          // UNLESS they've already navigated to modes
           else if (!dbCompleted) {
+            const hasSeenModes = sessionStorage.getItem('hasSeenModes') === 'true';
             setState(prev => ({
               ...prev,
               onboardingCompleted: false,
-              showOnboarding: true,
-              isFirstTime: true
+              showOnboarding: !hasSeenModes, // Don't show if they've seen modes
+              isFirstTime: !hasSeenModes
             }));
           }
         }
