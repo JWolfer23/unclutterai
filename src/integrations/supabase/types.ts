@@ -243,6 +243,90 @@ export type Database = {
         }
         Relationships: []
       }
+      news_prompts: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          prompt_text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          prompt_text: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          prompt_text?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      news_schedules: {
+        Row: {
+          channels: Json | null
+          created_at: string
+          delivery_time: string
+          frequency: string
+          id: string
+          is_enabled: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channels?: Json | null
+          created_at?: string
+          delivery_time?: string
+          frequency?: string
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channels?: Json | null
+          created_at?: string
+          delivery_time?: string
+          frequency?: string
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      news_summaries: {
+        Row: {
+          created_at: string
+          id: string
+          prompt_id: string | null
+          summary_text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prompt_id?: string | null
+          summary_text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prompt_id?: string | null
+          summary_text?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
