@@ -49,38 +49,13 @@ export const useOnboarding = () => {
         return;
       }
 
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('onboarding_completed')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (profile) {
-          const dbCompleted = profile.onboarding_completed;
-          
-          // Prioritize database state over local state
-          if (dbCompleted) {
-            setState(prev => ({
-              ...prev,
-              onboardingCompleted: true,
-              showOnboarding: false,
-              isFirstTime: false
-            }));
-          } else {
-            // User hasn't completed onboarding in DB
-            const hasSeenModes = sessionStorage.getItem('hasSeenModes') === 'true';
-            setState(prev => ({
-              ...prev,
-              onboardingCompleted: false,
-              showOnboarding: !hasSeenModes,
-              isFirstTime: !hasSeenModes
-            }));
-          }
-        }
-      } catch (error) {
-        console.error('Error syncing onboarding state:', error);
-      }
+      // Always show onboarding when user is logged in
+      setState(prev => ({
+        ...prev,
+        onboardingCompleted: false,
+        showOnboarding: true,
+        isFirstTime: true
+      }));
     };
 
     syncWithDatabase();
@@ -97,6 +72,9 @@ export const useOnboarding = () => {
       showOnboarding: false,
       onboardingCompleted: true
     }));
+
+    // Clear the session storage flag
+    sessionStorage.removeItem('hasSeenModes');
 
     // Update database
     if (user) {

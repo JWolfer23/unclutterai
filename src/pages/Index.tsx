@@ -218,19 +218,11 @@ const Index = () => {
     }
   };
 
-  // Show onboarding for first-time users only if they haven't navigated away yet
-  // If user is coming back from a mode page (via navigate("/")), skip onboarding
-  const hasNavigatedToModes = sessionStorage.getItem('hasSeenModes') === 'true';
-  
-  if (onboardingState.showOnboarding && !isOnboardingComplete && !hasNavigatedToModes) {
+  // Always show onboarding when user first logs in
+  if (onboardingState.showOnboarding) {
     return (
       <OnboardingFlow onComplete={completeOnboarding} onConnect={handleConnect} />
     );
-  }
-
-  // Mark that user has seen the modes screen
-  if (!hasNavigatedToModes) {
-    sessionStorage.setItem('hasSeenModes', 'true');
   }
 
   // ---------- VIEW 1: Neon Outline 12-button home screen ----------
