@@ -24,30 +24,23 @@ const ConnectedPlatforms = ({ connectedPlatforms }: ConnectedPlatformsProps) => 
   if (connected.length === 0) return null;
 
   return (
-    <div className="text-center space-y-3">
+    <div className="text-center space-y-4 px-4">
       <p className="text-sm font-medium text-slate-200">
         Connected platforms
       </p>
 
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="flex flex-wrap justify-center gap-3 max-w-2xl mx-auto">
         {connected.map((platform) => (
           <span
             key={platform.id}
-            className="
-              inline-flex items-center gap-2
-              px-3 py-1.5
-              rounded-full
-              border border-emerald-400/40
-              bg-emerald-500/10
-              text-emerald-100 text-xs font-medium
-            "
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 text-emerald-100 text-xs font-medium whitespace-nowrap shrink-0"
           >
             {platform.icon && (
-              <span className="w-4 h-4 flex items-center justify-center">
+              <span className="w-4 h-4 flex items-center justify-center shrink-0">
                 {platform.icon}
               </span>
             )}
-            <span className="capitalize">{platform.name}</span>
+            <span>{platform.name}</span>
           </span>
         ))}
       </div>
