@@ -21,7 +21,7 @@ export const useOnboarding = () => {
   const [state, setState] = useState<OnboardingState>(() => {
     const saved = localStorage.getItem(ONBOARDING_KEY);
     if (saved) {
-      return { ...JSON.parse(saved), onboardingCompleted: false };
+      return JSON.parse(saved);
     }
     return {
       isFirstTime: true,
@@ -42,7 +42,7 @@ export const useOnboarding = () => {
         setState(prev => ({
           ...prev,
           isFirstTime: true,
-          showOnboarding: true,
+          showOnboarding: false,
           onboardingCompleted: false,
           connectedPlatforms: []
         }));
@@ -59,24 +59,21 @@ export const useOnboarding = () => {
         if (profile) {
           const dbCompleted = profile.onboarding_completed;
           
-          // If user has completed onboarding in DB but localStorage shows incomplete,
-          // prioritize DB state and update localStorage
-          if (dbCompleted && !state.onboardingCompleted) {
+          // Prioritize database state over local state
+          if (dbCompleted) {
             setState(prev => ({
               ...prev,
               onboardingCompleted: true,
               showOnboarding: false,
               isFirstTime: false
             }));
-          }
-          // If it's a fresh user (no onboarding completed), ensure they see onboarding
-          // UNLESS they've already navigated to modes
-          else if (!dbCompleted) {
+          } else {
+            // User hasn't completed onboarding in DB
             const hasSeenModes = sessionStorage.getItem('hasSeenModes') === 'true';
             setState(prev => ({
               ...prev,
               onboardingCompleted: false,
-              showOnboarding: !hasSeenModes, // Don't show if they've seen modes
+              showOnboarding: !hasSeenModes,
               isFirstTime: !hasSeenModes
             }));
           }

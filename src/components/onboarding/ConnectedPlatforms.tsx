@@ -14,8 +14,11 @@ const ConnectedPlatforms = ({ connectedPlatforms }: ConnectedPlatformsProps) => 
     ...platformsByCategory.social,
   ];
 
+  // Deduplicate connected platforms
+  const uniqueConnected = Array.from(new Set(connectedPlatforms));
+  
   const connected = allPlatforms.filter((p) =>
-    connectedPlatforms.includes(p.id)
+    uniqueConnected.includes(p.id)
   );
 
   if (connected.length === 0) return null;
