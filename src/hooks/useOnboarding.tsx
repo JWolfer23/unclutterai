@@ -14,6 +14,7 @@ interface OnboardingState {
 }
 
 const ONBOARDING_KEY = "unclutter-onboarding";
+const ONBOARDING_SHOWN_KEY = "onboarding-shown-this-session";
 const RE_PROMPT_DELAY = 24 * 60 * 60 * 1000; // 24 hours
 
 export const useOnboarding = () => {
@@ -38,7 +39,8 @@ export const useOnboarding = () => {
   useEffect(() => {
     const syncWithDatabase = async () => {
       if (!user) {
-        // Clear onboarding state when user logs out
+        // Clear onboarding state and session flag when user logs out
+        sessionStorage.removeItem(ONBOARDING_SHOWN_KEY);
         setState(prev => ({
           ...prev,
           isFirstTime: true,
@@ -49,13 +51,16 @@ export const useOnboarding = () => {
         return;
       }
 
-      // Always show onboarding when user is logged in
-      setState(prev => ({
-        ...prev,
-        onboardingCompleted: false,
-        showOnboarding: true,
-        isFirstTime: true
-      }));
+      // Only show onboarding if it hasn't been shown this session
+      const hasShownOnboarding = sessionStorage.getItem(ONBOARDING_SHOWN_KEY);
+      if (!hasShownOnboarding) {
+        setState(prev => ({
+          ...prev,
+          onboardingCompleted: false,
+          showOnboarding: true,
+          isFirstTime: true
+        }));
+      }
     };
 
     syncWithDatabase();
@@ -73,6 +78,9 @@ export const useOnboarding = () => {
       onboardingCompleted: true
     }));
 
+    // Mark onboarding as shown for this session
+    sessionStorage.setItem(ONBOARDING_SHOWN_KEY, 'true');
+    
     // Clear the session storage flag
     sessionStorage.removeItem('hasSeenModes');
 

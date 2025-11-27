@@ -27,7 +27,14 @@ import {
   Bitcoin,
   Activity,
   Coins,
+  Menu,
+  LogOut,
 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 type ModeId =
   | "focus"
@@ -44,7 +51,7 @@ type ModeId =
   | "aiUsage";
 
 const Index = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
 
   const [showContextualPrompt, setShowContextualPrompt] = useState<{
@@ -225,9 +232,59 @@ const Index = () => {
     );
   }
 
+  // Handle sign out
+  const handleSignOut = async () => {
+    sessionStorage.removeItem('onboarding-shown-this-session');
+    await signOut();
+    navigate('/auth');
+  };
+
   // ---------- VIEW 1: Neon Outline 12-button home screen ----------
   const renderModesHome = () => (
     <div className="min-h-screen w-full flex flex-col items-center px-6 py-10 text-white bg-gradient-to-b from-black via-slate-950 to-slate-900">
+      {/* Hamburger menu - top right */}
+      <div className="absolute top-6 right-6">
+        <Sheet>
+          <SheetTrigger asChild>
+            <button
+              className="
+                flex items-center justify-center w-10 h-10
+                rounded-xl bg-black/40 backdrop-blur-xl
+                border border-white/10
+                shadow-[0_0_20px_rgba(15,23,42,0.8)]
+                hover:border-white/20 hover:shadow-[0_0_30px_rgba(148,163,184,0.6)]
+                transition-all duration-200
+              "
+            >
+              <Menu className="h-5 w-5 text-white/60" />
+            </button>
+          </SheetTrigger>
+          <SheetContent
+            side="right"
+            className="
+              w-64 bg-black/95 backdrop-blur-2xl
+              border-l border-white/10
+              text-white
+            "
+          >
+            <div className="flex flex-col gap-4 pt-8">
+              <button
+                onClick={handleSignOut}
+                className="
+                  flex items-center gap-3 px-4 py-3
+                  rounded-xl bg-white/5 hover:bg-white/10
+                  border border-white/10
+                  transition-colors duration-200
+                "
+              >
+                <LogOut className="h-5 w-5 text-white/60" />
+                <span className="text-sm font-medium text-white/90">Sign Out</span>
+              </button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
       {/* Logo + title */}
       <div className="flex flex-col items-center mb-10">
         <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-cyan-400/20 via-purple-600/30 to-pink-500/20 backdrop-blur-xl flex items-center justify-center border border-white/10 shadow-[0_0_40px_rgba(59,130,246,0.6)]">
