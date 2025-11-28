@@ -20,6 +20,7 @@ const RE_PROMPT_DELAY = 24 * 60 * 60 * 1000; // 24 hours
 export const useOnboarding = () => {
   const { user } = useAuth();
   const hasProcessedRef = useRef(false);
+  const wasUserLoadedRef = useRef(false);
   
   const [state, setState] = useState<OnboardingState>(() => {
     const saved = localStorage.getItem(ONBOARDING_KEY);
@@ -46,19 +47,28 @@ export const useOnboarding = () => {
   useEffect(() => {
     const syncWithDatabase = async () => {
       if (!user) {
-        // Clear onboarding state and session flag when user logs out
-        hasProcessedRef.current = false;
-        sessionStorage.removeItem(ONBOARDING_SHOWN_KEY);
-        setState(prev => ({
-          ...prev,
-          isFirstTime: true,
-          showOnboarding: false,
-          onboardingCompleted: false,
-          connectedPlatforms: []
-        }));
+        // Check saved onboarding state to avoid resetting on brief null user during navigation
+        const savedState = localStorage.getItem(ONBOARDING_KEY);
+        const parsedState = savedState ? JSON.parse(savedState) : null;
+
+        // Only treat this as a real logout if we've previously had a user loaded
+        // and onboarding hasn't already been completed
+        if (wasUserLoadedRef.current && !parsedState?.onboardingCompleted) {
+          hasProcessedRef.current = false;
+          sessionStorage.removeItem(ONBOARDING_SHOWN_KEY);
+          setState(prev => ({
+            ...prev,
+            isFirstTime: true,
+            showOnboarding: false,
+            onboardingCompleted: false,
+            connectedPlatforms: []
+          }));
+        }
         return;
       }
 
+      // Mark that we've seen a valid user in this session
+      wasUserLoadedRef.current = true;
       // Only process once per user session
       if (hasProcessedRef.current) return;
       hasProcessedRef.current = true;
