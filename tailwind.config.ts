@@ -110,6 +110,12 @@ export default {
     				'Segoe UI Symbol',
     				'Noto Color Emoji'
     			],
+    			sora: [
+    				'Sora',
+    				'Inter',
+    				'system-ui',
+    				'sans-serif'
+    			],
     			serif: [
     				'ui-serif',
     				'Georgia',
