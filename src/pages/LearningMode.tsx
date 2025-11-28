@@ -1,15 +1,41 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, GraduationCap, BookOpen, Target, Award } from "lucide-react";
+import { ArrowLeft, GraduationCap, BookOpen, Target, Award, Calendar } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useLearning } from "@/hooks/useLearning";
+import { SourcesDrawer } from "@/components/learning/SourcesDrawer";
+import { GoalsSection } from "@/components/learning/GoalsSection";
+import { LearningFocusMode } from "@/components/learning/LearningFocusMode";
+import { NotesVault } from "@/components/learning/NotesVault";
+import { LearningScheduleDrawer } from "@/components/learning/LearningScheduleDrawer";
 
 const LearningMode = () => {
   const navigate = useNavigate();
+  const { sources, goals, notes, streak, isLoading } = useLearning();
+  const [sourcesDrawerOpen, setSourcesDrawerOpen] = useState(false);
+  const [scheduleDrawerOpen, setScheduleDrawerOpen] = useState(false);
+
+  const activeTopics = sources?.filter((s) => s.is_active).length || 0;
+  const activeMilestones = goals?.filter((g) => !g.is_completed).length || 0;
+  const totalNotes = notes?.length || 0;
 
   const learningStats = [
-    { icon: BookOpen, label: "Active Topics", value: "0", color: "from-cyan-500 to-blue-500" },
-    { icon: Target, label: "Daily Streak", value: "0", color: "from-purple-500 to-pink-500" },
-    { icon: Award, label: "Milestones", value: "0", color: "from-yellow-500 to-orange-500" },
+    { icon: BookOpen, label: "Active Topics", value: activeTopics.toString(), color: "from-cyan-500 to-blue-500" },
+    { icon: Target, label: "Active Goals", value: activeMilestones.toString(), color: "from-purple-500 to-pink-500" },
+    { icon: Award, label: "Daily Streak", value: streak?.current_streak?.toString() || "0", color: "from-yellow-500 to-orange-500" },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-transparent text-white">
@@ -58,18 +84,98 @@ const LearningMode = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="glass-card">
-          <div className="text-center py-12">
-            <GraduationCap className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">Coming Soon</h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Track your learning journey with AI-powered micro-lessons, subject tracking, and milestone rewards with UCT tokens.
-            </p>
-          </div>
-        </div>
+        <Tabs defaultValue="sources" className="w-full">
+          <TabsList className="grid w-full grid-cols-5 glass-card mb-6">
+            <TabsTrigger value="sources" className="text-xs sm:text-sm">
+              📚 Sources
+            </TabsTrigger>
+            <TabsTrigger value="goals" className="text-xs sm:text-sm">
+              🎯 Goals
+            </TabsTrigger>
+            <TabsTrigger value="focus" className="text-xs sm:text-sm">
+              🧘 Focus
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="text-xs sm:text-sm">
+              📝 Notes
+            </TabsTrigger>
+            <TabsTrigger value="schedule" className="text-xs sm:text-sm">
+              📅 Schedule
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="sources">
+            <Card className="glass-card p-6">
+              <div className="text-center space-y-4">
+                <BookOpen className="h-12 w-12 mx-auto text-purple-300" />
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Learning Sources</h3>
+                  <p className="text-sm text-slate-400 mb-4">
+                    Add courses, books, PDFs, and other learning materials
+                  </p>
+                </div>
+                <div className="flex gap-2 justify-center">
+                  <button
+                    onClick={() => setSourcesDrawerOpen(true)}
+                    className="btn-primary"
+                  >
+                    Manage Sources
+                  </button>
+                </div>
+                {sources && sources.length > 0 && (
+                  <div className="mt-6 text-left">
+                    <p className="text-sm text-slate-300 mb-2">Recent sources: {sources.length}</p>
+                    <p className="text-xs text-slate-500">Click "Manage Sources" to view and edit all sources</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="goals">
+            <Card className="glass-card p-6">
+              <GoalsSection />
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="focus">
+            <Card className="glass-card p-6">
+              <LearningFocusMode />
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="notes">
+            <Card className="glass-card p-6">
+              <NotesVault />
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="schedule">
+            <Card className="glass-card p-6">
+              <div className="text-center space-y-4">
+                <Calendar className="h-12 w-12 mx-auto text-purple-300" />
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Learning Schedule</h3>
+                  <p className="text-sm text-slate-400 mb-4">
+                    Set up your study reminders and notifications
+                  </p>
+                </div>
+                <button
+                  onClick={() => setScheduleDrawerOpen(true)}
+                  className="btn-primary"
+                >
+                  Configure Schedule
+                </button>
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
+
+      {/* Drawers */}
+      <SourcesDrawer open={sourcesDrawerOpen} onOpenChange={setSourcesDrawerOpen} />
+      <LearningScheduleDrawer open={scheduleDrawerOpen} onOpenChange={setScheduleDrawerOpen} />
     </div>
   );
 };
