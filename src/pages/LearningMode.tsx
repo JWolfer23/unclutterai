@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, GraduationCap, BookOpen, Target, Award, Calendar } from "lucide-react";
+import { ArrowLeft, GraduationCap, BookOpen, Target, Award, Calendar, Brain, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLearning } from "@/hooks/useLearning";
@@ -21,9 +21,9 @@ const LearningMode = () => {
   const totalNotes = notes?.length || 0;
 
   const learningStats = [
-    { icon: BookOpen, label: "Active Topics", value: activeTopics.toString(), color: "from-cyan-500 to-blue-500" },
-    { icon: Target, label: "Active Goals", value: activeMilestones.toString(), color: "from-purple-500 to-pink-500" },
-    { icon: Award, label: "Daily Streak", value: streak?.current_streak?.toString() || "0", color: "from-yellow-500 to-orange-500" },
+    { icon: BookOpen, label: "Active Topics", value: activeTopics.toString(), gradient: "from-cyan-400 via-blue-400 to-blue-500", glow: "rgba(6, 182, 212, 0.4)" },
+    { icon: Target, label: "Active Goals", value: activeMilestones.toString(), gradient: "from-purple-400 via-purple-500 to-pink-500", glow: "rgba(139, 92, 246, 0.4)" },
+    { icon: Award, label: "Daily Streak", value: streak?.current_streak?.toString() || "0", gradient: "from-yellow-400 via-orange-400 to-orange-500", glow: "rgba(251, 146, 60, 0.4)" },
   ];
 
   if (isLoading) {
@@ -50,125 +50,179 @@ const LearningMode = () => {
         </button>
 
         <div className="flex items-center gap-4 mb-8">
-          <div className="metric-icon" style={{ background: "linear-gradient(135deg, hsl(189, 94%, 60%), hsl(217, 91%, 60%))" }}>
+          <div className="metric-icon learning-icon animate-pulse" style={{ background: "linear-gradient(135deg, hsl(189, 94%, 60%), hsl(217, 91%, 60%))" }}>
             <GraduationCap className="metric-icon__glyph" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Learning Mode</h1>
-            <p className="text-muted-foreground text-sm mt-1">
+            <h1 className="text-4xl font-bold font-sora tracking-tight bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
+              Learning Mode
+            </h1>
+            <p className="text-slate-300 text-sm mt-1 font-medium">
               Track subjects, earn streaks, and grow daily
             </p>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Stats - Premium Floating Cards */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {learningStats.map((stat, idx) => {
             const Icon = stat.icon;
             return (
-              <Card key={idx} className="glass-card">
+              <div
+                key={idx}
+                className="learning-stat-card group hover:scale-[1.02] transition-all duration-300"
+                style={{
+                  boxShadow: `0 0 40px -10px ${stat.glow}, 0 20px 40px -10px rgba(0, 0, 0, 0.6)`,
+                }}
+              >
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
-                    <Icon className="h-6 w-6 text-white" />
+                  <div 
+                    className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center relative`}
+                    style={{
+                      boxShadow: `0 0 30px ${stat.glow}`,
+                    }}
+                  >
+                    <Icon className="h-8 w-8 text-white learning-icon" />
                   </div>
-                  <div>
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <div className="text-sm text-muted-foreground">{stat.label}</div>
+                  <div className="flex-1">
+                    <div className={`text-5xl font-bold font-sora bg-gradient-to-br ${stat.gradient} bg-clip-text text-transparent`}>
+                      {stat.value}
+                    </div>
+                    <div className="text-sm text-slate-300 font-medium mt-1">{stat.label}</div>
                   </div>
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>
       </div>
 
-      {/* Main Content - Tabs */}
+      {/* Main Content - Premium Pill Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <Tabs defaultValue="sources" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 glass-card mb-6">
-            <TabsTrigger value="sources" className="text-xs sm:text-sm">
-              📚 Sources
-            </TabsTrigger>
-            <TabsTrigger value="goals" className="text-xs sm:text-sm">
-              🎯 Goals
-            </TabsTrigger>
-            <TabsTrigger value="focus" className="text-xs sm:text-sm">
-              🧘 Focus
-            </TabsTrigger>
-            <TabsTrigger value="notes" className="text-xs sm:text-sm">
-              📝 Notes
-            </TabsTrigger>
-            <TabsTrigger value="schedule" className="text-xs sm:text-sm">
-              📅 Schedule
-            </TabsTrigger>
-          </TabsList>
+          {/* Pill-Style Tabs */}
+          <div className="learning-tabs mb-8">
+            <TabsList className="grid w-full grid-cols-5 bg-transparent p-0 h-auto gap-2">
+              <TabsTrigger 
+                value="sources" 
+                className="learning-tab-trigger data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-blue-500/30 data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/50 flex items-center gap-2"
+              >
+                <BookOpen className="h-4 w-4 learning-icon" />
+                <span className="hidden sm:inline font-semibold">Sources</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="goals" 
+                className="learning-tab-trigger data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-blue-500/30 data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/50 flex items-center gap-2"
+              >
+                <Target className="h-4 w-4 learning-icon" />
+                <span className="hidden sm:inline font-semibold">Goals</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="focus" 
+                className="learning-tab-trigger data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-blue-500/30 data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/50 flex items-center gap-2"
+              >
+                <Brain className="h-4 w-4 learning-icon" />
+                <span className="hidden sm:inline font-semibold">Focus</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="notes" 
+                className="learning-tab-trigger data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-blue-500/30 data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/50 flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4 learning-icon" />
+                <span className="hidden sm:inline font-semibold">Notes</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="schedule" 
+                className="learning-tab-trigger data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/30 data-[state=active]:to-blue-500/30 data-[state=active]:shadow-lg data-[state=active]:shadow-purple-500/50 flex items-center gap-2"
+              >
+                <Calendar className="h-4 w-4 learning-icon" />
+                <span className="hidden sm:inline font-semibold">Schedule</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
+          {/* Tab Content - Premium Panels */}
           <TabsContent value="sources">
-            <Card className="glass-card p-6">
-              <div className="text-center space-y-4">
-                <BookOpen className="h-12 w-12 mx-auto text-purple-300" />
+            <div className="learning-panel p-8 animate-fade-in">
+              <div className="text-center space-y-6">
+                <div className="relative inline-block">
+                  <BookOpen className="h-16 w-16 mx-auto text-white learning-icon animate-pulse" 
+                    style={{ filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.8))' }} 
+                  />
+                </div>
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">Learning Sources</h3>
-                  <p className="text-sm text-slate-400 mb-4">
-                    Add courses, books, PDFs, and other learning materials
+                  <h3 className="text-2xl font-bold font-sora bg-gradient-to-r from-purple-300 via-blue-300 to-cyan-300 bg-clip-text text-transparent mb-3">
+                    Learning Sources
+                  </h3>
+                  <p className="text-sm text-slate-300 mb-6 max-w-md mx-auto">
+                    Add courses, books, PDFs, and other learning materials to track your progress
                   </p>
                 </div>
-                <div className="flex gap-2 justify-center">
+                <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => setSourcesDrawerOpen(true)}
-                    className="btn-primary"
+                    className="btn-primary px-8 py-3 text-base font-semibold shadow-lg shadow-purple-500/50 hover:shadow-purple-500/70 transition-all"
                   >
                     Manage Sources
                   </button>
                 </div>
                 {sources && sources.length > 0 && (
-                  <div className="mt-6 text-left">
-                    <p className="text-sm text-slate-300 mb-2">Recent sources: {sources.length}</p>
-                    <p className="text-xs text-slate-500">Click "Manage Sources" to view and edit all sources</p>
+                  <div className="mt-8 text-center">
+                    <div className="inline-block px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-emerald-400/40">
+                      <p className="text-sm text-emerald-300 font-semibold">
+                        {sources.length} {sources.length === 1 ? 'source' : 'sources'} added
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="goals">
-            <Card className="glass-card p-6">
+            <div className="learning-panel p-6 animate-fade-in">
               <GoalsSection />
-            </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="focus">
-            <Card className="glass-card p-6">
+            <div className="learning-panel p-6 animate-fade-in">
               <LearningFocusMode />
-            </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="notes">
-            <Card className="glass-card p-6">
+            <div className="learning-panel p-6 animate-fade-in">
               <NotesVault />
-            </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="schedule">
-            <Card className="glass-card p-6">
-              <div className="text-center space-y-4">
-                <Calendar className="h-12 w-12 mx-auto text-purple-300" />
+            <div className="learning-panel p-8 animate-fade-in">
+              <div className="text-center space-y-6">
+                <div className="relative inline-block">
+                  <Calendar className="h-16 w-16 mx-auto text-white learning-icon animate-pulse" 
+                    style={{ filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.8))' }} 
+                  />
+                </div>
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">Learning Schedule</h3>
-                  <p className="text-sm text-slate-400 mb-4">
-                    Set up your study reminders and notifications
+                  <h3 className="text-2xl font-bold font-sora bg-gradient-to-r from-purple-300 via-blue-300 to-cyan-300 bg-clip-text text-transparent mb-3">
+                    Learning Schedule
+                  </h3>
+                  <p className="text-sm text-slate-300 mb-6 max-w-md mx-auto">
+                    Set up your study reminders and get notifications for your learning sessions
                   </p>
                 </div>
                 <button
                   onClick={() => setScheduleDrawerOpen(true)}
-                  className="btn-primary"
+                  className="btn-primary px-8 py-3 text-base font-semibold shadow-lg shadow-purple-500/50 hover:shadow-purple-500/70 transition-all"
                 >
                   Configure Schedule
                 </button>
               </div>
-            </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
