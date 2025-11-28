@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -19,10 +19,17 @@ const RE_PROMPT_DELAY = 24 * 60 * 60 * 1000; // 24 hours
 
 export const useOnboarding = () => {
   const { user } = useAuth();
+  const hasProcessedRef = useRef(false);
+  
   const [state, setState] = useState<OnboardingState>(() => {
     const saved = localStorage.getItem(ONBOARDING_KEY);
     if (saved) {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // If onboarding was completed, ensure showOnboarding is false
+      if (parsed.onboardingCompleted) {
+        return { ...parsed, showOnboarding: false };
+      }
+      return parsed;
     }
     return {
       isFirstTime: true,
@@ -40,6 +47,7 @@ export const useOnboarding = () => {
     const syncWithDatabase = async () => {
       if (!user) {
         // Clear onboarding state and session flag when user logs out
+        hasProcessedRef.current = false;
         sessionStorage.removeItem(ONBOARDING_SHOWN_KEY);
         setState(prev => ({
           ...prev,
@@ -51,14 +59,30 @@ export const useOnboarding = () => {
         return;
       }
 
-      // Only show onboarding if it hasn't been shown this session
+      // Only process once per user session
+      if (hasProcessedRef.current) return;
+      hasProcessedRef.current = true;
+
+      // Check both session flag and localStorage state
       const hasShownOnboarding = sessionStorage.getItem(ONBOARDING_SHOWN_KEY);
-      if (!hasShownOnboarding) {
+      const savedState = localStorage.getItem(ONBOARDING_KEY);
+      const parsedState = savedState ? JSON.parse(savedState) : null;
+
+      // Only show onboarding if:
+      // 1. Session flag is missing AND
+      // 2. Onboarding was never completed (according to localStorage)
+      if (!hasShownOnboarding && !parsedState?.onboardingCompleted) {
         setState(prev => ({
           ...prev,
           onboardingCompleted: false,
           showOnboarding: true,
           isFirstTime: true
+        }));
+      } else if (hasShownOnboarding || parsedState?.onboardingCompleted) {
+        // Ensure showOnboarding is false if onboarding was completed
+        setState(prev => ({
+          ...prev,
+          showOnboarding: false
         }));
       }
     };
