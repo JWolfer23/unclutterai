@@ -177,6 +177,194 @@ export type Database = {
           },
         ]
       }
+      learning_goals: {
+        Row: {
+          created_at: string | null
+          current_value: number
+          description: string | null
+          end_date: string | null
+          goal_type: Database["public"]["Enums"]["learning_goal_type"]
+          id: string
+          is_completed: boolean | null
+          start_date: string | null
+          target_value: number
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_value?: number
+          description?: string | null
+          end_date?: string | null
+          goal_type: Database["public"]["Enums"]["learning_goal_type"]
+          id?: string
+          is_completed?: boolean | null
+          start_date?: string | null
+          target_value?: number
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_value?: number
+          description?: string | null
+          end_date?: string | null
+          goal_type?: Database["public"]["Enums"]["learning_goal_type"]
+          id?: string
+          is_completed?: boolean | null
+          start_date?: string | null
+          target_value?: number
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      learning_notes: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          note_type: Database["public"]["Enums"]["learning_note_type"] | null
+          source_id: string | null
+          tags: Json | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          note_type?: Database["public"]["Enums"]["learning_note_type"] | null
+          source_id?: string | null
+          tags?: Json | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          note_type?: Database["public"]["Enums"]["learning_note_type"] | null
+          source_id?: string | null
+          tags?: Json | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_notes_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "learning_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_schedules: {
+        Row: {
+          channels: Json | null
+          created_at: string | null
+          days_of_week: Json | null
+          delivery_time: string
+          frequency: string
+          id: string
+          is_enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channels?: Json | null
+          created_at?: string | null
+          days_of_week?: Json | null
+          delivery_time?: string
+          frequency?: string
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channels?: Json | null
+          created_at?: string | null
+          days_of_week?: Json | null
+          delivery_time?: string
+          frequency?: string
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      learning_sources: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          isbn: string | null
+          notes: string | null
+          progress_percent: number | null
+          source_type: Database["public"]["Enums"]["learning_source_type"]
+          title: string
+          updated_at: string | null
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          isbn?: string | null
+          notes?: string | null
+          progress_percent?: number | null
+          source_type: Database["public"]["Enums"]["learning_source_type"]
+          title: string
+          updated_at?: string | null
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          isbn?: string | null
+          notes?: string | null
+          progress_percent?: number | null
+          source_type?: Database["public"]["Enums"]["learning_source_type"]
+          title?: string
+          updated_at?: string | null
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      learning_streaks: {
+        Row: {
+          current_streak: number | null
+          last_session: string | null
+          longest_streak: number | null
+          user_id: string
+        }
+        Insert: {
+          current_streak?: number | null
+          last_session?: string | null
+          longest_streak?: number | null
+          user_id: string
+        }
+        Update: {
+          current_streak?: number | null
+          last_session?: string | null
+          longest_streak?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           ai_summary: string | null
@@ -476,6 +664,15 @@ export type Database = {
       }
     }
     Enums: {
+      learning_goal_type: "daily" | "weekly" | "milestone"
+      learning_note_type: "note" | "flashcard" | "summary"
+      learning_source_type:
+        | "course"
+        | "book"
+        | "pdf"
+        | "video"
+        | "audio"
+        | "article"
       message_type: "email" | "text" | "social" | "voice"
       priority_level: "low" | "medium" | "high"
       sentiment_type: "positive" | "negative" | "neutral"
@@ -607,6 +804,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      learning_goal_type: ["daily", "weekly", "milestone"],
+      learning_note_type: ["note", "flashcard", "summary"],
+      learning_source_type: [
+        "course",
+        "book",
+        "pdf",
+        "video",
+        "audio",
+        "article",
+      ],
       message_type: ["email", "text", "social", "voice"],
       priority_level: ["low", "medium", "high"],
       sentiment_type: ["positive", "negative", "neutral"],
