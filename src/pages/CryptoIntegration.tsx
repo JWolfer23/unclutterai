@@ -1,6 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft, Coins, Wallet, Shield, Database, Bot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import UCTRewards from "@/components/crypto/UCTRewards";
@@ -25,59 +23,79 @@ const CryptoIntegration = () => {
             Back to Home
           </button>
           <div className="flex items-center gap-4">
-            <div className="metric-icon metric-icon--tokens">
+            <div className="metric-icon metric-icon--tokens animate-pulse">
               <Coins className="metric-icon__glyph" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Crypto Integration</h1>
-              <p className="text-muted-foreground text-sm mt-1">
+              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 bg-clip-text text-transparent">
+                Crypto Integration
+              </h1>
+              <p className="text-slate-300 text-sm mt-1 font-medium">
                 Gamify your productivity with tokenized rewards and blockchain-backed features
               </p>
             </div>
           </div>
         </div>
 
-        <Tabs defaultValue="rewards" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="rewards" className="flex items-center gap-2">
-              <Coins className="h-4 w-4" />
-              <span className="hidden sm:inline">UCT Rewards</span>
-            </TabsTrigger>
-            <TabsTrigger value="wallet" className="flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
-              <span className="hidden sm:inline">Wallet</span>
-            </TabsTrigger>
-            <TabsTrigger value="logs" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Blockchain Logs</span>
-            </TabsTrigger>
-            <TabsTrigger value="vault" className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              <span className="hidden sm:inline">Data Vault</span>
-            </TabsTrigger>
-            <TabsTrigger value="agents" className="flex items-center gap-2">
-              <Bot className="h-4 w-4" />
-              <span className="hidden sm:inline">Agent Network</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* Premium Tabs */}
+        <Tabs defaultValue="rewards" className="space-y-8">
+          <div className="learning-tabs">
+            <TabsList className="grid w-full grid-cols-5 bg-transparent border-0">
+              <TabsTrigger 
+                value="rewards" 
+                className="learning-tab-trigger flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400/20 data-[state=active]:to-orange-400/20"
+              >
+                <Coins className="h-4 w-4" />
+                <span className="hidden sm:inline">UCT Rewards</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="wallet" 
+                className="learning-tab-trigger flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-400/20 data-[state=active]:to-blue-400/20"
+              >
+                <Wallet className="h-4 w-4" />
+                <span className="hidden sm:inline">Wallet</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="logs" 
+                className="learning-tab-trigger flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-400/20 data-[state=active]:to-blue-400/20"
+              >
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">Blockchain Logs</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="vault" 
+                className="learning-tab-trigger flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-400/20 data-[state=active]:to-emerald-400/20"
+              >
+                <Database className="h-4 w-4" />
+                <span className="hidden sm:inline">Data Vault</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="agents" 
+                className="learning-tab-trigger flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-400/20 data-[state=active]:to-purple-400/20"
+              >
+                <Bot className="h-4 w-4" />
+                <span className="hidden sm:inline">Agent Network</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="rewards">
+          <TabsContent value="rewards" className="animate-fade-in">
             <UCTRewards />
           </TabsContent>
 
-          <TabsContent value="wallet">
+          <TabsContent value="wallet" className="animate-fade-in">
             <WalletConnectPanel />
           </TabsContent>
 
-          <TabsContent value="logs">
+          <TabsContent value="logs" className="animate-fade-in">
             <BlockchainLogs />
           </TabsContent>
 
-          <TabsContent value="vault">
+          <TabsContent value="vault" className="animate-fade-in">
             <DataVaultOptIn />
           </TabsContent>
 
-          <TabsContent value="agents">
+          <TabsContent value="agents" className="animate-fade-in">
             <ComingSoonAgentNetwork />
           </TabsContent>
         </Tabs>
