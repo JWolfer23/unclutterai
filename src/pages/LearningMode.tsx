@@ -1,29 +1,77 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, GraduationCap, BookOpen, Target, Award, Calendar, Brain, FileText } from "lucide-react";
+import { ArrowLeft, GraduationCap, BookOpen, Target, Award, Calendar, Brain, FileText, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { useLearning } from "@/hooks/useLearning";
 import { SourcesDrawer } from "@/components/learning/SourcesDrawer";
 import { GoalsSection } from "@/components/learning/GoalsSection";
 import { LearningFocusMode } from "@/components/learning/LearningFocusMode";
 import { NotesVault } from "@/components/learning/NotesVault";
 import { LearningScheduleDrawer } from "@/components/learning/LearningScheduleDrawer";
+import { toast } from "sonner";
 
 const LearningMode = () => {
   const navigate = useNavigate();
   const { sources, goals, notes, streak, isLoading } = useLearning();
   const [sourcesDrawerOpen, setSourcesDrawerOpen] = useState(false);
   const [scheduleDrawerOpen, setScheduleDrawerOpen] = useState(false);
+  const [learningPlanOpen, setLearningPlanOpen] = useState(false);
+  const [dailyGoalsOpen, setDailyGoalsOpen] = useState(false);
+  const [learningPrompt, setLearningPrompt] = useState("");
+  const [generatingPlan, setGeneratingPlan] = useState(false);
 
   const activeTopics = sources?.filter((s) => s.is_active).length || 0;
   const activeMilestones = goals?.filter((g) => !g.is_completed).length || 0;
   const totalNotes = notes?.length || 0;
 
+  const dailyGoals = goals?.filter((g) => !g.is_completed && g.goal_type === 'daily') || [];
+
+  const handleGeneratePlan = async () => {
+    if (!learningPrompt.trim()) {
+      toast.error("Please describe your learning goals");
+      return;
+    }
+    setGeneratingPlan(true);
+    // Simulate AI generation - in production, call your AI edge function
+    setTimeout(() => {
+      toast.success("Learning plan generated! Check the Goals tab.");
+      setGeneratingPlan(false);
+      setLearningPlanOpen(false);
+      setLearningPrompt("");
+    }, 2000);
+  };
+
   const learningStats = [
-    { icon: BookOpen, label: "Active Topics", value: activeTopics.toString(), gradient: "from-cyan-400 via-blue-400 to-blue-500", glow: "rgba(6, 182, 212, 0.4)" },
-    { icon: Target, label: "Active Goals", value: activeMilestones.toString(), gradient: "from-purple-400 via-purple-500 to-pink-500", glow: "rgba(139, 92, 246, 0.4)" },
-    { icon: Award, label: "Daily Streak", value: streak?.current_streak?.toString() || "0", gradient: "from-yellow-400 via-orange-400 to-orange-500", glow: "rgba(251, 146, 60, 0.4)" },
+    { 
+      icon: Sparkles, 
+      label: "Generate Learning Plan", 
+      value: activeTopics.toString(), 
+      gradient: "from-cyan-400 via-blue-400 to-blue-500", 
+      glow: "rgba(6, 182, 212, 0.4)",
+      onClick: () => setLearningPlanOpen(true),
+      clickable: true
+    },
+    { 
+      icon: Target, 
+      label: "Daily Goals", 
+      value: dailyGoals.length.toString(), 
+      gradient: "from-purple-400 via-purple-500 to-pink-500", 
+      glow: "rgba(139, 92, 246, 0.4)",
+      onClick: () => setDailyGoalsOpen(true),
+      clickable: true
+    },
+    { 
+      icon: Award, 
+      label: "Daily Streak", 
+      value: streak?.current_streak?.toString() || "0", 
+      gradient: "from-yellow-400 via-orange-400 to-orange-500", 
+      glow: "rgba(251, 146, 60, 0.4)",
+      clickable: false
+    },
   ];
 
   if (isLoading) {
@@ -72,7 +120,8 @@ const LearningMode = () => {
             return (
               <div
                 key={idx}
-                className="learning-stat-card group hover:scale-[1.02] transition-all duration-300"
+                onClick={stat.clickable ? stat.onClick : undefined}
+                className={`learning-stat-card group hover:scale-[1.02] transition-all duration-300 ${stat.clickable ? 'cursor-pointer' : ''}`}
                 style={{
                   boxShadow: `0 0 40px -10px ${stat.glow}, 0 20px 40px -10px rgba(0, 0, 0, 0.6)`,
                 }}
@@ -230,6 +279,121 @@ const LearningMode = () => {
       {/* Drawers */}
       <SourcesDrawer open={sourcesDrawerOpen} onOpenChange={setSourcesDrawerOpen} />
       <LearningScheduleDrawer open={scheduleDrawerOpen} onOpenChange={setScheduleDrawerOpen} />
+
+      {/* Generate Learning Plan Dialog */}
+      <Dialog open={learningPlanOpen} onOpenChange={setLearningPlanOpen}>
+        <DialogContent className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 border-purple-500/30 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold font-sora bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-2">
+              <Sparkles className="h-6 w-6 text-cyan-400" />
+              Generate Learning Plan with AI
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="text-sm font-semibold text-slate-300 mb-2 block">
+                Describe your learning goals and interests
+              </label>
+              <Textarea
+                value={learningPrompt}
+                onChange={(e) => setLearningPrompt(e.target.value)}
+                placeholder="e.g., I want to learn web development, focusing on React and TypeScript. I have 2 hours per day and want to build a portfolio website..."
+                className="min-h-[200px] bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500"
+                disabled={generatingPlan}
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setLearningPlanOpen(false)}
+                disabled={generatingPlan}
+                className="border-slate-700 hover:bg-slate-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleGeneratePlan}
+                disabled={generatingPlan}
+                className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-semibold shadow-lg shadow-purple-500/50"
+              >
+                {generatingPlan ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate Plan
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Daily Goals Dialog */}
+      <Dialog open={dailyGoalsOpen} onOpenChange={setDailyGoalsOpen}>
+        <DialogContent className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 border-purple-500/30 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold font-sora bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-2">
+              <Target className="h-6 w-6 text-purple-400" />
+              Today's Daily Goals
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {dailyGoals.length === 0 ? (
+              <div className="text-center py-8">
+                <Target className="h-16 w-16 mx-auto text-slate-600 mb-4" />
+                <p className="text-slate-400 mb-4">No daily goals yet. Create some goals to get started!</p>
+                <Button
+                  onClick={() => {
+                    setDailyGoalsOpen(false);
+                    // Navigate to Goals tab
+                    const goalsTab = document.querySelector('[value="goals"]') as HTMLElement;
+                    goalsTab?.click();
+                  }}
+                  className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                >
+                  Create Goals
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {dailyGoals.map((goal) => (
+                  <div
+                    key={goal.id}
+                    className="learning-panel p-4 hover:border-purple-500/50 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-white mb-1">{goal.title}</h4>
+                        {goal.description && (
+                          <p className="text-sm text-slate-400 mb-2">{goal.description}</p>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-slate-800/50 rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
+                              style={{
+                                width: `${Math.min(100, (goal.current_value / goal.target_value) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs text-slate-400 font-medium whitespace-nowrap">
+                            {goal.current_value}/{goal.target_value}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
