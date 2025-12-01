@@ -179,7 +179,7 @@ const AuthPage = () => {
         <CardHeader className="text-center space-y-4">
           {/* Logo in outline square with rounded corners */}
           <div className="w-28 h-28 mx-auto flex items-center justify-center border border-white/20 rounded-3xl">
-            <img src={logoTransparent} alt="UnclutterAI Logo" className="w-24 h-24 object-contain" />
+            <img src={logoTransparent} alt="UnclutterAI Logo" className="w-26 h-26 object-contain" />
           </div>
 
           {/* Title */}
