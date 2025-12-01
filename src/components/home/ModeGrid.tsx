@@ -160,11 +160,11 @@ const ModeGrid = ({ onSelectMode }: ModeGridProps) => {
         {/* App icon with halo */}
         <div className="relative">
           <div className="absolute -inset-8 rounded-[36px] bg-[radial-gradient(circle_at_0%_0%,rgba(56,189,248,0.6),transparent_55%),radial-gradient(circle_at_100%_0%,rgba(244,114,182,0.7),transparent_55%)] opacity-80 blur-xl" />
-          <div className="relative h-28 w-28 flex items-center justify-center">
+          <div className="relative h-56 w-56 flex items-center justify-center">
             <img
               src={logoTransparent}
               alt="UnclutterAI"
-              className="h-28 w-28 object-contain"
+              className="h-56 w-56 object-contain"
             />
           </div>
         </div>
