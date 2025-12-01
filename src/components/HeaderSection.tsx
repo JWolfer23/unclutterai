@@ -8,7 +8,7 @@ import BetaTestButton from "./BetaTestButton";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import logoDark from "@/assets/logo-new.png";
+import logoTransparent from "@/assets/logo-transparent.png";
 import { fadeInUp } from "@/ui/styles";
 
 interface HeaderSectionProps {
@@ -93,11 +93,11 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
     <header className="sticky top-4 z-50 px-4 sm:px-6 lg:px-8">
       <div className={`max-w-7xl mx-auto unclutter-header ${fadeInUp}`}>
         {/* Logo */}
-        <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 bg-black/40 border border-white/10 flex items-center justify-center">
+        <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center">
           <img
-            src={logoDark}
+            src={logoTransparent}
             alt="UnclutterAI Logo"
-            className="w-6 h-6 object-contain"
+            className="w-8 h-8 object-contain"
           />
         </div>
 

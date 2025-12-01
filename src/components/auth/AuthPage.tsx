@@ -10,7 +10,7 @@ import { Fingerprint } from "lucide-react";
 import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
 import { validateEmail, getPasswordStrength } from "@/lib/security";
 import { supabase } from "@/integrations/supabase/client";
-import logoNew from "@/assets/logo-new.png";
+import logoTransparent from "@/assets/logo-transparent.png";
 import { fadeInUp, primaryGradientButton, whiteSurfaceButton } from "@/ui/styles";
 
 const AuthPage = () => {
@@ -178,8 +178,8 @@ const AuthPage = () => {
       <div className={`w-full max-w-[420px] glass-card glass-card--primary ${fadeInUp}`}>
         <CardHeader className="text-center space-y-6">
           {/* Logo */}
-          <div className="w-20 h-20 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl shadow-lg mx-auto flex items-center justify-center p-3">
-            <img src={logoNew} alt="UnclutterAI Logo" className="w-full h-full object-contain drop-shadow-md" />
+          <div className="w-20 h-20 mx-auto flex items-center justify-center">
+            <img src={logoTransparent} alt="UnclutterAI Logo" className="w-full h-full object-contain" />
           </div>
 
           {/* Title */}
