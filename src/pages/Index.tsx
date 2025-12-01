@@ -287,10 +287,10 @@ const Index = () => {
 
       {/* Logo + title */}
       <div className="flex flex-col items-center mb-10">
-        <div className="w-28 h-28 rounded-3xl bg-gradient-to-br from-cyan-400/20 via-purple-600/30 to-pink-500/20 backdrop-blur-xl flex items-center justify-center border border-white/10 shadow-[0_0_40px_rgba(59,130,246,0.6)]">
+        <div className="w-28 h-28 rounded-3xl border border-white/20 flex items-center justify-center">
           <img
             src={logoNew}
-            className="w-14 h-14 opacity-90"
+            className="w-26 h-26 object-contain"
             alt="UnclutterAI logo"
           />
         </div>
