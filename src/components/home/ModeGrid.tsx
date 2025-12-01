@@ -157,13 +157,19 @@ const ModeGrid = ({ onSelectMode }: ModeGridProps) => {
 
       {/* Logo + title */}
       <div className="flex flex-col items-center gap-6">
-        {/* App icon with outline */}
-        <div className="w-56 h-56 flex items-center justify-center border border-white/20 rounded-3xl">
-          <img
-            src={logoTransparent}
-            alt="UnclutterAI"
-            className="w-52 h-52 object-contain"
-          />
+        {/* App icon with purple gradient fill and glow */}
+        <div className="relative">
+          {/* Ambient glow behind */}
+          <div className="absolute -inset-4 rounded-[40px] bg-purple-500/20 blur-2xl" />
+          
+          {/* Main container with gradient fill */}
+          <div className="relative w-56 h-56 flex items-center justify-center rounded-3xl bg-gradient-to-br from-purple-600/40 via-purple-800/60 to-slate-900/80 border border-purple-400/30 shadow-[0_0_60px_rgba(147,51,234,0.35)]">
+            <img
+              src={logoTransparent}
+              alt="UnclutterAI"
+              className="w-52 h-52 object-contain"
+            />
+          </div>
         </div>
 
         {/* Text lockup */}
