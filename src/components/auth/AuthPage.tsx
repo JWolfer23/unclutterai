@@ -176,10 +176,10 @@ const AuthPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 pb-10 pt-20">
       <div className={`w-full max-w-[420px] glass-card glass-card--primary ${fadeInUp}`}>
-        <CardHeader className="text-center space-y-6">
-          {/* Logo */}
-          <div className="w-40 h-40 mx-auto flex items-center justify-center">
-            <img src={logoTransparent} alt="UnclutterAI Logo" className="w-full h-full object-contain" />
+        <CardHeader className="text-center space-y-4">
+          {/* Logo in dark rounded square */}
+          <div className="w-28 h-28 mx-auto flex items-center justify-center bg-black/90 rounded-3xl shadow-lg">
+            <img src={logoTransparent} alt="UnclutterAI Logo" className="w-24 h-24 object-contain" />
           </div>
 
           {/* Title */}
