@@ -12,7 +12,7 @@ import { AIUsageResetTimer } from "@/components/AIUsageResetTimer";
 import AIUsageTracker from "@/components/AIUsageTracker";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
-import logoNew from "@/assets/logo-new.png";
+import logoNew from "@/assets/logo-transparent.png";
 
 import {
   ArrowUpRight,
