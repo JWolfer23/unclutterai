@@ -287,12 +287,19 @@ const Index = () => {
 
       {/* Logo + title */}
       <div className="flex flex-col items-center mb-10">
-        <div className="w-28 h-28 rounded-3xl border border-white/20 flex items-center justify-center">
-          <img
-            src={logoNew}
-            className="w-26 h-26 object-contain"
-            alt="UnclutterAI logo"
-          />
+        {/* App icon with purple gradient fill and glow */}
+        <div className="relative">
+          {/* Ambient glow behind */}
+          <div className="absolute -inset-4 rounded-[40px] bg-purple-500/40 blur-2xl" />
+          
+          {/* Main container with gradient fill */}
+          <div className="relative w-56 h-56 flex items-center justify-center rounded-3xl bg-gradient-to-br from-purple-600/80 via-purple-700/70 to-slate-900 border border-purple-500/50 shadow-[0_0_60px_rgba(147,51,234,0.5)]">
+            <img
+              src={logoNew}
+              className="w-52 h-52 object-contain"
+              alt="UnclutterAI logo"
+            />
+          </div>
         </div>
 
         <h1 className="text-4xl font-bold mt-6 tracking-tight">unclutterAI</h1>
