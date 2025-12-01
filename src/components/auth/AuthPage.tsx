@@ -178,7 +178,7 @@ const AuthPage = () => {
       <div className={`w-full max-w-[420px] glass-card glass-card--primary ${fadeInUp}`}>
         <CardHeader className="text-center space-y-6">
           {/* Logo */}
-          <div className="w-20 h-20 mx-auto flex items-center justify-center">
+          <div className="w-40 h-40 mx-auto flex items-center justify-center">
             <img src={logoTransparent} alt="UnclutterAI Logo" className="w-full h-full object-contain" />
           </div>
 
