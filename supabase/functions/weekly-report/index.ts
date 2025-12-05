@@ -8,6 +8,7 @@ import { WeeklyReportEmail } from './_templates/weekly-report.tsx';
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const cronSecret = Deno.env.get('CRON_SECRET');
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -22,7 +23,27 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log("Starting weekly report email campaign...");
+    // SECURITY: Verify CRON_SECRET to prevent unauthorized mass email triggers
+    const authHeader = req.headers.get('authorization');
+    const providedSecret = authHeader?.replace('Bearer ', '');
+    
+    if (!cronSecret) {
+      console.error("CRON_SECRET not configured");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
+    if (!providedSecret || providedSecret !== cronSecret) {
+      console.warn("Unauthorized attempt to trigger weekly-report function");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("CRON_SECRET verified, starting weekly report email campaign...");
 
     // Fetch all users with their dashboard data
     const { data: users, error } = await supabase
@@ -87,11 +108,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Weekly report campaign completed: ${successful} sent, ${failed} failed`);
 
+    // Return sanitized response (don't expose email addresses in response)
     return new Response(JSON.stringify({
       message: "Weekly report campaign completed",
       successful,
       failed,
-      results
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -100,7 +121,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in weekly-report function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Internal server error" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
