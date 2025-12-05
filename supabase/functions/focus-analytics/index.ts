@@ -5,6 +5,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Level titles based on level brackets
+const LEVEL_TITLES: { minLevel: number; title: string }[] = [
+  { minLevel: 20, title: 'Master of Focus' },
+  { minLevel: 15, title: 'Deep Work Practitioner' },
+  { minLevel: 10, title: 'Consistent Operator' },
+  { minLevel: 5, title: 'Focused Beginner' },
+  { minLevel: 1, title: 'Getting Started' },
+];
+
+// Get level title based on level
+function getLevelTitle(level: number): string {
+  const titleInfo = LEVEL_TITLES.find(t => level >= t.minLevel);
+  return titleInfo?.title || 'Getting Started';
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -55,6 +70,7 @@ Deno.serve(async (req) => {
       modeBreakdownResult,
       recentSessionsResult,
       totalSessionsResult,
+      focusLevelResult,
     ] = await Promise.all([
       // Today's focus minutes
       supabase.rpc('get_focus_minutes_today', { p_user_id: user.id }),
@@ -89,6 +105,8 @@ Deno.serve(async (req) => {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('is_completed', true),
+      // Focus level data
+      supabase.from('focus_levels').select('*').eq('user_id', user.id).maybeSingle(),
     ]);
 
     // Extract values with defaults
@@ -119,8 +137,15 @@ Deno.serve(async (req) => {
     // Recent sessions
     const recentSessions = recentSessionsResult.data ?? [];
 
+    // Focus level data
+    const levelData = focusLevelResult.data;
+    const level = levelData?.level ?? 1;
+    const xpTotal = levelData?.xp_total ?? 0;
+    const xpToNext = levelData?.xp_to_next ?? 100;
+    const levelTitle = getLevelTitle(level);
+
     // Log summary
-    console.log(`Analytics: ${todayMinutes}min today, ${weeklyMinutes}min week, ${weeklyUCT} UCT week, streak: ${currentStreak}, tier: ${tier}`);
+    console.log(`Analytics: ${todayMinutes}min today, ${weeklyMinutes}min week, ${weeklyUCT} UCT week, streak: ${currentStreak}, tier: ${tier}, level: ${level}`);
 
     const analytics = {
       today_minutes: todayMinutes,
@@ -135,6 +160,12 @@ Deno.serve(async (req) => {
       tier_bonus_percent: tierBonus,
       sessions_this_week: sessionsThisWeek,
       total_sessions: totalSessions,
+      focus_level: {
+        level,
+        xp_total: xpTotal,
+        xp_to_next: xpToNext,
+        title: levelTitle,
+      },
       focus_history: recentSessions.map(s => ({
         id: s.id,
         mode: s.mode,
