@@ -41,6 +41,44 @@ export type Database = {
         }
         Relationships: []
       }
+      focus_rewards_history: {
+        Row: {
+          created_at: string
+          id: string
+          reward_value: number
+          session_id: string | null
+          streak_value: number
+          tier_value: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reward_value?: number
+          session_id?: string | null
+          streak_value?: number
+          tier_value?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reward_value?: number
+          session_id?: string | null
+          streak_value?: number
+          tier_value?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "focus_rewards_history_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "focus_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       focus_session_notes: {
         Row: {
           content: string
@@ -138,19 +176,19 @@ export type Database = {
           current_streak: number | null
           last_session: string | null
           longest_streak: number | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           current_streak?: number | null
           last_session?: string | null
           longest_streak?: number | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           current_streak?: number | null
           last_session?: string | null
           longest_streak?: number | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -667,6 +705,27 @@ export type Database = {
       }
     }
     Functions: {
+      get_focus_minutes_by_day: {
+        Args: { p_user_id: string }
+        Returns: {
+          day: string
+          total_minutes: number
+        }[]
+      }
+      get_focus_minutes_today: { Args: { p_user_id: string }; Returns: number }
+      get_focus_minutes_week: { Args: { p_user_id: string }; Returns: number }
+      get_lifetime_uct: { Args: { p_user_id: string }; Returns: number }
+      get_mode_usage_breakdown: {
+        Args: { p_user_id: string }
+        Returns: {
+          mode: string
+          session_count: number
+          total_minutes: number
+        }[]
+      }
+      get_sessions_this_week: { Args: { p_user_id: string }; Returns: number }
+      get_uct_earned_month: { Args: { p_user_id: string }; Returns: number }
+      get_uct_earned_week: { Args: { p_user_id: string }; Returns: number }
       get_user_weekly_stats: {
         Args: never
         Returns: {
@@ -675,6 +734,14 @@ export type Database = {
           focus_streak: number
           tasks_generated: number
           tokens_earned: number
+        }[]
+      }
+      get_weekly_tier: {
+        Args: { p_user_id: string }
+        Returns: {
+          bonus_percent: number
+          sessions_count: number
+          tier: string
         }[]
       }
     }
