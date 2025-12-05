@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useFocusStreaks } from "./useFocusStreaks";
+import { useFocusRewards } from "./useFocusRewards";
 
 interface FocusSession {
   id: string;
@@ -24,6 +25,7 @@ interface FocusSession {
 export const useFocusSessions = () => {
   const queryClient = useQueryClient();
   const { updateStreak } = useFocusStreaks();
+  const { completeSessionWithRewardsAsync } = useFocusRewards();
 
   // Fetch user's focus sessions
   const { data: sessions = [], isLoading, error } = useQuery({
@@ -81,7 +83,7 @@ export const useFocusSessions = () => {
     },
   });
 
-  // Complete a focus session (Task Completed) - awards tokens
+  // Complete a focus session (Task Completed) - awards tokens with full reward engine
   const completeSession = useMutation({
     mutationFn: async ({ 
       sessionId, 
@@ -92,76 +94,36 @@ export const useFocusSessions = () => {
       actualMinutes: number;
       interruptions?: number;
     }) => {
-      // Calculate UCT reward: duration_minutes * 0.1
-      const uctReward = Math.round(actualMinutes * 0.1 * 100) / 100;
-      
-      // Calculate focus score
+      // Get the session's mode
       const session = sessions.find(s => s.id === sessionId);
-      const plannedMinutes = session?.planned_minutes || actualMinutes;
-      const focusScore = Math.max(
-        Math.min((actualMinutes / plannedMinutes) * 100, 100) - (interruptions * 5),
-        0
-      );
+      const mode = session?.mode || 'focus';
 
-      const { data, error } = await supabase
-        .from('focus_sessions')
-        .update({
-          end_time: new Date().toISOString(),
-          actual_minutes: actualMinutes,
-          interruptions,
-          focus_score: Math.round(focusScore),
-          uct_reward: uctReward,
-          is_completed: true,
-        })
-        .eq('id', sessionId)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return { session: data as FocusSession, uctReward };
+      // Use the new reward engine which handles:
+      // - Tiered reward calculation
+      // - Streak updates
+      // - Wallet updates
+      // - Reward history recording
+      const result = await completeSessionWithRewardsAsync({
+        sessionId,
+        actualMinutes,
+        mode,
+        interruptions,
+      });
+
+      return result;
     },
-    onSuccess: async ({ session, uctReward }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['focus_sessions'] });
       queryClient.invalidateQueries({ queryKey: ['focus_stats'] });
-      
-      // Award tokens to wallet
-      if (uctReward > 0) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            // Get current balance
-            const { data: tokenData } = await supabase
-              .from('tokens')
-              .select('balance')
-              .eq('user_id', user.id)
-              .maybeSingle();
-            
-            if (tokenData) {
-              // Update existing balance
-              const newBalance = (tokenData.balance || 0) + uctReward;
-              await supabase
-                .from('tokens')
-                .update({ balance: newBalance, updated_at: new Date().toISOString() })
-                .eq('user_id', user.id);
-            } else {
-              // Create new wallet
-              await supabase
-                .from('tokens')
-                .insert({ user_id: user.id, balance: uctReward });
-            }
-            queryClient.invalidateQueries({ queryKey: ['tokens'] });
-          }
-        } catch (e) {
-          console.error('Error awarding tokens:', e);
-        }
-      }
-      
-      // Update streak
-      updateStreak();
-      
+      queryClient.invalidateQueries({ queryKey: ['focus_analytics'] });
+      // Toast is already shown by the reward engine
+    },
+    onError: (error) => {
+      console.error('Failed to complete session:', error);
       toast({
-        title: "✅ Focus Session Complete",
-        description: `Score: ${session.focus_score}% • Earned ${uctReward} UCT tokens`,
+        title: "Error completing session",
+        description: "Please try again.",
+        variant: "destructive",
       });
     },
   });

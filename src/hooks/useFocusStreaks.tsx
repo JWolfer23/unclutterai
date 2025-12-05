@@ -12,12 +12,16 @@ export const useFocusStreaks = () => {
   const { data: streakData, isLoading, error } = useQuery({
     queryKey: ['focus_streaks'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
       const { data, error } = await supabase
         .from('focus_streaks')
         .select('*')
-        .single();
+        .eq('user_id', user.id)
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
       return data;
     },
   });
@@ -25,11 +29,21 @@ export const useFocusStreaks = () => {
   // Update streak after successful focus session
   const updateStreak = useMutation({
     mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
       const today = new Date().toISOString().split('T')[0];
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      const currentStreak = streakData?.current_streak || 0;
-      const lastSession = streakData?.last_session;
+      // Fetch fresh streak data
+      const { data: currentData } = await supabase
+        .from('focus_streaks')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      const currentStreak = currentData?.current_streak || 0;
+      const lastSession = currentData?.last_session;
       
       let newStreak = 1;
       
@@ -43,12 +57,12 @@ export const useFocusStreaks = () => {
       }
       // Otherwise, reset to 1
       
-      const longestStreak = Math.max(streakData?.longest_streak || 0, newStreak);
+      const longestStreak = Math.max(currentData?.longest_streak || 0, newStreak);
       
       const { data, error } = await supabase
         .from('focus_streaks')
         .upsert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: user.id,
           current_streak: newStreak,
           longest_streak: longestStreak,
           last_session: today,
@@ -61,6 +75,7 @@ export const useFocusStreaks = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['focus_streaks'] });
+      queryClient.invalidateQueries({ queryKey: ['focus_analytics'] });
       
       if (data.current_streak > (streakData?.current_streak || 0)) {
         toast({
