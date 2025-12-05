@@ -22,6 +22,15 @@ const TIER_THRESHOLDS = [
   { minSessions: 0, tier: 'none', bonus: 0 },
 ];
 
+// Level titles based on level brackets
+const LEVEL_TITLES: { minLevel: number; title: string }[] = [
+  { minLevel: 20, title: 'Master of Focus' },
+  { minLevel: 15, title: 'Deep Work Practitioner' },
+  { minLevel: 10, title: 'Consistent Operator' },
+  { minLevel: 5, title: 'Focused Beginner' },
+  { minLevel: 1, title: 'Getting Started' },
+];
+
 interface RewardCalculation {
   base: number;
   modeBonus: number;
@@ -29,6 +38,67 @@ interface RewardCalculation {
   tierBonus: number;
   total: number;
   tier: string;
+}
+
+interface XPCalculation {
+  xp_earned: number;
+  xp_total: number;
+  xp_to_next: number;
+  level: number;
+  leveled_up: boolean;
+  title: string;
+}
+
+// Calculate XP required for a given level: 100 * (N * N)
+function xpRequiredForLevel(level: number): number {
+  return 100 * (level * level);
+}
+
+// Get level title based on level
+function getLevelTitle(level: number): string {
+  const titleInfo = LEVEL_TITLES.find(t => level >= t.minLevel);
+  return titleInfo?.title || 'Getting Started';
+}
+
+// Calculate XP earned from a session
+function calculateXP(
+  durationMinutes: number,
+  mode: string,
+  currentStreak: number
+): number {
+  const baseXP = durationMinutes;
+  const modeMultiplier = MODE_MULTIPLIERS[mode] || 1.0;
+  const streakBonusPercent = currentStreak * 0.01; // +1% per streak day
+  
+  const xp = baseXP * modeMultiplier * (1 + streakBonusPercent);
+  return Math.round(xp);
+}
+
+// Process level-up logic and return updated level data
+function processLevelUp(
+  currentLevel: number,
+  currentXPTotal: number,
+  xpEarned: number
+): XPCalculation {
+  let level = currentLevel;
+  let xpTotal = currentXPTotal + xpEarned;
+  let xpToNext = xpRequiredForLevel(level);
+  const startingLevel = currentLevel;
+  
+  // Check for level-ups
+  while (xpTotal >= xpToNext) {
+    level += 1;
+    xpToNext = xpRequiredForLevel(level);
+  }
+  
+  return {
+    xp_earned: xpEarned,
+    xp_total: xpTotal,
+    xp_to_next: xpToNext,
+    level,
+    leveled_up: level > startingLevel,
+    title: getLevelTitle(level),
+  };
 }
 
 // Calculate reward based on session parameters
@@ -109,6 +179,8 @@ Deno.serve(async (req) => {
         return await handleBreak(supabaseUser, user.id, params);
       case 'notes':
         return await handleNotes(supabaseUser, user.id, params);
+      case 'get_level':
+        return await handleGetLevel(supabaseUser, user.id);
       default:
         return new Response(
           JSON.stringify({ error: 'Invalid action' }),
@@ -169,7 +241,7 @@ async function handleStart(supabase: any, userId: string, params: { mode: string
   );
 }
 
-// 2️⃣ COMPLETE SESSION
+// 2️⃣ COMPLETE SESSION (with XP + Level system)
 async function handleComplete(supabase: any, supabaseAdmin: any, userId: string, params: { session_id: string; actual_minutes?: number; interruptions?: number }) {
   const { session_id, actual_minutes, interruptions = 0 } = params;
 
@@ -247,8 +319,32 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
   const weeklySessionCount = (sessionsThisWeek || 0) + 1; // +1 for current session
 
   // Calculate reward
-  const reward = calculateReward(durationMinutes, session.mode || 'health', currentStreak, weeklySessionCount);
+  const mode = session.mode || 'health';
+  const reward = calculateReward(durationMinutes, mode, currentStreak, weeklySessionCount);
   console.log(`Reward calculation:`, reward);
+
+  // Calculate XP
+  const xpEarned = calculateXP(durationMinutes, mode, currentStreak);
+  console.log(`XP earned: ${xpEarned}`);
+
+  // Get or create focus_levels row
+  let { data: levelData } = await supabase
+    .from('focus_levels')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  let currentLevel = 1;
+  let currentXPTotal = 0;
+
+  if (levelData) {
+    currentLevel = levelData.level;
+    currentXPTotal = levelData.xp_total;
+  }
+
+  // Process level-up logic
+  const xpResult = processLevelUp(currentLevel, currentXPTotal, xpEarned);
+  console.log(`XP result: level=${xpResult.level}, xp_total=${xpResult.xp_total}, leveled_up=${xpResult.leveled_up}`);
 
   // Calculate focus score
   const focusScore = Math.max(0, Math.min(100, Math.round(
@@ -288,6 +384,36 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
 
   if (streakError) {
     console.error('Error updating streak:', streakError);
+  }
+
+  // Update or create focus_levels row
+  if (levelData) {
+    const { error: levelError } = await supabase
+      .from('focus_levels')
+      .update({
+        level: xpResult.level,
+        xp_total: xpResult.xp_total,
+        xp_to_next: xpResult.xp_to_next,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId);
+
+    if (levelError) {
+      console.error('Error updating focus_levels:', levelError);
+    }
+  } else {
+    const { error: levelError } = await supabase
+      .from('focus_levels')
+      .insert({
+        user_id: userId,
+        level: xpResult.level,
+        xp_total: xpResult.xp_total,
+        xp_to_next: xpResult.xp_to_next,
+      });
+
+    if (levelError) {
+      console.error('Error inserting focus_levels:', levelError);
+    }
   }
 
   // Insert reward history
@@ -346,6 +472,14 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
       },
       tier: reward.tier,
       wallet_balance_after: walletBalance,
+      xp: {
+        xp_earned: xpResult.xp_earned,
+        xp_total: xpResult.xp_total,
+        xp_to_next: xpResult.xp_to_next,
+        level: xpResult.level,
+        leveled_up: xpResult.leveled_up,
+        title: xpResult.title,
+      },
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
@@ -450,6 +584,41 @@ async function handleNotes(supabase: any, userId: string, params: { session_id: 
     JSON.stringify({
       status: 'success',
       notes,
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// 6️⃣ GET FOCUS LEVEL
+async function handleGetLevel(supabase: any, userId: string) {
+  console.log(`Getting focus level for user ${userId}`);
+
+  const { data: levelData, error } = await supabase
+    .from('focus_levels')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching focus level:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Default values if no level data exists
+  const level = levelData?.level ?? 1;
+  const xpTotal = levelData?.xp_total ?? 0;
+  const xpToNext = levelData?.xp_to_next ?? 100;
+  const title = getLevelTitle(level);
+
+  return new Response(
+    JSON.stringify({
+      level,
+      xp_total: xpTotal,
+      xp_to_next: xpToNext,
+      title,
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );

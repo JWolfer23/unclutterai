@@ -41,6 +41,30 @@ export type Database = {
         }
         Relationships: []
       }
+      focus_levels: {
+        Row: {
+          level: number
+          updated_at: string
+          user_id: string
+          xp_to_next: number
+          xp_total: number
+        }
+        Insert: {
+          level?: number
+          updated_at?: string
+          user_id: string
+          xp_to_next?: number
+          xp_total?: number
+        }
+        Update: {
+          level?: number
+          updated_at?: string
+          user_id?: string
+          xp_to_next?: number
+          xp_total?: number
+        }
+        Relationships: []
+      }
       focus_rewards_history: {
         Row: {
           created_at: string
