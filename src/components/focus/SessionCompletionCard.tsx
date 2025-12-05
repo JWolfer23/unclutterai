@@ -1,9 +1,20 @@
-import { Award, Coins, Sparkles } from "lucide-react";
+import { Award, Coins, Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useFocusAnalytics } from "@/hooks/useFocusAnalytics";
 import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useNavigate } from "react-router-dom";
+import { FocusTierBadge } from "./FocusTierBadge";
+import { LevelUpAnimation } from "./LevelUpAnimation";
+
+interface XPData {
+  xp_earned: number;
+  xp_total: number;
+  xp_to_next: number;
+  level: number;
+  leveled_up: boolean;
+  title: string;
+}
 
 interface SessionCompletionCardProps {
   tokensEarned: number;
@@ -13,6 +24,7 @@ interface SessionCompletionCardProps {
   onSaveNote: () => void;
   noteSaved: boolean;
   selectedTask: string;
+  xpData?: XPData;
 }
 
 const TIER_STYLES: Record<string, { bg: string; border: string; text: string }> = {
@@ -31,15 +43,25 @@ export const SessionCompletionCard = ({
   onSaveNote,
   noteSaved,
   selectedTask,
+  xpData,
 }: SessionCompletionCardProps) => {
   const navigate = useNavigate();
-  const { weeklyTier } = useFocusAnalytics();
+  const { weeklyTier, focusLevel } = useFocusAnalytics();
   const { currentStreak } = useFocusStreaks();
 
   const tierKey = weeklyTier.tier.toLowerCase();
   const tierStyle = TIER_STYLES[tierKey] || TIER_STYLES.none;
   const tierLabel = tierKey === 'none' ? 'No Tier' : 
     tierKey.charAt(0).toUpperCase() + tierKey.slice(1);
+
+  // Use xpData if provided, otherwise fall back to focusLevel
+  const level = xpData?.level || focusLevel?.level || 1;
+  const xpTotal = xpData?.xp_total || focusLevel?.xp_total || 0;
+  const xpToNext = xpData?.xp_to_next || focusLevel?.xp_to_next || 100;
+  const xpEarned = xpData?.xp_earned || 0;
+  const leveledUp = xpData?.leveled_up || false;
+  const title = xpData?.title || focusLevel?.title || "Getting Started";
+  const xpProgressPercent = Math.min((xpTotal / xpToNext) * 100, 100);
 
   // Encouragement message based on streak
   const getEncouragement = () => {
@@ -61,10 +83,13 @@ export const SessionCompletionCard = ({
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 relative">
+      {/* Level Up Animation */}
+      <LevelUpAnimation show={leveledUp} newLevel={level} />
+
       {/* Reward Summary Card */}
       <div className="glass-card glass-card--primary text-center">
-        {/* Reward Summary */}
+        {/* UCT Reward Summary */}
         <div className="relative mb-6">
           {/* Glow effect */}
           <div className="absolute inset-0 flex items-center justify-center">
@@ -86,14 +111,56 @@ export const SessionCompletionCard = ({
           </p>
         </div>
 
+        {/* XP Block */}
+        <div className="relative mb-6 p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-teal-500/10 border border-purple-500/20">
+          {/* XP glow effect */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-24 h-24 rounded-full bg-purple-500/20 blur-2xl" />
+          </div>
+          
+          <div className="relative z-10">
+            {/* XP Earned */}
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Star className="w-6 h-6 text-purple-400" />
+              <span 
+                className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-teal-400 bg-clip-text text-transparent"
+                style={{ textShadow: "0 0 20px rgba(168, 85, 247, 0.5)" }}
+              >
+                +{xpEarned} XP
+              </span>
+            </div>
+            
+            {/* Level & Title */}
+            <p className="text-sm text-slate-300 mb-4">
+              You are now <span className="text-white font-semibold">Level {level}</span> — {title}
+            </p>
+            
+            {/* XP Progress Bar */}
+            <div className="space-y-2">
+              <div className="relative h-2 w-full bg-white/10 rounded-full overflow-hidden">
+                <div 
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 to-teal-400 rounded-full transition-all duration-700"
+                  style={{ width: `${xpProgressPercent}%` }}
+                />
+              </div>
+              <p className="text-xs text-slate-400">XP: {xpTotal} / {xpToNext}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Tier Badge */}
-        <div className="flex justify-center mb-4">
+        <div className="flex justify-center gap-3 mb-4">
           <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${tierStyle.bg} ${tierStyle.border} border`}>
             <Sparkles className={`w-4 h-4 ${tierStyle.text}`} />
             <span className={`text-sm font-semibold ${tierStyle.text}`}>
               Current Tier: {tierLabel}
             </span>
           </div>
+        </div>
+        
+        {/* Focus Level Badge */}
+        <div className="flex justify-center mb-4">
+          <FocusTierBadge level={level} />
         </div>
 
         {/* Encouragement */}

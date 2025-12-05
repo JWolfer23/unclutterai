@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
 import { toast } from "@/hooks/use-toast";
-import { FocusStreakStrip, SessionCompletionCard } from "@/components/focus";
+import { FocusStreakStrip, SessionCompletionCard, FocusLevelIndicator } from "@/components/focus";
 
 const FocusMode = () => {
   const navigate = useNavigate();
@@ -338,6 +338,11 @@ const FocusMode = () => {
                 duration={duration} 
                 timeRemaining={duration * 60} 
               />
+              
+              {/* Level Indicator */}
+              <div className="mt-4">
+                <FocusLevelIndicator />
+              </div>
             </div>
           )}
 
@@ -400,6 +405,11 @@ const FocusMode = () => {
                 duration={duration} 
                 timeRemaining={timeRemaining} 
               />
+              
+              {/* Level Indicator */}
+              <div className="mt-4">
+                <FocusLevelIndicator />
+              </div>
             </div>
           )}
 

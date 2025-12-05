@@ -18,6 +18,13 @@ export interface WeeklyTierData {
   sessions_count: number;
 }
 
+export interface FocusLevelData {
+  level: number;
+  xp_total: number;
+  xp_to_next: number;
+  title?: string;
+}
+
 export const useFocusAnalytics = () => {
   // Get focus minutes today
   const { data: todayMinutes, isLoading: isLoadingToday } = useQuery({
@@ -200,6 +207,38 @@ export const useFocusAnalytics = () => {
     },
   });
 
+  // Get focus level data
+  const { data: focusLevel, isLoading: isLoadingLevel } = useQuery({
+    queryKey: ['focus_analytics', 'focus_level'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { level: 1, xp_total: 0, xp_to_next: 100 };
+
+      const { data, error } = await supabase
+        .from('focus_levels')
+        .select('level, xp_total, xp_to_next')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      // Add title based on level
+      const level = data?.level || 1;
+      let title = "Getting Started";
+      if (level >= 20) title = "Master of Focus";
+      else if (level >= 15) title = "Deep Work Practitioner";
+      else if (level >= 10) title = "Consistent Operator";
+      else if (level >= 5) title = "Focused Beginner";
+      
+      return {
+        level,
+        xp_total: data?.xp_total || 0,
+        xp_to_next: data?.xp_to_next || 100,
+        title,
+      } as FocusLevelData;
+    },
+  });
+
   const isLoading = 
     isLoadingToday || 
     isLoadingWeek || 
@@ -211,7 +250,8 @@ export const useFocusAnalytics = () => {
     isLoadingModes || 
     isLoadingTier ||
     isLoadingRecent ||
-    isLoadingTotal;
+    isLoadingTotal ||
+    isLoadingLevel;
 
   return {
     // Time metrics
@@ -232,6 +272,9 @@ export const useFocusAnalytics = () => {
     dailyMinutes: dailyMinutes || [],
     modeBreakdown: modeBreakdown || [],
     weeklyTier: weeklyTier || { tier: 'none', bonus_percent: 0, sessions_count: 0 },
+    
+    // Focus Level
+    focusLevel: focusLevel || { level: 1, xp_total: 0, xp_to_next: 100, title: "Getting Started" },
     
     // Loading state
     isLoading,
