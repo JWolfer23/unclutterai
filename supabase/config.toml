@@ -7,7 +7,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.weekly-report]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-news-summary]
 verify_jwt = true
