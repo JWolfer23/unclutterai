@@ -13,6 +13,12 @@ import AIUsageTracker from "@/components/AIUsageTracker";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
 import logoNew from "@/assets/logo-transparent.png";
+import { 
+  FocusStatsRow, 
+  FocusRewardsSection, 
+  ModeBreakdownChart, 
+  RecentSessionsList 
+} from "@/components/focus";
 
 import {
   ArrowUpRight,
@@ -380,7 +386,7 @@ const Index = () => {
 
   // ---------- VIEW 2: Existing dashboard (Focus Mode) ----------
   const renderFocusDashboard = () => (
-    <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-white pb-12">
       <HeaderSection onShowCommandPalette={() => setShowCommandPalette(true)} />
 
       {/* Back to modes */}
@@ -394,15 +400,33 @@ const Index = () => {
         </button>
       </div>
 
+      {/* Top Stats Row - New */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <FocusStatsRow />
+      </div>
+
       {/* Priority dashboard cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         <PriorityDashboardCards
           onShowRecoveryDashboard={() => setShowRecoveryDashboard(true)}
         />
       </div>
 
-      {/* Your AI Stats */}
+      {/* Focus Rewards Section - New */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <FocusRewardsSection />
+      </div>
+
+      {/* Mode Breakdown & Recent Sessions */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ModeBreakdownChart />
+          <RecentSessionsList />
+        </div>
+      </div>
+
+      {/* Your AI Stats */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         <h2 className="text-2xl font-semibold text-white mb-4">Your AI Stats</h2>
         <UserStatsOverview />
       </div>

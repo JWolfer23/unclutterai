@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, X, Zap, Coins, Award, Clock, Target, Check } from "lucide-react";
+import { ArrowLeft, Play, X, Zap, Clock, Target, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
 import { toast } from "@/hooks/use-toast";
-import { Textarea } from "@/components/ui/textarea";
+import { FocusStreakStrip, SessionCompletionCard } from "@/components/focus";
 
 const FocusMode = () => {
   const navigate = useNavigate();
@@ -245,54 +245,17 @@ const FocusMode = () => {
         </div>
       </div>
 
-      {/* Session Complete Card */}
+      {/* Session Complete Card - Enhanced */}
       {sessionComplete && (
-        <div className="max-w-2xl mx-auto mb-8 glass-card glass-card--primary">
-          <div className="text-center">
-            <Award className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold mb-2">Session Complete! 🎉</h2>
-            <p className="text-slate-300 mb-4">You stayed focused for {actualMinutesDisplay || duration} minutes</p>
-            
-            <div className="flex items-center justify-center gap-2 mb-6">
-              <Coins className="w-6 h-6 text-yellow-400" />
-              <span className="text-3xl font-bold text-yellow-400">+{tokensEarned}</span>
-              <span className="text-slate-400">UCT Tokens</span>
-            </div>
-
-            <Button onClick={() => navigate("/")} className="btn-primary">
-              Back to Dashboard
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Notes Section - After Session Complete */}
-      {sessionComplete && (
-        <div className="max-w-2xl mx-auto glass-card">
-          <h2 className="text-xl font-semibold text-white mb-4">Notes from your session</h2>
-          
-          <Textarea
-            value={sessionNote}
-            onChange={(e) => setSessionNote(e.target.value)}
-            placeholder="Reflect on what you learned, completed, or discovered during this session…"
-            disabled={noteSaved}
-            className="min-h-[150px] bg-white/5 border-purple-500/30 text-white placeholder:text-slate-500 mb-4"
-          />
-
-          {!noteSaved ? (
-            <Button onClick={handleSaveNote} className="btn-primary">
-              Save Note
-            </Button>
-          ) : (
-            <p className="text-emerald-400 text-sm font-medium">
-              ✅ Note saved to {selectedTask === "learning" ? "Learning Mode" : 
-                selectedTask === "health" ? "Health Mode" : 
-                selectedTask === "career" ? "Career Mode" : 
-                selectedTask === "wealth" ? "Wealth Mode" :
-                "Focus Mode"}
-            </p>
-          )}
-        </div>
+        <SessionCompletionCard
+          tokensEarned={tokensEarned}
+          actualMinutes={actualMinutesDisplay || duration}
+          sessionNote={sessionNote}
+          onNoteChange={setSessionNote}
+          onSaveNote={handleSaveNote}
+          noteSaved={noteSaved}
+          selectedTask={selectedTask}
+        />
       )}
 
       {/* Main Focus Card */}
@@ -348,7 +311,7 @@ const FocusMode = () => {
 
           {/* Duration Selector */}
           {!isActive && (
-            <div className="mb-8">
+            <div className="mb-6">
               <label className="block text-sm font-semibold mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-purple-400" />
                 Session Duration
@@ -368,6 +331,13 @@ const FocusMode = () => {
                   </button>
                 ))}
               </div>
+              
+              {/* Streak Strip - Pre-session */}
+              <FocusStreakStrip 
+                isActive={false} 
+                duration={duration} 
+                timeRemaining={duration * 60} 
+              />
             </div>
           )}
 
@@ -413,7 +383,7 @@ const FocusMode = () => {
               </div>
 
               {/* Session Stats */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10">
                   <div className="text-2xl font-bold text-purple-400">{duration}m</div>
                   <div className="text-xs text-slate-400">Planned</div>
@@ -424,6 +394,12 @@ const FocusMode = () => {
                 </div>
               </div>
 
+              {/* Streak & Reward Strip */}
+              <FocusStreakStrip 
+                isActive={isActive} 
+                duration={duration} 
+                timeRemaining={timeRemaining} 
+              />
             </div>
           )}
 
