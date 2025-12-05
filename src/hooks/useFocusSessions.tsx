@@ -1,16 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
-import { useTokens } from "./useTokens";
 import { useFocusStreaks } from "./useFocusStreaks";
 
-type FocusSession = Database['public']['Tables']['focus_sessions']['Row'];
-type FocusSessionInsert = Database['public']['Tables']['focus_sessions']['Insert'];
+interface FocusSession {
+  id: string;
+  user_id: string | null;
+  start_time: string;
+  end_time: string | null;
+  planned_minutes: number;
+  actual_minutes: number | null;
+  interruptions: number | null;
+  focus_score: number | null;
+  mode: string | null;
+  goal: string | null;
+  notes: string | null;
+  uct_reward: number | null;
+  is_completed: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 export const useFocusSessions = () => {
   const queryClient = useQueryClient();
-  const { awardFocusTokens } = useTokens();
   const { updateStreak } = useFocusStreaks();
 
   // Fetch user's focus sessions
@@ -24,26 +36,41 @@ export const useFocusSessions = () => {
         .limit(10);
       
       if (error) throw error;
-      return data;
+      return data as FocusSession[];
     },
   });
 
-  // Start a new focus session
+  // Start a new focus session with mode and goal
   const startSession = useMutation({
-    mutationFn: async (plannedMinutes: number) => {
+    mutationFn: async ({ 
+      plannedMinutes, 
+      mode, 
+      goal 
+    }: { 
+      plannedMinutes: number; 
+      mode: string; 
+      goal: string; 
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { data, error } = await supabase
         .from('focus_sessions')
         .insert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: user.id,
           start_time: new Date().toISOString(),
           planned_minutes: plannedMinutes,
+          mode,
+          goal,
           interruptions: 0,
+          uct_reward: 0,
+          is_completed: false,
         })
         .select()
         .single();
       
       if (error) throw error;
-      return data;
+      return data as FocusSession;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['focus_sessions'] });
@@ -54,7 +81,153 @@ export const useFocusSessions = () => {
     },
   });
 
-  // End a focus session
+  // Complete a focus session (Task Completed) - awards tokens
+  const completeSession = useMutation({
+    mutationFn: async ({ 
+      sessionId, 
+      actualMinutes,
+      interruptions = 0,
+    }: { 
+      sessionId: string; 
+      actualMinutes: number;
+      interruptions?: number;
+    }) => {
+      // Calculate UCT reward: duration_minutes * 0.1
+      const uctReward = Math.round(actualMinutes * 0.1 * 100) / 100;
+      
+      // Calculate focus score
+      const session = sessions.find(s => s.id === sessionId);
+      const plannedMinutes = session?.planned_minutes || actualMinutes;
+      const focusScore = Math.max(
+        Math.min((actualMinutes / plannedMinutes) * 100, 100) - (interruptions * 5),
+        0
+      );
+
+      const { data, error } = await supabase
+        .from('focus_sessions')
+        .update({
+          end_time: new Date().toISOString(),
+          actual_minutes: actualMinutes,
+          interruptions,
+          focus_score: Math.round(focusScore),
+          uct_reward: uctReward,
+          is_completed: true,
+        })
+        .eq('id', sessionId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return { session: data as FocusSession, uctReward };
+    },
+    onSuccess: async ({ session, uctReward }) => {
+      queryClient.invalidateQueries({ queryKey: ['focus_sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['focus_stats'] });
+      
+      // Award tokens to wallet
+      if (uctReward > 0) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            // Get current balance
+            const { data: tokenData } = await supabase
+              .from('tokens')
+              .select('balance')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            
+            if (tokenData) {
+              // Update existing balance
+              const newBalance = (tokenData.balance || 0) + uctReward;
+              await supabase
+                .from('tokens')
+                .update({ balance: newBalance, updated_at: new Date().toISOString() })
+                .eq('user_id', user.id);
+            } else {
+              // Create new wallet
+              await supabase
+                .from('tokens')
+                .insert({ user_id: user.id, balance: uctReward });
+            }
+            queryClient.invalidateQueries({ queryKey: ['tokens'] });
+          }
+        } catch (e) {
+          console.error('Error awarding tokens:', e);
+        }
+      }
+      
+      // Update streak
+      updateStreak();
+      
+      toast({
+        title: "✅ Focus Session Complete",
+        description: `Score: ${session.focus_score}% • Earned ${uctReward} UCT tokens`,
+      });
+    },
+  });
+
+  // Break/interrupt a session (no reward)
+  const breakSession = useMutation({
+    mutationFn: async ({ 
+      sessionId, 
+      actualMinutes,
+      interruptions = 0,
+    }: { 
+      sessionId: string; 
+      actualMinutes: number;
+      interruptions?: number;
+    }) => {
+      const { data, error } = await supabase
+        .from('focus_sessions')
+        .update({
+          end_time: new Date().toISOString(),
+          actual_minutes: actualMinutes,
+          interruptions,
+          uct_reward: 0,
+          is_completed: false,
+        })
+        .eq('id', sessionId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data as FocusSession;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['focus_sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['focus_stats'] });
+      toast({
+        title: "Session Ended",
+        description: "No UCT reward for interrupted session.",
+      });
+    },
+  });
+
+  // Save notes to an existing session
+  const saveSessionNotes = useMutation({
+    mutationFn: async ({ 
+      sessionId, 
+      notes 
+    }: { 
+      sessionId: string; 
+      notes: string; 
+    }) => {
+      const { data, error } = await supabase
+        .from('focus_sessions')
+        .update({ notes })
+        .eq('id', sessionId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data as FocusSession;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['focus_sessions'] });
+    },
+  });
+
+  // Legacy endSession for backward compatibility
   const endSession = useMutation({
     mutationFn: async ({ 
       sessionId, 
@@ -84,23 +257,10 @@ export const useFocusSessions = () => {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as FocusSession;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['focus_sessions'] });
-      
-      // Award tokens for focus time
-      if (data.actual_minutes) {
-        awardFocusTokens(data.actual_minutes);
-      }
-      
-      // Update streak
-      updateStreak();
-      
-      toast({
-        title: "✅ Focus Session Complete",
-        description: `Score: ${data.focus_score}% • Earned tokens for ${data.actual_minutes} minutes`,
-      });
     },
   });
 
@@ -120,7 +280,7 @@ export const useFocusSessions = () => {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as FocusSession;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['focus_sessions'] });
@@ -149,9 +309,13 @@ export const useFocusSessions = () => {
     isLoading,
     error,
     startSession: startSession.mutate,
+    completeSession: completeSession.mutate,
+    breakSession: breakSession.mutate,
+    saveSessionNotes: saveSessionNotes.mutate,
     endSession: endSession.mutate,
     addInterruption: addInterruption.mutate,
     isStarting: startSession.isPending,
     isEnding: endSession.isPending,
+    isCompleting: completeSession.isPending,
   };
 };

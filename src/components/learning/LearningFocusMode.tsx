@@ -15,7 +15,11 @@ export const LearningFocusMode = () => {
 
   const startFocusSession = () => {
     const minutes = parseInt(plannedMinutes) || 25;
-    startSession(minutes);
+    startSession({
+      plannedMinutes: minutes,
+      mode: 'learning',
+      goal: 'Learning session',
+    });
     
     // Start timer
     const id = setInterval(() => {

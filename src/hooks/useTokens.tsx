@@ -85,6 +85,55 @@ export const useTokens = () => {
     },
   });
 
+  // Award tokens directly to wallet (used by focus sessions)
+  const awardTokensToWallet = useMutation({
+    mutationFn: async (uctReward: number) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      // Get current balance
+      const { data: existingToken, error: fetchError } = await supabase
+        .from('tokens')
+        .select('balance')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+      
+      // If no wallet exists, create one
+      if (!existingToken) {
+        const { data, error } = await supabase
+          .from('tokens')
+          .insert({
+            user_id: user.id,
+            balance: uctReward,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        return { newBalance: uctReward, data };
+      }
+      
+      // Update existing balance
+      const newBalance = (existingToken.balance || 0) + uctReward;
+      const { data, error } = await supabase
+        .from('tokens')
+        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return { newBalance, data };
+    },
+    onSuccess: ({ newBalance }) => {
+      queryClient.invalidateQueries({ queryKey: ['tokens'] });
+    },
+    onError: (error) => {
+      console.error('Error awarding tokens to wallet:', error);
+    },
+  });
+
   return {
     tokenData,
     balance: tokenData?.balance || 0,
@@ -92,6 +141,7 @@ export const useTokens = () => {
     error,
     awardFocusTokens: awardFocusTokens.mutate,
     awardSummaryTokens: awardSummaryTokens.mutate,
-    isAwarding: awardFocusTokens.isPending || awardSummaryTokens.isPending,
+    awardTokensToWallet: awardTokensToWallet.mutate,
+    isAwarding: awardFocusTokens.isPending || awardSummaryTokens.isPending || awardTokensToWallet.isPending,
   };
 };

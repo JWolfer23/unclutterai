@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Play, X, Zap, Coins, Award, Clock, Target, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useFocusSessions } from "@/hooks/useFocusSessions";
 import { toast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
 
 const FocusMode = () => {
   const navigate = useNavigate();
-  const { startSession, endSession, addInterruption, activeSession } = useFocusSessions();
+  const { 
+    startSession, 
+    completeSession, 
+    breakSession, 
+    saveSessionNotes,
+    addInterruption, 
+    activeSession 
+  } = useFocusSessions();
 
   const [taskInput, setTaskInput] = useState("");
   const [selectedTask, setSelectedTask] = useState<string>("");
@@ -24,6 +30,10 @@ const FocusMode = () => {
   const [interruptions, setInterruptions] = useState(0);
   const [sessionNote, setSessionNote] = useState("");
   const [noteSaved, setNoteSaved] = useState(false);
+  const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
+
+  // Track actual minutes spent
+  const actualMinutesRef = useRef(0);
 
   // Timer countdown logic
   useEffect(() => {
@@ -42,6 +52,13 @@ const FocusMode = () => {
     return () => clearInterval(interval);
   }, [isActive, isPaused, timeRemaining]);
 
+  // Calculate actual minutes whenever timer changes
+  useEffect(() => {
+    if (isActive) {
+      actualMinutesRef.current = Math.floor((duration * 60 - timeRemaining) / 60);
+    }
+  }, [timeRemaining, duration, isActive]);
+
   const handleStart = () => {
     if (!taskInput && !selectedTask) {
       toast({
@@ -52,11 +69,20 @@ const FocusMode = () => {
       return;
     }
 
-    startSession(duration);
+    // Start session with mode and goal
+    startSession({
+      plannedMinutes: duration,
+      mode: selectedTask || 'general',
+      goal: taskInput || selectedTask,
+    });
+
     setIsActive(true);
     setTimeRemaining(duration * 60);
     setSessionComplete(false);
     setInterruptions(0);
+    setNoteSaved(false);
+    setCompletedSessionId(null);
+    actualMinutesRef.current = 0;
     
     toast({
       title: "🎯 Focus Mode Activated",
@@ -65,29 +91,29 @@ const FocusMode = () => {
   };
 
   const handleTaskCompleted = () => {
-    // End the session and show notes screen
+    const actualMinutes = Math.max(Math.floor((duration * 60 - timeRemaining) / 60), 1);
+    
+    // Calculate UCT reward: duration_minutes * 0.1
+    const uctReward = Math.round(actualMinutes * 0.1 * 100) / 100;
+    
+    // Complete the session in backend
     if (activeSession) {
-      const actualMinutes = Math.floor((duration * 60 - timeRemaining) / 60);
-      endSession({
+      completeSession({
         sessionId: activeSession.id,
         actualMinutes,
         interruptions,
       });
+      setCompletedSessionId(activeSession.id);
     }
     
-    // Calculate tokens earned
-    const baseTokens = Math.floor((duration * 60 - timeRemaining) / 60) * 0.08;
-    const interruptionPenalty = interruptions * 0.5;
-    const earned = Math.max(Math.round(baseTokens - interruptionPenalty), 1);
-    
-    setTokensEarned(earned);
+    setTokensEarned(uctReward);
     setSessionComplete(true);
     setIsActive(false);
     setIsPaused(false);
 
     toast({
       title: "✅ Task Completed!",
-      description: `You earned ${earned} UCT tokens! Add your notes below.`,
+      description: `You earned ${uctReward} UCT tokens! Add your notes below.`,
     });
   };
 
@@ -97,16 +123,18 @@ const FocusMode = () => {
       addInterruption(activeSession.id);
     }
     toast({
-      title: "⚠️ Interruption Logged",
+      title: "⚠️ Break Logged",
       description: "Try to minimize breaks for maximum tokens!",
       variant: "destructive",
     });
   };
 
-  const handleEnd = () => {
+  const handleBreak = () => {
+    const actualMinutes = Math.max(Math.floor((duration * 60 - timeRemaining) / 60), 0);
+    
+    // Break session - no reward
     if (activeSession) {
-      const actualMinutes = Math.floor((duration * 60 - timeRemaining) / 60);
-      endSession({
+      breakSession({
         sessionId: activeSession.id,
         actualMinutes,
         interruptions,
@@ -115,34 +143,30 @@ const FocusMode = () => {
     
     setIsActive(false);
     setIsPaused(false);
-    toast({
-      title: "Session Ended",
-      description: "Focus session saved.",
-    });
     
     setTimeout(() => navigate("/"), 1500);
   };
 
   const handleSessionComplete = () => {
-    const baseTokens = duration * 0.08; // ~2 tokens per 25min
-    const interruptionPenalty = interruptions * 0.5;
-    const earned = Math.max(Math.round(baseTokens - interruptionPenalty), 1);
+    // Timer reached zero - complete session
+    const uctReward = Math.round(duration * 0.1 * 100) / 100;
     
-    setTokensEarned(earned);
+    setTokensEarned(uctReward);
     setSessionComplete(true);
     setIsActive(false);
 
     if (activeSession) {
-      endSession({
+      completeSession({
         sessionId: activeSession.id,
         actualMinutes: duration,
         interruptions,
       });
+      setCompletedSessionId(activeSession.id);
     }
 
     toast({
       title: "🎉 Focus Session Complete!",
-      description: `You earned ${earned} UCT tokens!`,
+      description: `You earned ${uctReward} UCT tokens!`,
     });
   };
 
@@ -156,47 +180,32 @@ const FocusMode = () => {
       return;
     }
 
-    if (!selectedTask) {
-      toast({
-        title: "Mode Required",
-        description: "Please select a mode for this note.",
-        variant: "destructive",
+    const sessionId = completedSessionId || activeSession?.id;
+    
+    if (sessionId) {
+      // Save notes to the focus session
+      saveSessionNotes({
+        sessionId,
+        notes: sessionNote,
       });
-      return;
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { error } = await supabase
-        .from("focus_session_notes")
-        .insert({
-          user_id: user.id,
-          session_id: activeSession?.id || null,
-          mode: selectedTask,
-          content: sessionNote,
-        });
-
-      if (error) throw error;
-
+      
       setNoteSaved(true);
       const modeNames: Record<string, string> = {
         learning: "Learning Mode",
         health: "Health Mode",
         career: "Career Mode",
         wealth: "Wealth Mode",
+        general: "Focus Mode",
       };
 
       toast({
         title: "✅ Note Saved",
-        description: `Note saved to ${modeNames[selectedTask]}`,
+        description: `Note saved to ${modeNames[selectedTask] || 'Focus Mode'}`,
       });
-    } catch (error) {
-      console.error("Error saving note:", error);
+    } else {
       toast({
         title: "Error",
-        description: "Failed to save note. Please try again.",
+        description: "No session to save notes to.",
         variant: "destructive",
       });
     }
@@ -209,6 +218,7 @@ const FocusMode = () => {
   };
 
   const progress = ((duration * 60 - timeRemaining) / (duration * 60)) * 100;
+  const actualMinutesDisplay = Math.floor((duration * 60 - timeRemaining) / 60);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-white p-6">
@@ -241,7 +251,7 @@ const FocusMode = () => {
           <div className="text-center">
             <Award className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Session Complete! 🎉</h2>
-            <p className="text-slate-300 mb-4">You stayed focused for {duration} minutes</p>
+            <p className="text-slate-300 mb-4">You stayed focused for {actualMinutesDisplay || duration} minutes</p>
             
             <div className="flex items-center justify-center gap-2 mb-6">
               <Coins className="w-6 h-6 text-yellow-400" />
@@ -278,7 +288,8 @@ const FocusMode = () => {
               ✅ Note saved to {selectedTask === "learning" ? "Learning Mode" : 
                 selectedTask === "health" ? "Health Mode" : 
                 selectedTask === "career" ? "Career Mode" : 
-                "Wealth Mode"}
+                selectedTask === "wealth" ? "Wealth Mode" :
+                "Focus Mode"}
             </p>
           )}
         </div>
@@ -409,7 +420,7 @@ const FocusMode = () => {
                 </div>
                 <div className="text-center p-4 bg-white/5 rounded-xl border border-white/10">
                   <div className="text-2xl font-bold text-red-400">{interruptions}</div>
-                  <div className="text-xs text-slate-400">Interruptions</div>
+                  <div className="text-xs text-slate-400">Breaks</div>
                 </div>
               </div>
 
@@ -432,7 +443,7 @@ const FocusMode = () => {
                 <Button onClick={handleInterruption} variant="outline" className="h-12">
                   Break
                 </Button>
-                <Button onClick={handleEnd} variant="destructive" className="h-12">
+                <Button onClick={handleBreak} variant="destructive" className="h-12">
                   <X className="w-5 h-5" />
                 </Button>
               </>

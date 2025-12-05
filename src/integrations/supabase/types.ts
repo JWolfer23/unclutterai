@@ -85,10 +85,15 @@ export type Database = {
           created_at: string | null
           end_time: string | null
           focus_score: number | null
+          goal: string | null
           id: string
           interruptions: number | null
+          is_completed: boolean | null
+          mode: string | null
+          notes: string | null
           planned_minutes: number
           start_time: string
+          uct_reward: number | null
           updated_at: string | null
           user_id: string | null
         }
@@ -97,10 +102,15 @@ export type Database = {
           created_at?: string | null
           end_time?: string | null
           focus_score?: number | null
+          goal?: string | null
           id?: string
           interruptions?: number | null
+          is_completed?: boolean | null
+          mode?: string | null
+          notes?: string | null
           planned_minutes: number
           start_time: string
+          uct_reward?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -109,10 +119,15 @@ export type Database = {
           created_at?: string | null
           end_time?: string | null
           focus_score?: number | null
+          goal?: string | null
           id?: string
           interruptions?: number | null
+          is_completed?: boolean | null
+          mode?: string | null
+          notes?: string | null
           planned_minutes?: number
           start_time?: string
+          uct_reward?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
