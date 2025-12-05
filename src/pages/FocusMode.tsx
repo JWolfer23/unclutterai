@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause, X, Zap, Coins, Award, Clock, Target } from "lucide-react";
+import { ArrowLeft, Play, X, Zap, Coins, Award, Clock, Target, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -64,11 +64,30 @@ const FocusMode = () => {
     });
   };
 
-  const handlePause = () => {
-    setIsPaused(!isPaused);
+  const handleTaskCompleted = () => {
+    // End the session and show notes screen
+    if (activeSession) {
+      const actualMinutes = Math.floor((duration * 60 - timeRemaining) / 60);
+      endSession({
+        sessionId: activeSession.id,
+        actualMinutes,
+        interruptions,
+      });
+    }
+    
+    // Calculate tokens earned
+    const baseTokens = Math.floor((duration * 60 - timeRemaining) / 60) * 0.08;
+    const interruptionPenalty = interruptions * 0.5;
+    const earned = Math.max(Math.round(baseTokens - interruptionPenalty), 1);
+    
+    setTokensEarned(earned);
+    setSessionComplete(true);
+    setIsActive(false);
+    setIsPaused(false);
+
     toast({
-      title: isPaused ? "▶️ Resumed" : "⏸️ Paused",
-      description: isPaused ? "Keep going!" : "Take a quick break if needed.",
+      title: "✅ Task Completed!",
+      description: `You earned ${earned} UCT tokens! Add your notes below.`,
     });
   };
 
@@ -394,13 +413,6 @@ const FocusMode = () => {
                 </div>
               </div>
 
-              {/* Summary Indicator */}
-              <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                  <span className="text-sm text-blue-300">Summarizing communications in the background...</span>
-                </div>
-              </div>
             </div>
           )}
 
@@ -413,9 +425,9 @@ const FocusMode = () => {
               </Button>
             ) : (
               <>
-                <Button onClick={handlePause} variant="outline" className="flex-1 h-12">
-                  {isPaused ? <Play className="w-5 h-5 mr-2" /> : <Pause className="w-5 h-5 mr-2" />}
-                  {isPaused ? "Resume" : "Pause"}
+                <Button onClick={handleTaskCompleted} className="flex-1 h-12 bg-black hover:bg-slate-900 text-white border border-white/20">
+                  <Check className="w-5 h-5 mr-2" />
+                  Task Completed
                 </Button>
                 <Button onClick={handleInterruption} variant="outline" className="h-12">
                   Break
