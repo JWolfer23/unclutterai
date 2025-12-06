@@ -6,6 +6,12 @@ import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useNavigate } from "react-router-dom";
 import { FocusTierBadge } from "./FocusTierBadge";
 import { LevelUpAnimation, InlineLevelGlow } from "./LevelUpAnimation";
+import { FocusSystemExplainerModal } from "./FocusSystemExplainerModal";
+import { 
+  getLevelIdentity, 
+  getLevelEncouragement, 
+  getStreakEncouragement 
+} from "@/lib/focusMicroCopy";
 
 interface XPData {
   xp_earned: number;
@@ -63,16 +69,10 @@ export const SessionCompletionCard = ({
   const title = xpData?.title || focusLevel?.title || "Getting Started";
   const xpProgressPercent = Math.min((xpTotal / xpToNext) * 100, 100);
 
-  // Encouragement message based on streak
-  const getEncouragement = () => {
-    if (currentStreak < 3) {
-      return "Great start — come back tomorrow to build your streak.";
-    } else if (currentStreak < 7) {
-      return "Nice run — you're building serious momentum.";
-    } else {
-      return "You're on fire — don't break this streak! 🔥";
-    }
-  };
+  // Get micro-copy messages
+  const levelIdentity = getLevelIdentity(level);
+  const levelEncouragement = getLevelEncouragement(level, true);
+  const streakEncouragement = getStreakEncouragement(currentStreak);
 
   const modeNames: Record<string, string> = {
     learning: "Learning Mode",
@@ -167,10 +167,25 @@ export const SessionCompletionCard = ({
           <FocusTierBadge level={level} />
         </div>
 
-        {/* Encouragement */}
-        <p className="text-sm text-slate-300 mb-6">
-          {getEncouragement()}
+        {/* Level Identity */}
+        <p className="text-xs text-slate-400 italic mb-2">
+          {levelIdentity}
         </p>
+
+        {/* Encouragement Messages */}
+        <div className="space-y-1 mb-4">
+          <p className="text-sm text-slate-300">
+            {levelEncouragement}
+          </p>
+          <p className="text-xs text-slate-400">
+            {streakEncouragement}
+          </p>
+        </div>
+
+        {/* Learn More Link */}
+        <div className="flex justify-center mb-4">
+          <FocusSystemExplainerModal />
+        </div>
 
         <Button onClick={() => navigate("/")} className="btn-primary">
           Back to Dashboard

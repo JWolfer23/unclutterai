@@ -2,8 +2,9 @@ import { useFocusAnalytics } from "@/hooks/useFocusAnalytics";
 import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useTokens } from "@/hooks/useTokens";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Coins, Zap, Flame, Trophy, Star, Diamond } from "lucide-react";
+import { getLevelTitle } from "@/lib/focusMicroCopy";
+import { FocusSystemExplainerModal } from "./FocusSystemExplainerModal";
 
 const getTierInfo = (tier: string) => {
   switch (tier.toLowerCase()) {
@@ -19,14 +20,6 @@ const getTierInfo = (tier: string) => {
     default:
       return { color: '#C57A3B', label: 'Bronze', icon: Star };
   }
-};
-
-const getLevelTitle = (level: number) => {
-  if (level >= 20) return "Master of Focus";
-  if (level >= 15) return "Deep Work Practitioner";
-  if (level >= 10) return "Consistent Operator";
-  if (level >= 5) return "Focused Beginner";
-  return "Getting Started";
 };
 
 const getTierFromLevel = (level: number) => {
@@ -225,6 +218,11 @@ export const ProfilePanel = () => {
             </div>
           </div>
 
+        </div>
+
+        {/* Learn More Link */}
+        <div className="mt-4 pt-4 border-t border-white/5 flex justify-center">
+          <FocusSystemExplainerModal />
         </div>
       </CardContent>
     </Card>
