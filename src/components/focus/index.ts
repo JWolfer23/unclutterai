@@ -9,3 +9,4 @@ export { FocusLevelCard } from './FocusLevelCard';
 export { FocusTierBadge } from './FocusTierBadge';
 export { FocusLevelIndicator } from './FocusLevelIndicator';
 export { LevelUpAnimation } from './LevelUpAnimation';
+export { ProfilePanel } from './ProfilePanel';
