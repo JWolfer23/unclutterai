@@ -5,7 +5,7 @@ import { useFocusAnalytics } from "@/hooks/useFocusAnalytics";
 import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useNavigate } from "react-router-dom";
 import { FocusTierBadge } from "./FocusTierBadge";
-import { LevelUpAnimation } from "./LevelUpAnimation";
+import { LevelUpAnimation, InlineLevelGlow } from "./LevelUpAnimation";
 
 interface XPData {
   xp_earned: number;
@@ -119,21 +119,25 @@ export const SessionCompletionCard = ({
           </div>
           
           <div className="relative z-10">
-            {/* XP Earned */}
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Star className="w-6 h-6 text-purple-400" />
+            {/* XP Earned with glow animation */}
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Star className={`w-6 h-6 text-purple-400 ${leveledUp ? 'animate-pulse' : ''}`} />
               <span 
                 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-teal-400 bg-clip-text text-transparent"
-                style={{ textShadow: "0 0 20px rgba(168, 85, 247, 0.5)" }}
+                style={{ 
+                  textShadow: leveledUp 
+                    ? "0 0 30px rgba(168, 85, 247, 0.8)" 
+                    : "0 0 20px rgba(168, 85, 247, 0.5)" 
+                }}
               >
                 +{xpEarned} XP
               </span>
             </div>
             
-            {/* Level & Title */}
-            <p className="text-sm text-slate-300 mb-4">
-              You are now <span className="text-white font-semibold">Level {level}</span> — {title}
-            </p>
+            {/* Level & Title with inline animation */}
+            <div className="flex items-center justify-center mb-4">
+              <InlineLevelGlow level={level} leveledUp={leveledUp} title={title} />
+            </div>
             
             {/* XP Progress Bar */}
             <div className="space-y-2">

@@ -90,7 +90,7 @@ const FocusMode = () => {
     });
   };
 
-  const handleTaskCompleted = () => {
+  const handleTaskCompleted = async () => {
     const actualMinutes = Math.max(Math.floor((duration * 60 - timeRemaining) / 60), 1);
     
     // Calculate UCT reward: duration_minutes * 0.1
@@ -98,12 +98,16 @@ const FocusMode = () => {
     
     // Complete the session in backend
     if (activeSession) {
-      completeSession({
-        sessionId: activeSession.id,
-        actualMinutes,
-        interruptions,
-      });
-      setCompletedSessionId(activeSession.id);
+      try {
+        await completeSession.mutateAsync({
+          sessionId: activeSession.id,
+          actualMinutes,
+          interruptions,
+        });
+        setCompletedSessionId(activeSession.id);
+      } catch (error) {
+        console.error("Error completing session:", error);
+      }
     }
     
     setTokensEarned(uctReward);
@@ -147,7 +151,7 @@ const FocusMode = () => {
     setTimeout(() => navigate("/"), 1500);
   };
 
-  const handleSessionComplete = () => {
+  const handleSessionComplete = async () => {
     // Timer reached zero - complete session
     const uctReward = Math.round(duration * 0.1 * 100) / 100;
     
@@ -156,12 +160,16 @@ const FocusMode = () => {
     setIsActive(false);
 
     if (activeSession) {
-      completeSession({
-        sessionId: activeSession.id,
-        actualMinutes: duration,
-        interruptions,
-      });
-      setCompletedSessionId(activeSession.id);
+      try {
+        await completeSession.mutateAsync({
+          sessionId: activeSession.id,
+          actualMinutes: duration,
+          interruptions,
+        });
+        setCompletedSessionId(activeSession.id);
+      } catch (error) {
+        console.error("Error completing session:", error);
+      }
     }
 
     toast({
