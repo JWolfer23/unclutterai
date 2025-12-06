@@ -271,7 +271,7 @@ export const useFocusSessions = () => {
     isLoading,
     error,
     startSession: startSession.mutate,
-    completeSession: completeSession.mutate,
+    completeSession: completeSession,
     breakSession: breakSession.mutate,
     saveSessionNotes: saveSessionNotes.mutate,
     endSession: endSession.mutate,
