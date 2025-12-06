@@ -18,7 +18,8 @@ import {
   FocusRewardsSection, 
   ModeBreakdownChart, 
   RecentSessionsList,
-  FocusLevelCard
+  FocusLevelCard,
+  ProfilePanel
 } from "@/components/focus";
 
 import {
@@ -401,14 +402,14 @@ const Index = () => {
         </button>
       </div>
 
-      {/* Top Stats Row - New */}
+      {/* Profile Panel - Unified UCT, Level, Streak, Tier */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <FocusStatsRow />
+        <ProfilePanel />
       </div>
 
-      {/* Focus Level Card - New */}
+      {/* Top Stats Row */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <FocusLevelCard />
+        <FocusStatsRow />
       </div>
 
       {/* Priority dashboard cards */}
