@@ -66,31 +66,25 @@ export const usePrivyWallet = () => {
     },
   });
 
-  // Disconnect wallet
+  // Disconnect wallet (clears local session but keeps DB wallet address for future claims)
   const disconnectWallet = useMutation({
     mutationFn: async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) throw new Error('Not authenticated');
-
-      // Clear wallet from database
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
-          wallet_address: null,
-          wallet_provider: null 
-        })
-        .eq('id', authUser.id);
-      
-      if (error) throw error;
-
-      // Logout from Privy
+      // Only logout from Privy - DO NOT clear wallet_address from profiles
+      // The wallet address is kept for future UCT claims and re-connections
       await logout();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet-profile'] });
       toast({
-        title: "🔌 Wallet Disconnected",
-        description: "Your wallet has been unlinked",
+        title: "🔌 Session Disconnected",
+        description: "Wallet session ended. Your wallet address is saved for future use.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to disconnect: " + (error as Error).message,
+        variant: "destructive",
       });
     },
   });
