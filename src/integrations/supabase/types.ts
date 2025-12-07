@@ -791,17 +791,7 @@ export type Database = {
       }
     }
     Views: {
-      user_ai_dashboard: {
-        Row: {
-          daily_summaries: number | null
-          email: string | null
-          focus_streak: number | null
-          tasks_generated: number | null
-          tokens_earned: number | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       get_focus_minutes_by_day: {
@@ -825,6 +815,17 @@ export type Database = {
       get_sessions_this_week: { Args: { p_user_id: string }; Returns: number }
       get_uct_earned_month: { Args: { p_user_id: string }; Returns: number }
       get_uct_earned_week: { Args: { p_user_id: string }; Returns: number }
+      get_user_ai_dashboard: {
+        Args: never
+        Returns: {
+          daily_summaries: number
+          email: string
+          focus_streak: number
+          tasks_generated: number
+          tokens_earned: number
+          user_id: string
+        }[]
+      }
       get_user_weekly_stats: {
         Args: never
         Returns: {
