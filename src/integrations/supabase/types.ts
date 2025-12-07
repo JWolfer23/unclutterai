@@ -717,6 +717,39 @@ export type Database = {
         }
         Relationships: []
       }
+      uct_claim_history: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          network: string
+          status: string
+          tx_hash: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          network?: string
+          status?: string
+          tx_hash?: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          network?: string
+          status?: string
+          tx_hash?: string | null
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       user_ai_dashboard: {

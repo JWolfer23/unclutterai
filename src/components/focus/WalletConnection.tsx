@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { usePrivyWallet } from "@/hooks/usePrivyWallet";
 import { Wallet, Copy, Check, LogOut, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
+import { ClaimUCTModal } from "./ClaimUCTModal";
 export const WalletConnection = () => {
   const { 
     walletAddress, 
@@ -131,6 +131,9 @@ export const WalletConnection = () => {
             </p>
           </div>
         </div>
+        
+        {/* Claim UCT Button */}
+        <ClaimUCTModal />
         
         <Button
           onClick={() => disconnectWallet()}

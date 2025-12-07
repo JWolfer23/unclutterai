@@ -20,3 +20,6 @@ verify_jwt = true
 
 [functions.focus-analytics]
 verify_jwt = true
+
+[functions.claim-uct]
+verify_jwt = true
