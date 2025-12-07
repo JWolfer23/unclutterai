@@ -5,20 +5,22 @@ import { Input } from "@/components/ui/input";
 import { useTokens } from "@/hooks/useTokens";
 import { usePrivyWallet } from "@/hooks/usePrivyWallet";
 import { useClaimUCT } from "@/hooks/useClaimUCT";
-import { Coins, Wallet, AlertCircle, CheckCircle, ExternalLink, Loader2, ArrowRight } from "lucide-react";
+import { Coins, Wallet, AlertCircle, CheckCircle, ExternalLink, Loader2, ArrowRight, Clock } from "lucide-react";
 
 export const ClaimUCTModal = () => {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
-  const [step, setStep] = useState<'input' | 'confirming' | 'success'>('input');
+  const [step, setStep] = useState<'input' | 'confirming' | 'success' | 'rate-limited'>('input');
+  const [rateLimitMinutes, setRateLimitMinutes] = useState(0);
   
   const { balance, isLoading: balanceLoading } = useTokens();
   const { walletAddress, isConnected, isLoading: walletLoading } = usePrivyWallet();
   const { claimUCTAsync, isClaiming, claimResult, claimHistory } = useClaimUCT();
 
   const availableBalance = balance || 0;
-  const claimAmount = parseFloat(amount) || 0;
-  const isValidAmount = claimAmount > 0 && claimAmount <= availableBalance;
+  // Ensure whole numbers only (no fractional tokens)
+  const claimAmount = Math.floor(parseFloat(amount) || 0);
+  const isValidAmount = claimAmount >= 1 && claimAmount <= availableBalance && Number.isInteger(claimAmount);
 
   const handleClaim = async () => {
     if (!isValidAmount) return;
@@ -27,8 +29,14 @@ export const ClaimUCTModal = () => {
     try {
       await claimUCTAsync(claimAmount);
       setStep('success');
-    } catch (error) {
-      setStep('input');
+    } catch (error: any) {
+      // Handle rate limiting
+      if (error.message?.includes('Too many') || error.message?.includes('rate')) {
+        setRateLimitMinutes(60);
+        setStep('rate-limited');
+      } else {
+        setStep('input');
+      }
     }
   };
 
@@ -41,7 +49,7 @@ export const ClaimUCTModal = () => {
   };
 
   const setMaxAmount = () => {
-    setAmount(availableBalance.toString());
+    setAmount(Math.floor(availableBalance).toString());
   };
 
   const formatAddress = (address: string) => {
@@ -65,7 +73,7 @@ export const ClaimUCTModal = () => {
       <DialogContent className="bg-slate-900 border border-white/10 text-white max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-            Claim UCT Tokens
+            Claim UCT Rewards
           </DialogTitle>
         </DialogHeader>
 
@@ -80,14 +88,38 @@ export const ClaimUCTModal = () => {
               Please connect your wallet before claiming UCT.
             </p>
           </div>
+        ) : step === 'rate-limited' ? (
+          <div className="text-center py-8 space-y-4">
+            <div className="relative mx-auto w-16 h-16">
+              <div className="absolute inset-0 bg-amber-500/30 rounded-full blur-xl" />
+              <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                <Clock className="w-8 h-8 text-white" />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Please Wait</h3>
+              <p className="text-sm text-slate-400 mt-1">
+                You've reached the maximum claims per hour.
+              </p>
+              <p className="text-xs text-slate-500 mt-2">
+                Try again in about {rateLimitMinutes} minutes.
+              </p>
+            </div>
+            <Button
+              onClick={handleClose}
+              className="w-full bg-slate-700 hover:bg-slate-600 text-white"
+            >
+              Close
+            </Button>
+          </div>
         ) : step === 'input' ? (
           <div className="space-y-5">
-            {/* Balance Display */}
+            {/* Balance Display - Avoid "value" language */}
             <div className="p-4 rounded-xl bg-slate-800/50 border border-white/5">
-              <p className="text-xs text-slate-400 mb-1">Available Balance</p>
+              <p className="text-xs text-slate-400 mb-1">Earned UCT Available</p>
               <div className="flex items-center gap-2">
                 <Coins className="w-5 h-5 text-cyan-400" />
-                <span className="text-2xl font-bold text-white">{availableBalance.toLocaleString()}</span>
+                <span className="text-2xl font-bold text-white">{Math.floor(availableBalance).toLocaleString()}</span>
                 <span className="text-sm text-cyan-400">UCT</span>
               </div>
             </div>
@@ -100,10 +132,11 @@ export const ClaimUCTModal = () => {
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Enter amount"
+                  placeholder="Enter whole number"
                   className="bg-slate-800/50 border-white/10 text-white pr-16"
                   min="1"
                   max={availableBalance}
+                  step="1"
                 />
                 <button
                   onClick={setMaxAmount}
@@ -113,7 +146,10 @@ export const ClaimUCTModal = () => {
                 </button>
               </div>
               {claimAmount > availableBalance && (
-                <p className="text-xs text-red-400">Insufficient balance</p>
+                <p className="text-xs text-red-400">Exceeds available UCT</p>
+              )}
+              {amount && !Number.isInteger(parseFloat(amount)) && (
+                <p className="text-xs text-amber-400">Only whole numbers accepted</p>
               )}
             </div>
 
@@ -128,7 +164,7 @@ export const ClaimUCTModal = () => {
                 <span className="text-emerald-400">Base Sepolia (Testnet)</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Gas Fees</span>
+                <span className="text-slate-400">Gas</span>
                 <span className="text-slate-300">Sponsored ✨</span>
               </div>
             </div>
@@ -152,8 +188,9 @@ export const ClaimUCTModal = () => {
               )}
             </Button>
 
+            {/* Disclaimer - Avoid financial language */}
             <p className="text-xs text-slate-500 text-center">
-              Tokens will be minted to your connected wallet on Base Sepolia testnet.
+              UCT is a utility token for UnclutterAI rewards. Tokens will be sent to your connected wallet.
             </p>
           </div>
         ) : step === 'confirming' ? (
@@ -165,9 +202,9 @@ export const ClaimUCTModal = () => {
               </div>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Minting Tokens...</h3>
+              <h3 className="text-lg font-semibold text-white">Sending UCT...</h3>
               <p className="text-sm text-slate-400 mt-1">
-                Sending {claimAmount.toLocaleString()} UCT to your wallet
+                Transferring {claimAmount.toLocaleString()} UCT to your wallet
               </p>
             </div>
           </div>
@@ -181,7 +218,7 @@ export const ClaimUCTModal = () => {
             </div>
             
             <div>
-              <h3 className="text-lg font-semibold text-white">Claim Successful!</h3>
+              <h3 className="text-lg font-semibold text-white">UCT Claimed!</h3>
               <p className="text-sm text-slate-400 mt-1">
                 {claimResult.amount_claimed.toLocaleString()} UCT sent to your wallet
               </p>
@@ -193,7 +230,7 @@ export const ClaimUCTModal = () => {
                 <span className="text-cyan-400 font-semibold">{claimResult.amount_claimed} UCT</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-400">New Balance</span>
+                <span className="text-slate-400">Remaining</span>
                 <span className="text-white">{claimResult.new_offchain_balance} UCT</span>
               </div>
               <div className="flex justify-between text-sm items-center">
@@ -211,7 +248,7 @@ export const ClaimUCTModal = () => {
             </div>
 
             <p className="text-xs text-amber-400/80 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2">
-              ⚠️ Testnet: This is a mock transaction. Real minting will be enabled when the UCT contract is deployed.
+              ⚠️ Testnet: Mock transaction. Real on-chain transfer available when UCT contract is deployed.
             </p>
 
             <Button
