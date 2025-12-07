@@ -604,6 +604,7 @@ export type Database = {
           timezone: string | null
           updated_at: string | null
           wallet_address: string | null
+          wallet_provider: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -616,6 +617,7 @@ export type Database = {
           timezone?: string | null
           updated_at?: string | null
           wallet_address?: string | null
+          wallet_provider?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -628,6 +630,7 @@ export type Database = {
           timezone?: string | null
           updated_at?: string | null
           wallet_address?: string | null
+          wallet_provider?: string | null
         }
         Relationships: []
       }

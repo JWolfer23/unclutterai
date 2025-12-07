@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Coins, Zap, Flame, Trophy, Star, Diamond } from "lucide-react";
 import { getLevelTitle } from "@/lib/focusMicroCopy";
 import { FocusSystemExplainerModal } from "./FocusSystemExplainerModal";
-
+import { WalletConnection } from "./WalletConnection";
 const getTierInfo = (tier: string) => {
   switch (tier.toLowerCase()) {
     case 'diamond':
@@ -218,6 +218,12 @@ export const ProfilePanel = () => {
             </div>
           </div>
 
+        </div>
+
+        {/* Wallet Connection Section */}
+        <div className="mt-4 pt-4 border-t border-white/5">
+          <h3 className="text-xs text-slate-400 font-medium mb-3 text-center">Web3 Wallet</h3>
+          <WalletConnection />
         </div>
 
         {/* Learn More Link */}
