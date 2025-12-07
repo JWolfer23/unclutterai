@@ -12,3 +12,4 @@ export { LevelUpAnimation, InlineLevelGlow } from './LevelUpAnimation';
 export { FocusSystemExplainerModal } from './FocusSystemExplainerModal';
 export { ProfilePanel } from './ProfilePanel';
 export { WalletConnection } from './WalletConnection';
+export { ClaimUCTModal } from './ClaimUCTModal';
