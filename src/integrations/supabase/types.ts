@@ -700,26 +700,59 @@ export type Database = {
         Row: {
           balance: number | null
           id: string | null
-          tokens_claimed: number | null
-          tokens_pending: number | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           balance?: number | null
           id?: string | null
-          tokens_claimed?: number | null
-          tokens_pending?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           balance?: number | null
           id?: string | null
-          tokens_claimed?: number | null
-          tokens_pending?: number | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      tokens_claims: {
+        Row: {
+          amount: number
+          created_at: string
+          error_message: string | null
+          id: string
+          network: string
+          status: string
+          tx_hash: string | null
+          updated_at: string
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          network?: string
+          status?: string
+          tx_hash?: string | null
+          updated_at?: string
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          network?: string
+          status?: string
+          tx_hash?: string | null
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string
         }
         Relationships: []
       }

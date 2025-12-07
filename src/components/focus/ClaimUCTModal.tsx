@@ -22,13 +22,12 @@ export const ClaimUCTModal: React.FC = () => {
 
   const {
     balance,
-    tokensPending,
-    tokensClaimed,
+    totalClaimed,
+    hasPendingClaim,
     balancesLoading,
     claimUCTAsync,
     isClaiming,
     claimResult,
-    claimError,
   } = useClaimUCT();
 
   const { walletAddress, isConnected } = usePrivyWallet();
@@ -38,12 +37,12 @@ export const ClaimUCTModal: React.FC = () => {
 
   // Validation
   const isAmountValid = parsedAmount > 0 && parsedAmount <= balance;
-  const canSubmit = isAmountValid && isConnected && !isClaiming && tokensPending === 0;
+  const canSubmit = isAmountValid && isConnected && !isClaiming && !hasPendingClaim;
 
   // Validation messages
   const getValidationMessage = () => {
     if (!isConnected) return 'Connect a wallet to claim UCT';
-    if (tokensPending > 0) return 'A claim is already in progress';
+    if (hasPendingClaim) return 'A claim is already in progress';
     if (balance === 0) return 'No UCT available to claim';
     if (parsedAmount <= 0 && amount !== '') return 'Enter a valid amount';
     if (parsedAmount > balance) return 'Amount exceeds available balance';
@@ -198,8 +197,10 @@ export const ClaimUCTModal: React.FC = () => {
 
               {/* Token Stats Row */}
               <div className="flex justify-between text-xs text-slate-500 px-1">
-                <span>Pending: <span className="text-amber-400">{tokensPending}</span></span>
-                <span>Total Claimed: <span className="text-purple-400">{tokensClaimed}</span></span>
+                <span>Status: <span className={hasPendingClaim ? "text-amber-400" : "text-emerald-400"}>
+                  {hasPendingClaim ? 'Pending claim...' : 'Ready'}
+                </span></span>
+                <span>Total Claimed: <span className="text-purple-400">{totalClaimed}</span></span>
               </div>
 
               {/* Action Buttons */}
@@ -236,7 +237,7 @@ export const ClaimUCTModal: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold text-white">Processing Claim...</h3>
               <p className="text-sm text-slate-400 mt-2">
-                Sending {parsedAmount} UCT to your wallet
+                Sending {parsedAmount || balance} UCT to your wallet
               </p>
               <p className="text-xs text-slate-500 mt-1">
                 This may take a few moments
