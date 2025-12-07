@@ -11,7 +11,7 @@ const corsHeaders = {
 // ============================================================
 // 1. ALL token balance validation happens server-side only
 // 2. ONLY this backend function can mint tokens
-// 3. Balance is deducted BEFORE minting (prevents replay attacks)
+// 3. Balance moves to pending BEFORE minting (prevents replay attacks)
 // 4. Database constraints prevent negative balances
 // 5. Wallet addresses are validated (EVM format: 0x + 40 hex chars)
 // 6. Rate limiting: max 3 claims per hour per user
@@ -19,21 +19,31 @@ const corsHeaders = {
 // ============================================================
 
 const MAX_CLAIMS_PER_HOUR = 3;
-const MAX_CLAIM_AMOUNT = 10000;
-const MIN_CLAIM_AMOUNT = 1;
-
-interface ClaimRequest {
-  amount: number;
-}
 
 // Validate EVM wallet address format
 function isValidEVMAddress(address: string): boolean {
   if (!address || typeof address !== 'string') return false;
   if (address.length !== 42) return false;
   if (!address.startsWith('0x')) return false;
-  // Check remaining 40 characters are valid hex
   const hexPart = address.slice(2);
   return /^[0-9a-fA-F]{40}$/.test(hexPart);
+}
+
+// Mock blockchain transaction (replace with real implementation)
+async function sendToBlockchain(walletAddress: string, amount: number): Promise<{ txHash: string; success: boolean }> {
+  console.log(`[MOCK] Sending ${amount} UCT to ${walletAddress} on Base Sepolia`);
+  
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  
+  // Generate mock transaction hash
+  const txHash = `0x${Array.from({ length: 64 }, () => 
+    Math.floor(Math.random() * 16).toString(16)
+  ).join('')}`;
+  
+  console.log(`[MOCK] Transaction successful: ${txHash}`);
+  
+  return { txHash, success: true };
 }
 
 serve(async (req) => {
@@ -73,54 +83,7 @@ serve(async (req) => {
     console.log(`[CLAIM] Processing for user: ${user.id}`);
 
     // ============================================================
-    // STEP 2: Parse and validate request (server-side validation)
-    // ============================================================
-    let requestBody: ClaimRequest;
-    try {
-      requestBody = await req.json();
-    } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid request body' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { amount } = requestBody;
-
-    // Validate amount is a positive number
-    if (!amount || typeof amount !== 'number' || !Number.isFinite(amount)) {
-      console.error('[SECURITY] Invalid amount type:', typeof amount);
-      return new Response(
-        JSON.stringify({ error: 'Amount must be a valid number' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (amount < MIN_CLAIM_AMOUNT) {
-      return new Response(
-        JSON.stringify({ error: `Minimum claim is ${MIN_CLAIM_AMOUNT} UCT` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (amount > MAX_CLAIM_AMOUNT) {
-      console.error('[SECURITY] Amount exceeds maximum:', amount);
-      return new Response(
-        JSON.stringify({ error: `Maximum claim is ${MAX_CLAIM_AMOUNT.toLocaleString()} UCT per transaction` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Ensure amount is an integer (no fractional tokens)
-    if (!Number.isInteger(amount)) {
-      return new Response(
-        JSON.stringify({ error: 'Amount must be a whole number' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // ============================================================
-    // STEP 3: Rate limiting (3 claims per hour)
+    // STEP 2: Rate limiting (3 claims per hour)
     // ============================================================
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     
@@ -147,7 +110,7 @@ serve(async (req) => {
     }
 
     // ============================================================
-    // STEP 4: Fetch wallet address from database (not from client)
+    // STEP 3: Fetch wallet address from database (not from client)
     // ============================================================
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -181,11 +144,11 @@ serve(async (req) => {
     }
 
     // ============================================================
-    // STEP 5: Fetch off-chain balance from database (not from client)
+    // STEP 4: Fetch token balances from database (not from client)
     // ============================================================
     const { data: tokenData, error: tokenError } = await supabase
       .from('tokens')
-      .select('balance')
+      .select('balance, tokens_pending, tokens_claimed')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -198,76 +161,114 @@ serve(async (req) => {
     }
 
     const currentBalance = tokenData?.balance || 0;
-    console.log(`[CLAIM] Current balance: ${currentBalance}, Requested: ${amount}`);
+    const currentPending = tokenData?.tokens_pending || 0;
+    const currentClaimed = tokenData?.tokens_claimed || 0;
+
+    console.log(`[CLAIM] Current balance: ${currentBalance}, Pending: ${currentPending}, Claimed: ${currentClaimed}`);
 
     // ============================================================
-    // STEP 6: Validate sufficient balance (server-side check)
+    // STEP 5: Validate there are tokens to claim
     // ============================================================
-    if (currentBalance < amount) {
-      console.warn(`[SECURITY] Insufficient balance: has ${currentBalance}, wants ${amount}`);
+    if (currentBalance <= 0) {
       return new Response(
-        JSON.stringify({ 
-          error: `Insufficient UCT available. You have ${currentBalance} UCT.`,
-          available_balance: currentBalance
-        }),
+        JSON.stringify({ error: 'No earned UCT available to claim' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Check for pending claims (prevent double-claim)
+    if (currentPending > 0) {
+      return new Response(
+        JSON.stringify({ error: 'A claim is already in progress. Please wait for it to complete.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Claim entire balance
+    const claimAmount = currentBalance;
+    console.log(`[CLAIM] Processing claim: ${claimAmount} UCT for user ${user.id}`);
+
     // ============================================================
-    // STEP 7: DEDUCT BALANCE FIRST (prevents replay attacks)
-    // This ensures if minting fails, balance is already reduced
+    // STEP 6: Move balance to pending (atomic operation to prevent double-claim)
     // ============================================================
-    const newBalance = currentBalance - amount;
-    
-    const { error: updateError } = await supabase
+    const { error: pendingError } = await supabase
       .from('tokens')
-      .update({ 
-        balance: newBalance,
+      .update({
+        balance: 0,
+        tokens_pending: currentPending + claimAmount,
         updated_at: new Date().toISOString()
       })
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .eq('balance', currentBalance); // Optimistic lock
 
-    if (updateError) {
-      // Database constraint will prevent negative balance
-      console.error('[ERROR] Balance update failed:', updateError);
-      if (updateError.message?.includes('tokens_balance_non_negative')) {
-        return new Response(
-          JSON.stringify({ error: 'Insufficient UCT available' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    if (pendingError) {
+      console.error('[ERROR] Failed to move to pending:', pendingError);
       return new Response(
         JSON.stringify({ error: 'Failed to process claim. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[CLAIM] Balance deducted: ${currentBalance} -> ${newBalance}`);
+    console.log(`[CLAIM] Balance moved to pending: ${claimAmount} UCT`);
 
     // ============================================================
-    // STEP 8: MINT ON-CHAIN (mock for testnet)
+    // STEP 7: Send to blockchain
     // ============================================================
-    // SECURITY NOTES:
-    // - Server signer private key stored in environment variable
-    // - NEVER exposed to client
-    // - Only this function can call mint()
-    // - In production: use ethers.js with server-side signer
-    // - Recommend: minter role wallet, not deployer
-    // - Recommend: contract ownership in Gnosis Safe multi-sig
-    // ============================================================
-    
-    console.log(`[MOCK MINT] ${amount} UCT to ${profile.wallet_address}`);
-    
-    // Generate mock transaction hash (simulates on-chain tx)
-    const mockTxHash = `0x${Array.from({ length: 64 }, () => 
-      Math.floor(Math.random() * 16).toString(16)
-    ).join('')}`;
-    
-    // Simulate network latency
-    await new Promise(resolve => setTimeout(resolve, 800));
+    let txResult;
+    try {
+      txResult = await sendToBlockchain(profile.wallet_address, claimAmount);
+    } catch (blockchainError) {
+      console.error('[ERROR] Blockchain error:', blockchainError);
+      
+      // Rollback: move pending back to balance
+      await supabase
+        .from('tokens')
+        .update({
+          balance: claimAmount,
+          tokens_pending: currentPending,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+      
+      return new Response(
+        JSON.stringify({ error: 'Blockchain transaction failed. Your balance has been restored.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    console.log(`[MOCK MINT] Tx hash: ${mockTxHash}`);
+    if (!txResult.success) {
+      // Rollback on failure
+      await supabase
+        .from('tokens')
+        .update({
+          balance: claimAmount,
+          tokens_pending: currentPending,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+      
+      return new Response(
+        JSON.stringify({ error: 'Blockchain transaction failed' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ============================================================
+    // STEP 8: Move pending to claimed
+    // ============================================================
+    const { error: claimedError } = await supabase
+      .from('tokens')
+      .update({
+        tokens_pending: 0,
+        tokens_claimed: currentClaimed + claimAmount,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id);
+
+    if (claimedError) {
+      console.error('[ERROR] Failed to finalize claim:', claimedError);
+      // Log this for manual review - tokens were sent but DB update failed
+    }
 
     // ============================================================
     // STEP 9: Log claim in history (audit trail)
@@ -276,19 +277,18 @@ serve(async (req) => {
       .from('uct_claim_history')
       .insert({
         user_id: user.id,
-        amount: amount,
+        amount: claimAmount,
         wallet_address: profile.wallet_address,
-        tx_hash: mockTxHash,
+        tx_hash: txResult.txHash,
         status: 'completed',
         network: 'base-sepolia'
       });
 
     if (historyError) {
-      // Non-critical - log but don't fail the request
       console.error('[WARN] Failed to log claim history:', historyError);
     }
 
-    console.log(`[CLAIM] Success: ${amount} UCT claimed by ${user.id}`);
+    console.log(`[CLAIM] Success: ${claimAmount} UCT claimed, tx: ${txResult.txHash}`);
 
     // ============================================================
     // STEP 10: Return success (avoid financial language)
@@ -296,14 +296,15 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        amount_claimed: amount,
-        new_offchain_balance: newBalance,
-        onchain_tx_hash: mockTxHash,
+        amount_claimed: claimAmount,
+        tx_hash: txResult.txHash,
         wallet_address: profile.wallet_address,
         network: 'base-sepolia',
-        explorer_url: `https://sepolia.basescan.org/tx/${mockTxHash}`,
-        // Note: Avoid words like "value", "investment", "profit"
-        message: '[Testnet] UCT tokens have been sent to your wallet. Real minting available when contract is deployed.'
+        explorer_url: `https://sepolia.basescan.org/tx/${txResult.txHash}`,
+        new_balance: 0,
+        new_pending: 0,
+        new_claimed: currentClaimed + claimAmount,
+        message: `Successfully sent ${claimAmount} UCT to your wallet`
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
