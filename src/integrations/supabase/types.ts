@@ -700,18 +700,24 @@ export type Database = {
         Row: {
           balance: number | null
           id: string | null
+          tokens_claimed: number | null
+          tokens_pending: number | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           balance?: number | null
           id?: string | null
+          tokens_claimed?: number | null
+          tokens_pending?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           balance?: number | null
           id?: string | null
+          tokens_claimed?: number | null
+          tokens_pending?: number | null
           updated_at?: string | null
           user_id?: string | null
         }

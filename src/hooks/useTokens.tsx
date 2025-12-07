@@ -15,7 +15,7 @@ export const useTokens = () => {
       const { data, error } = await supabase
         .from('tokens')
         .select('*')
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
