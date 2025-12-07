@@ -11,11 +11,11 @@ const corsHeaders = {
 // ============================================================
 // 1. ALL token balance validation happens server-side only
 // 2. ONLY this backend function can mint tokens
-// 3. Balance moves to pending BEFORE minting (prevents replay attacks)
+// 3. Claim record created as "pending" BEFORE minting
 // 4. Database constraints prevent negative balances
 // 5. Wallet addresses are validated (EVM format: 0x + 40 hex chars)
 // 6. Rate limiting: max 3 claims per hour per user
-// 7. All claims are logged for audit trail
+// 7. All claims tracked in tokens_claims table
 // ============================================================
 
 const MAX_CLAIMS_PER_HOUR = 3;
@@ -29,7 +29,7 @@ function isValidEVMAddress(address: string): boolean {
   return /^[0-9a-fA-F]{40}$/.test(hexPart);
 }
 
-// Mock blockchain transaction (replace with real implementation)
+// Mock blockchain transaction (replace with real implementation when UCT contract is deployed)
 async function sendToBlockchain(walletAddress: string, amount: number): Promise<{ txHash: string; success: boolean }> {
   console.log(`[MOCK] Sending ${amount} UCT to ${walletAddress} on Base Sepolia`);
   
@@ -83,12 +83,12 @@ serve(async (req) => {
     console.log(`[CLAIM] Processing for user: ${user.id}`);
 
     // ============================================================
-    // STEP 2: Rate limiting (3 claims per hour)
+    // STEP 2: Rate limiting (3 claims per hour) using tokens_claims
     // ============================================================
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     
     const { data: recentClaims, error: claimsError } = await supabase
-      .from('uct_claim_history')
+      .from('tokens_claims')
       .select('id')
       .eq('user_id', user.id)
       .gte('created_at', oneHourAgo);
@@ -110,7 +110,27 @@ serve(async (req) => {
     }
 
     // ============================================================
-    // STEP 3: Fetch wallet address from database (not from client)
+    // STEP 3: Check for pending claims (prevent double-claim)
+    // ============================================================
+    const { data: pendingClaims, error: pendingError } = await supabase
+      .from('tokens_claims')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
+
+    if (pendingError) {
+      console.error('[ERROR] Failed to check pending claims:', pendingError);
+    }
+
+    if (pendingClaims && pendingClaims.length > 0) {
+      return new Response(
+        JSON.stringify({ error: 'A claim is already in progress. Please wait for it to complete.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ============================================================
+    // STEP 4: Fetch wallet address from database (not from client)
     // ============================================================
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -144,11 +164,11 @@ serve(async (req) => {
     }
 
     // ============================================================
-    // STEP 4: Fetch token balances from database (not from client)
+    // STEP 5: Fetch token balance from database (not from client)
     // ============================================================
     const { data: tokenData, error: tokenError } = await supabase
       .from('tokens')
-      .select('balance, tokens_pending, tokens_claimed')
+      .select('balance')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -161,25 +181,14 @@ serve(async (req) => {
     }
 
     const currentBalance = tokenData?.balance || 0;
-    const currentPending = tokenData?.tokens_pending || 0;
-    const currentClaimed = tokenData?.tokens_claimed || 0;
-
-    console.log(`[CLAIM] Current balance: ${currentBalance}, Pending: ${currentPending}, Claimed: ${currentClaimed}`);
+    console.log(`[CLAIM] Current balance: ${currentBalance}`);
 
     // ============================================================
-    // STEP 5: Validate there are tokens to claim
+    // STEP 6: Validate there are tokens to claim
     // ============================================================
     if (currentBalance <= 0) {
       return new Response(
         JSON.stringify({ error: 'No earned UCT available to claim' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check for pending claims (prevent double-claim)
-    if (currentPending > 0) {
-      return new Response(
-        JSON.stringify({ error: 'A claim is already in progress. Please wait for it to complete.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -189,30 +198,61 @@ serve(async (req) => {
     console.log(`[CLAIM] Processing claim: ${claimAmount} UCT for user ${user.id}`);
 
     // ============================================================
-    // STEP 6: Move balance to pending (atomic operation to prevent double-claim)
+    // STEP 7: Create pending claim record
     // ============================================================
-    const { error: pendingError } = await supabase
+    const { data: claimRecord, error: createClaimError } = await supabase
+      .from('tokens_claims')
+      .insert({
+        user_id: user.id,
+        amount: claimAmount,
+        status: 'pending',
+        wallet_address: profile.wallet_address,
+        network: 'base-sepolia'
+      })
+      .select()
+      .single();
+
+    if (createClaimError) {
+      console.error('[ERROR] Failed to create claim record:', createClaimError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to initiate claim. Please try again.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[CLAIM] Created pending claim: ${claimRecord.id}`);
+
+    // ============================================================
+    // STEP 8: Deduct balance (optimistic lock)
+    // ============================================================
+    const { error: deductError } = await supabase
       .from('tokens')
       .update({
         balance: 0,
-        tokens_pending: currentPending + claimAmount,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', user.id)
       .eq('balance', currentBalance); // Optimistic lock
 
-    if (pendingError) {
-      console.error('[ERROR] Failed to move to pending:', pendingError);
+    if (deductError) {
+      console.error('[ERROR] Failed to deduct balance:', deductError);
+      
+      // Mark claim as failed
+      await supabase
+        .from('tokens_claims')
+        .update({ status: 'failed', error_message: 'Balance deduction failed' })
+        .eq('id', claimRecord.id);
+      
       return new Response(
         JSON.stringify({ error: 'Failed to process claim. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[CLAIM] Balance moved to pending: ${claimAmount} UCT`);
+    console.log(`[CLAIM] Balance deducted: ${claimAmount} UCT`);
 
     // ============================================================
-    // STEP 7: Send to blockchain
+    // STEP 9: Send to blockchain
     // ============================================================
     let txResult;
     try {
@@ -220,15 +260,23 @@ serve(async (req) => {
     } catch (blockchainError) {
       console.error('[ERROR] Blockchain error:', blockchainError);
       
-      // Rollback: move pending back to balance
+      // Rollback: restore balance and mark claim as failed
       await supabase
         .from('tokens')
         .update({
           balance: claimAmount,
-          tokens_pending: currentPending,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id);
+      
+      await supabase
+        .from('tokens_claims')
+        .update({ 
+          status: 'failed', 
+          error_message: 'Blockchain transaction failed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', claimRecord.id);
       
       return new Response(
         JSON.stringify({ error: 'Blockchain transaction failed. Your balance has been restored.' }),
@@ -242,10 +290,18 @@ serve(async (req) => {
         .from('tokens')
         .update({
           balance: claimAmount,
-          tokens_pending: currentPending,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id);
+      
+      await supabase
+        .from('tokens_claims')
+        .update({ 
+          status: 'failed', 
+          error_message: 'Transaction unsuccessful',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', claimRecord.id);
       
       return new Response(
         JSON.stringify({ error: 'Blockchain transaction failed' }),
@@ -254,56 +310,47 @@ serve(async (req) => {
     }
 
     // ============================================================
-    // STEP 8: Move pending to claimed
+    // STEP 10: Mark claim as completed with tx hash
     // ============================================================
-    const { error: claimedError } = await supabase
-      .from('tokens')
+    const { error: completeError } = await supabase
+      .from('tokens_claims')
       .update({
-        tokens_pending: 0,
-        tokens_claimed: currentClaimed + claimAmount,
+        status: 'completed',
+        tx_hash: txResult.txHash,
         updated_at: new Date().toISOString()
       })
-      .eq('user_id', user.id);
+      .eq('id', claimRecord.id);
 
-    if (claimedError) {
-      console.error('[ERROR] Failed to finalize claim:', claimedError);
-      // Log this for manual review - tokens were sent but DB update failed
+    if (completeError) {
+      console.error('[ERROR] Failed to update claim status:', completeError);
+      // Non-critical - claim succeeded but status update failed
     }
 
-    // ============================================================
-    // STEP 9: Log claim in history (audit trail)
-    // ============================================================
-    const { error: historyError } = await supabase
-      .from('uct_claim_history')
-      .insert({
-        user_id: user.id,
-        amount: claimAmount,
-        wallet_address: profile.wallet_address,
-        tx_hash: txResult.txHash,
-        status: 'completed',
-        network: 'base-sepolia'
-      });
+    // Get total claimed for this user
+    const { data: claimedData } = await supabase
+      .from('tokens_claims')
+      .select('amount')
+      .eq('user_id', user.id)
+      .eq('status', 'completed');
 
-    if (historyError) {
-      console.error('[WARN] Failed to log claim history:', historyError);
-    }
+    const totalClaimed = claimedData?.reduce((sum, c) => sum + c.amount, 0) || 0;
 
     console.log(`[CLAIM] Success: ${claimAmount} UCT claimed, tx: ${txResult.txHash}`);
 
     // ============================================================
-    // STEP 10: Return success (avoid financial language)
+    // STEP 11: Return success
     // ============================================================
     return new Response(
       JSON.stringify({
         success: true,
+        claim_id: claimRecord.id,
         amount_claimed: claimAmount,
         tx_hash: txResult.txHash,
         wallet_address: profile.wallet_address,
         network: 'base-sepolia',
         explorer_url: `https://sepolia.basescan.org/tx/${txResult.txHash}`,
         new_balance: 0,
-        new_pending: 0,
-        new_claimed: currentClaimed + claimAmount,
+        total_claimed: totalClaimed,
         message: `Successfully sent ${claimAmount} UCT to your wallet`
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

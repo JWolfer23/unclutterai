@@ -4,66 +4,86 @@ import { toast } from "@/hooks/use-toast";
 
 interface ClaimResult {
   success: boolean;
+  claim_id: string;
   amount_claimed: number;
   tx_hash: string;
   wallet_address: string;
   network: string;
   explorer_url: string;
   new_balance: number;
-  new_pending: number;
-  new_claimed: number;
+  total_claimed: number;
   message: string;
 }
 
-interface ClaimHistoryItem {
+interface ClaimRecord {
   id: string;
   amount: number;
   wallet_address: string;
   tx_hash: string | null;
-  status: string;
+  status: 'pending' | 'completed' | 'failed';
   network: string;
+  error_message: string | null;
   created_at: string;
-}
-
-interface TokenBalances {
-  balance: number;
-  tokens_pending: number;
-  tokens_claimed: number;
+  updated_at: string;
 }
 
 export const useClaimUCT = () => {
   const queryClient = useQueryClient();
 
-  // Fetch current token balances
-  const { data: tokenBalances, isLoading: balancesLoading } = useQuery({
-    queryKey: ['token-balances'],
-    queryFn: async (): Promise<TokenBalances> => {
+  // Fetch current token balance
+  const { data: balance, isLoading: balanceLoading } = useQuery({
+    queryKey: ['token-balance'],
+    queryFn: async (): Promise<number> => {
       const { data, error } = await supabase
         .from('tokens')
-        .select('balance, tokens_pending, tokens_claimed')
+        .select('balance')
         .maybeSingle();
       
       if (error) throw error;
-      return {
-        balance: data?.balance ?? 0,
-        tokens_pending: data?.tokens_pending ?? 0,
-        tokens_claimed: data?.tokens_claimed ?? 0
-      };
+      return data?.balance ?? 0;
+    },
+  });
+
+  // Fetch pending claims count
+  const { data: pendingClaims } = useQuery({
+    queryKey: ['pending-claims'],
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase
+        .from('tokens_claims')
+        .select('id')
+        .eq('status', 'pending');
+      
+      if (error) throw error;
+      return data?.length ?? 0;
+    },
+  });
+
+  // Fetch total claimed
+  const { data: totalClaimed } = useQuery({
+    queryKey: ['total-claimed'],
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase
+        .from('tokens_claims')
+        .select('amount')
+        .eq('status', 'completed');
+      
+      if (error) throw error;
+      return data?.reduce((sum, c) => sum + c.amount, 0) ?? 0;
     },
   });
 
   // Fetch claim history
   const { data: claimHistory, isLoading: historyLoading } = useQuery({
-    queryKey: ['uct-claim-history'],
+    queryKey: ['claim-history'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('uct_claim_history')
+        .from('tokens_claims')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
       
       if (error) throw error;
-      return data as ClaimHistoryItem[];
+      return data as ClaimRecord[];
     },
   });
 
@@ -81,35 +101,28 @@ export const useClaimUCT = () => {
     },
     onMutate: async () => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['token-balances'] });
-      await queryClient.cancelQueries({ queryKey: ['tokens'] });
+      await queryClient.cancelQueries({ queryKey: ['token-balance'] });
+      await queryClient.cancelQueries({ queryKey: ['pending-claims'] });
       
-      // Snapshot current value
-      const previousBalances = queryClient.getQueryData<TokenBalances>(['token-balances']);
+      // Snapshot current values
+      const previousBalance = queryClient.getQueryData<number>(['token-balance']);
+      const previousPending = queryClient.getQueryData<number>(['pending-claims']);
       
-      // Optimistic update: move balance to pending
-      if (previousBalances && previousBalances.balance > 0) {
-        queryClient.setQueryData<TokenBalances>(['token-balances'], {
-          balance: 0,
-          tokens_pending: (previousBalances.tokens_pending || 0) + previousBalances.balance,
-          tokens_claimed: previousBalances.tokens_claimed || 0
-        });
+      // Optimistic update
+      if (previousBalance && previousBalance > 0) {
+        queryClient.setQueryData(['token-balance'], 0);
+        queryClient.setQueryData(['pending-claims'], (previousPending || 0) + 1);
       }
       
-      return { previousBalances };
+      return { previousBalance, previousPending };
     },
     onSuccess: (data) => {
-      // Update with actual server response
-      queryClient.setQueryData<TokenBalances>(['token-balances'], {
-        balance: data.new_balance,
-        tokens_pending: data.new_pending,
-        tokens_claimed: data.new_claimed
-      });
-      
-      // Invalidate related queries
+      // Invalidate all related queries
+      queryClient.invalidateQueries({ queryKey: ['token-balance'] });
       queryClient.invalidateQueries({ queryKey: ['tokens'] });
-      queryClient.invalidateQueries({ queryKey: ['uct-claim-history'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-claims'] });
+      queryClient.invalidateQueries({ queryKey: ['total-claimed'] });
+      queryClient.invalidateQueries({ queryKey: ['claim-history'] });
       
       toast({
         title: "🎉 Transaction Sent!",
@@ -118,8 +131,11 @@ export const useClaimUCT = () => {
     },
     onError: (error: Error, _, context) => {
       // Rollback optimistic update
-      if (context?.previousBalances) {
-        queryClient.setQueryData<TokenBalances>(['token-balances'], context.previousBalances);
+      if (context?.previousBalance !== undefined) {
+        queryClient.setQueryData(['token-balance'], context.previousBalance);
+      }
+      if (context?.previousPending !== undefined) {
+        queryClient.setQueryData(['pending-claims'], context.previousPending);
       }
       
       toast({
@@ -130,16 +146,15 @@ export const useClaimUCT = () => {
     },
   });
 
-  const canClaim = (tokenBalances?.balance ?? 0) > 0 && 
-                   (tokenBalances?.tokens_pending ?? 0) === 0 &&
-                   !claimMutation.isPending;
+  const hasPendingClaim = (pendingClaims ?? 0) > 0;
+  const canClaim = (balance ?? 0) > 0 && !hasPendingClaim && !claimMutation.isPending;
 
   return {
     // Balances
-    balance: tokenBalances?.balance ?? 0,
-    tokensPending: tokenBalances?.tokens_pending ?? 0,
-    tokensClaimed: tokenBalances?.tokens_claimed ?? 0,
-    balancesLoading,
+    balance: balance ?? 0,
+    totalClaimed: totalClaimed ?? 0,
+    hasPendingClaim,
+    balancesLoading: balanceLoading,
     
     // Claim functionality
     claimUCT: claimMutation.mutate,
