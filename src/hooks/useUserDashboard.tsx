@@ -8,41 +8,22 @@ export const useUserDashboard = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // Get data from various tables to build dashboard summary
-      const today = new Date().toDateString();
+      // Use the secure RPC function that filters by auth.uid()
+      const { data, error } = await supabase.rpc('get_user_ai_dashboard');
       
-      // Get daily AI usage count
-      const { data: aiUsage } = await supabase
-        .from("ai_usage")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("used_at", new Date(today).toISOString());
+      if (error) {
+        console.error('Error fetching dashboard:', error);
+        return null;
+      }
 
-      // Get tasks count  
-      const { data: tasks } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("user_id", user.id);
-
-      // Get token balance
-      const { data: tokens } = await supabase
-        .from("tokens")
-        .select("balance")
-        .eq("user_id", user.id)
-        .single();
-
-      // Get focus streak
-      const { data: streak } = await supabase
-        .from("focus_streaks")
-        .select("current_streak")
-        .eq("user_id", user.id)
-        .single();
-
+      // The function returns an array, get first row
+      const dashboard = data?.[0];
+      
       return {
-        daily_summaries: aiUsage?.filter(usage => usage.type === 'summary').length || 0,
-        tasks_generated: tasks?.length || 0,
-        tokens_earned: tokens?.balance || 0,
-        focus_streak: streak?.current_streak || 0,
+        daily_summaries: dashboard?.daily_summaries || 0,
+        tasks_generated: dashboard?.tasks_generated || 0,
+        tokens_earned: dashboard?.tokens_earned || 0,
+        focus_streak: dashboard?.focus_streak || 0,
       };
     },
   });
