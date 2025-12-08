@@ -45,18 +45,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("CRON_SECRET verified, starting weekly report email campaign...");
 
-    // Fetch all users with their dashboard data
-    const { data: users, error } = await supabase
-      .from('user_ai_dashboard')
-      .select('*')
+    // Fetch all user profiles with email addresses (using service role bypasses RLS)
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
       .not('email', 'is', null);
 
-    if (error) {
-      console.error("Error fetching user dashboard data:", error);
-      throw error;
+    if (profilesError) {
+      console.error("Error fetching user profiles:", profilesError);
+      throw profilesError;
     }
 
-    if (!users || users.length === 0) {
+    if (!profiles || profiles.length === 0) {
       console.log("No users found with valid email addresses");
       return new Response(JSON.stringify({ message: "No users to send emails to" }), {
         status: 200,
@@ -64,18 +64,54 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    console.log(`Found ${users.length} users to send weekly reports to`);
+    console.log(`Found ${profiles.length} users to send weekly reports to`);
+
+    // Build dashboard data for each user from individual tables
+    const users = await Promise.all(profiles.map(async (profile) => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get daily AI usage count
+      const { count: dailySummaries } = await supabase
+        .from('ai_usage')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .eq('type', 'summary')
+        .gte('used_at', today);
+
+      // Get tasks count
+      const { count: tasksGenerated } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', profile.id);
+
+      // Get token balance
+      const { data: tokenData } = await supabase
+        .from('tokens')
+        .select('balance')
+        .eq('user_id', profile.id)
+        .single();
+
+      // Get focus streak
+      const { data: streakData } = await supabase
+        .from('focus_streaks')
+        .select('current_streak')
+        .eq('user_id', profile.id)
+        .single();
+
+      return {
+        user_id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        daily_summaries: dailySummaries || 0,
+        tasks_generated: tasksGenerated || 0,
+        tokens_earned: tokenData?.balance || 0,
+        focus_streak: streakData?.current_streak || 0,
+      };
+    }));
 
     const emailPromises = users.map(async (user) => {
       try {
-        // Get user profile for name
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.user_id)
-          .single();
-
-        const userName = profile?.full_name || user.email.split('@')[0];
+        const userName = user.full_name || user.email.split('@')[0];
 
         const html = await renderAsync(
           React.createElement(WeeklyReportEmail, {
