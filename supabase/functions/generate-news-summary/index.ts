@@ -31,9 +31,10 @@ serve(async (req) => {
     }
 
     console.log('generate-news-summary: Creating Supabase client');
+    // Use service role key to verify auth tokens from client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       {
         global: {
           headers: { Authorization: authHeader },
