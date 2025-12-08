@@ -826,16 +826,6 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_user_weekly_stats: {
-        Args: never
-        Returns: {
-          daily_summaries: number
-          email: string
-          focus_streak: number
-          tasks_generated: number
-          tokens_earned: number
-        }[]
-      }
       get_weekly_tier: {
         Args: { p_user_id: string }
         Returns: {
