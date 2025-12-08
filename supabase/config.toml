@@ -23,3 +23,6 @@ verify_jwt = true
 
 [functions.claim-uct]
 verify_jwt = true
+
+[functions.send-scheduled-news]
+verify_jwt = false
