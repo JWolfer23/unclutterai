@@ -213,7 +213,10 @@ export const ScheduleDrawer = ({ open, onOpenChange }: ScheduleDrawerProps) => {
               </div>
               
               <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
-                <span className="text-sm text-slate-300">Email</span>
+                <div className="flex flex-col">
+                  <span className="text-sm text-slate-300">Email</span>
+                  <span className="text-xs text-slate-500">Receive summaries via Resend</span>
+                </div>
                 <Switch
                   checked={channels.email}
                   onCheckedChange={(checked) =>
