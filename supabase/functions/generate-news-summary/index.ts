@@ -15,19 +15,45 @@ serve(async (req) => {
   }
 
   try {
+    // Validate authorization header exists
+    const authHeader = req.headers.get('Authorization');
+    console.log('generate-news-summary: Auth header present:', !!authHeader);
+    
+    if (!authHeader) {
+      console.error('generate-news-summary: Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization. Please sign in and try again.' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     console.log('generate-news-summary: Creating Supabase client');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
       }
     );
 
     console.log('generate-news-summary: Getting user');
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    
+    if (userError) {
+      console.error('generate-news-summary: Auth error:', userError.message);
+      return new Response(
+        JSON.stringify({ error: 'Session expired. Please sign in again.' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
     
     if (!user) {
       console.log('generate-news-summary: User not authenticated');
