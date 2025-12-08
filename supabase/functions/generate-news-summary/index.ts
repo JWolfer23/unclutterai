@@ -8,11 +8,14 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('generate-news-summary: Request received', req.method);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log('generate-news-summary: Creating Supabase client');
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -23,9 +26,11 @@ serve(async (req) => {
       }
     );
 
+    console.log('generate-news-summary: Getting user');
     const { data: { user } } = await supabaseClient.auth.getUser();
     
     if (!user) {
+      console.log('generate-news-summary: User not authenticated');
       return new Response(
         JSON.stringify({ error: 'Not authenticated. Please log in to generate news summaries.' }),
         {
@@ -35,6 +40,7 @@ serve(async (req) => {
       );
     }
 
+    console.log('generate-news-summary: User authenticated', user.id);
     const { promptId } = await req.json();
 
     // Get the user's prompt
@@ -47,6 +53,7 @@ Include:
 • Major policy or tech shifts shaping the world this week.`;
 
     if (promptId) {
+      console.log('generate-news-summary: Loading custom prompt', promptId);
       const { data: prompt } = await supabaseClient
         .from('news_prompts')
         .select('prompt_text')
@@ -61,10 +68,12 @@ Include:
     // Generate summary using Lovable AI Gateway
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
+    console.log('generate-news-summary: LOVABLE_API_KEY exists:', !!LOVABLE_API_KEY);
+    
     if (!LOVABLE_API_KEY) {
       console.error('LOVABLE_API_KEY is not configured');
       return new Response(
-        JSON.stringify({ error: 'AI service not configured' }),
+        JSON.stringify({ error: 'AI service not configured. Please check your Lovable AI setup.' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
