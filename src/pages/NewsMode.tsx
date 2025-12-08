@@ -17,6 +17,7 @@ const NewsMode = () => {
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [activePromptId, setActivePromptId] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const { toast } = useToast();
 
   const categories = [
@@ -26,9 +27,23 @@ const NewsMode = () => {
   ];
 
   useEffect(() => {
+    checkAuth();
     loadActivePrompt();
     loadLatestSummary();
   }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setIsAuthenticated(!!session);
+    
+    if (!session) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to use News Mode",
+        variant: "destructive",
+      });
+    }
+  };
 
   const loadActivePrompt = async () => {
     try {
@@ -67,49 +82,85 @@ const NewsMode = () => {
 
   const handleCategoryClick = async (id: string) => {
     if (id === "prompt") {
+      if (!isAuthenticated) {
+        navigate('/auth');
+        return;
+      }
       setPromptDrawerOpen(true);
       return;
     }
     
     if (id === "schedule") {
+      if (!isAuthenticated) {
+        navigate('/auth');
+        return;
+      }
       setScheduleDrawerOpen(true);
       return;
     }
 
     if (id === "yourNews") {
+      if (!isAuthenticated) {
+        navigate('/auth');
+        return;
+      }
       setSelectedCategory(id);
-      await generateSummary();
+      await generateSummary(activePromptId);
     }
   };
 
-  const generateSummary = async () => {
+  const generateSummary = async (promptId: string | null = null) => {
+    if (!isAuthenticated) {
+      navigate('/auth');
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
+      if (!session) {
+        toast({
+          title: "Session expired",
+          description: "Please sign in again",
+          variant: "destructive",
+        });
+        navigate('/auth');
+        return;
+      }
+      
       const response = await supabase.functions.invoke('generate-news-summary', {
-        body: { promptId: activePromptId },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
+        body: { promptId: promptId || activePromptId },
       });
 
-      if (response.error) throw response.error;
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to generate summary');
+      }
+
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
 
       setSummary(response.data.summary);
+      setSelectedCategory("yourNews");
       toast({
         title: "News summary generated",
         description: "Your personalized news digest is ready",
       });
     } catch (error: any) {
+      console.error('Error generating summary:', error);
       toast({
         title: "Error generating summary",
-        description: error.message,
+        description: error.message || "Please try again later",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGenerateFromDrawer = async (promptId: string | null, _promptText: string) => {
+    await generateSummary(promptId);
   };
 
   return (
@@ -205,7 +256,7 @@ const NewsMode = () => {
             </div>
 
             <Button
-              onClick={generateSummary}
+              onClick={() => generateSummary(activePromptId)}
               className="mt-6 btn-primary"
               disabled={loading}
             >
@@ -238,6 +289,7 @@ const NewsMode = () => {
       <NewsPromptDrawer
         open={promptDrawerOpen}
         onOpenChange={setPromptDrawerOpen}
+        onGenerateNews={handleGenerateFromDrawer}
       />
       <ScheduleDrawer
         open={scheduleDrawerOpen}

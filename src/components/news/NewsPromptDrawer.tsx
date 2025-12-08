@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Edit3, Save, Plus, Trash2 } from "lucide-react";
+import { Edit3, Save, Trash2, Sparkles, Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface NewsPromptDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onGenerateNews?: (promptId: string | null, promptText: string) => void;
 }
 
 const DEFAULT_PROMPT = `Provide a balanced and insightful summary of the most important global events from the past week.
@@ -26,11 +27,12 @@ Include:
 • Notable scientific, environmental, and cultural developments
 • Major policy or tech shifts shaping the world this week.`;
 
-export const NewsPromptDrawer = ({ open, onOpenChange }: NewsPromptDrawerProps) => {
+export const NewsPromptDrawer = ({ open, onOpenChange, onGenerateNews }: NewsPromptDrawerProps) => {
   const [prompts, setPrompts] = useState<any[]>([]);
   const [newPrompt, setNewPrompt] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -74,12 +76,18 @@ export const NewsPromptDrawer = ({ open, onOpenChange }: NewsPromptDrawerProps) 
       if (editingId) {
         const { error } = await supabase
           .from('news_prompts')
-          .update({ prompt_text: newPrompt })
+          .update({ prompt_text: newPrompt, is_active: true })
           .eq('id', editingId);
 
         if (error) throw error;
         toast({ title: "Prompt updated successfully" });
       } else {
+        // Set all other prompts to inactive first
+        await supabase
+          .from('news_prompts')
+          .update({ is_active: false })
+          .eq('user_id', user!.id);
+
         const { error } = await supabase
           .from('news_prompts')
           .insert({
@@ -130,6 +138,55 @@ export const NewsPromptDrawer = ({ open, onOpenChange }: NewsPromptDrawerProps) 
     setEditingId(null);
   };
 
+  const handleGenerateNews = async () => {
+    const promptToUse = newPrompt.trim() || DEFAULT_PROMPT;
+    
+    if (onGenerateNews) {
+      setGenerating(true);
+      try {
+        // If there's a saved prompt being edited, use its ID
+        const activePrompt = prompts.find(p => p.is_active);
+        await onGenerateNews(editingId || activePrompt?.id || null, promptToUse);
+        onOpenChange(false);
+      } finally {
+        setGenerating(false);
+      }
+    }
+  };
+
+  const selectAndGeneratePrompt = async (prompt: any) => {
+    // Set this prompt as active
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      await supabase
+        .from('news_prompts')
+        .update({ is_active: false })
+        .eq('user_id', user!.id);
+      
+      await supabase
+        .from('news_prompts')
+        .update({ is_active: true })
+        .eq('id', prompt.id);
+      
+      if (onGenerateNews) {
+        setGenerating(true);
+        try {
+          await onGenerateNews(prompt.id, prompt.prompt_text);
+          onOpenChange(false);
+        } finally {
+          setGenerating(false);
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -172,8 +229,8 @@ export const NewsPromptDrawer = ({ open, onOpenChange }: NewsPromptDrawerProps) 
             <div className="flex gap-2">
               <Button
                 onClick={savePrompt}
-                disabled={loading}
-                className="flex-1 btn-primary"
+                disabled={loading || generating}
+                className="flex-1 bg-white/10 border border-white/20 text-white hover:bg-white/20"
               >
                 <Save className="h-4 w-4 mr-2" />
                 {editingId ? "Update" : "Save"} Prompt
@@ -191,6 +248,20 @@ export const NewsPromptDrawer = ({ open, onOpenChange }: NewsPromptDrawerProps) 
                 </Button>
               )}
             </div>
+
+            {/* Generate News Button */}
+            <Button
+              onClick={handleGenerateNews}
+              disabled={generating || loading}
+              className="w-full btn-primary"
+            >
+              {generating ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              {generating ? "Generating..." : "Generate Your News"}
+            </Button>
           </div>
 
           {/* Saved Prompts */}
@@ -199,17 +270,36 @@ export const NewsPromptDrawer = ({ open, onOpenChange }: NewsPromptDrawerProps) 
               Saved Prompts ({prompts.length})
             </h3>
             
-            <ScrollArea className="h-[300px]">
+            <ScrollArea className="h-[250px]">
               <div className="space-y-2">
                 {prompts.map((prompt) => (
                   <div
                     key={prompt.id}
-                    className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-purple-400/40 transition-colors"
+                    className={`p-4 rounded-xl bg-white/5 border transition-colors ${
+                      prompt.is_active 
+                        ? 'border-purple-400/60' 
+                        : 'border-white/10 hover:border-purple-400/40'
+                    }`}
                   >
+                    {prompt.is_active && (
+                      <span className="inline-block text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full mb-2">
+                        Active
+                      </span>
+                    )}
                     <p className="text-sm text-slate-300 line-clamp-3 mb-3">
                       {prompt.prompt_text}
                     </p>
                     <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => selectAndGeneratePrompt(prompt)}
+                        disabled={generating}
+                        className="text-xs text-emerald-400 hover:text-emerald-300"
+                      >
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Generate
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
