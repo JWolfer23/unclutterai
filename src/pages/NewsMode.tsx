@@ -117,9 +117,21 @@ const NewsMode = () => {
     
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Get fresh session to ensure valid auth token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (!session) {
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        toast({
+          title: "Session error",
+          description: "Please sign in again",
+          variant: "destructive",
+        });
+        navigate('/auth');
+        return;
+      }
+      
+      if (!session?.access_token) {
         toast({
           title: "Session expired",
           description: "Please sign in again",
@@ -128,16 +140,29 @@ const NewsMode = () => {
         navigate('/auth');
         return;
       }
+
+      console.log('Calling generate-news-summary with valid session');
       
       const response = await supabase.functions.invoke('generate-news-summary', {
         body: { promptId: promptId || activePromptId },
       });
 
       if (response.error) {
-        throw new Error(response.error.message || 'Failed to generate summary');
+        // Handle specific error codes
+        const errorMessage = response.error.message || 'Failed to generate summary';
+        if (errorMessage.includes('401') || errorMessage.includes('auth') || errorMessage.includes('session')) {
+          toast({
+            title: "Authentication error",
+            description: "Please sign in again",
+            variant: "destructive",
+          });
+          navigate('/auth');
+          return;
+        }
+        throw new Error(errorMessage);
       }
 
-      if (response.data.error) {
+      if (response.data?.error) {
         throw new Error(response.data.error);
       }
 
