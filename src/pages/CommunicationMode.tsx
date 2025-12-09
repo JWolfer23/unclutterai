@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, 
@@ -13,71 +13,83 @@ import {
   Zap,
   Brain,
   Link2,
-  Settings
+  Settings,
+  RefreshCw,
+  Loader2,
+  Unlink
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useGmailAuth } from "@/hooks/useGmailAuth";
+import { useMessages } from "@/hooks/useMessages";
+import { Button } from "@/components/ui/button";
+import { formatDistanceToNow } from "date-fns";
 
 const CommunicationMode = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("inbox");
+  const [selectedMessages, setSelectedMessages] = useState<string[]>([]);
+  
+  const { 
+    isConnected, 
+    activeCredential, 
+    loading: gmailLoading, 
+    syncing, 
+    connectGmail, 
+    disconnectGmail, 
+    syncNow,
+    reAnalyze 
+  } = useGmailAuth();
+  
+  const { messages, isLoading: messagesLoading } = useMessages();
 
-  // Mock data
+  // Filter Gmail messages
+  const gmailMessages = messages?.filter(m => m.channel_type === 'gmail' || m.platform === 'gmail') || [];
+  
+  // Calculate stats from real data
   const stats = {
-    unreadCount: 47,
-    urgent: 8,
-    reply: 15,
-    ignore: 24,
-    clarityScore: 72,
-    actionItems: 12
+    unreadCount: gmailMessages.filter(m => !m.is_read).length,
+    urgent: gmailMessages.filter(m => m.priority_score === 5 || m.priority_score === 4).length,
+    reply: gmailMessages.filter(m => m.priority_score === 3).length,
+    ignore: gmailMessages.filter(m => m.priority_score && m.priority_score <= 2).length,
+    clarityScore: gmailMessages.length > 0 ? Math.round((gmailMessages.filter(m => m.is_read).length / gmailMessages.length) * 100) : 0,
+    actionItems: gmailMessages.filter(m => m.priority_score && m.priority_score >= 4).length
   };
 
-  const messages = [
-    {
-      id: 1,
-      sender: "Sarah Chen",
-      subject: "Q4 Budget Review",
-      preview: "Can we sync on the budget allocation for...",
-      priority: "urgent",
-      platform: "email",
-      time: "10m ago"
-    },
-    {
-      id: 2,
-      sender: "Marketing Team",
-      subject: "Campaign Performance Update",
-      preview: "This week's metrics look strong across...",
-      priority: "actionable",
-      platform: "slack",
-      time: "1h ago"
-    },
-    {
-      id: 3,
-      sender: "Newsletter",
-      subject: "Weekly Digest",
-      preview: "Top stories from this week...",
-      priority: "ignore",
-      platform: "email",
-      time: "2h ago"
-    }
-  ];
+  const getPriorityColor = (priorityScore: number | null) => {
+    if (!priorityScore) return "text-slate-400 bg-slate-500/10 border-slate-500/30";
+    if (priorityScore >= 4) return "text-red-400 bg-red-500/10 border-red-500/30";
+    if (priorityScore === 3) return "text-yellow-400 bg-yellow-500/10 border-yellow-500/30";
+    return "text-slate-400 bg-slate-500/10 border-slate-500/30";
+  };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "urgent": return "text-red-400 bg-red-500/10 border-red-500/30";
-      case "actionable": return "text-yellow-400 bg-yellow-500/10 border-yellow-500/30";
-      case "ignore": return "text-slate-400 bg-slate-500/10 border-slate-500/30";
-      default: return "text-slate-400 bg-slate-500/10 border-slate-500/30";
+  const getPriorityLabel = (priorityScore: number | null) => {
+    if (!priorityScore) return { icon: "⚪", label: "unscored" };
+    if (priorityScore === 5) return { icon: "🔴", label: "urgent" };
+    if (priorityScore === 4) return { icon: "🟠", label: "important" };
+    if (priorityScore === 3) return { icon: "🟡", label: "normal" };
+    if (priorityScore === 2) return { icon: "🔵", label: "low" };
+    return { icon: "⚪", label: "ignore" };
+  };
+
+  const handleReAnalyze = async () => {
+    if (selectedMessages.length > 0) {
+      await reAnalyze(selectedMessages);
+      setSelectedMessages([]);
     }
   };
 
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case "urgent": return "🔴";
-      case "actionable": return "🟡";
-      case "ignore": return "⚪";
-      default: return "⚪";
+  const handleReAnalyzeAll = async () => {
+    const allIds = gmailMessages.map(m => m.id);
+    if (allIds.length > 0) {
+      await reAnalyze(allIds.slice(0, 20)); // Limit to 20 for performance
     }
+  };
+
+  const toggleMessageSelection = (id: string) => {
+    setSelectedMessages(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -107,6 +119,33 @@ const CommunicationMode = () => {
         </div>
       </div>
 
+      {/* Connection Banner */}
+      {!isConnected && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-blue-500/20 border border-indigo-500/40">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-yellow-500 flex items-center justify-center">
+                  <Mail className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Connect Your Gmail</h3>
+                  <p className="text-sm text-slate-300">Sync your inbox and let AI prioritize your messages</p>
+                </div>
+              </div>
+              <Button
+                onClick={connectGmail}
+                disabled={gmailLoading}
+                className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:opacity-90"
+              >
+                {gmailLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+                Connect Gmail
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Functional Tiles */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -122,15 +161,15 @@ const CommunicationMode = () => {
               {stats.unreadCount}
             </div>
             <div className="text-sm text-slate-300 mb-3">Unread Messages</div>
-            <div className="flex gap-2 text-xs">
+            <div className="flex gap-2 text-xs flex-wrap">
               <span className="px-2 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/30">
                 🔴 {stats.urgent} Urgent
               </span>
               <span className="px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
-                🟡 {stats.reply} Reply
+                🟡 {stats.reply} Normal
               </span>
               <span className="px-2 py-1 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/30">
-                ⚪ {stats.ignore} Ignore
+                ⚪ {stats.ignore} Low
               </span>
             </div>
           </div>
@@ -146,9 +185,9 @@ const CommunicationMode = () => {
             <div className="text-4xl font-bold bg-gradient-to-r from-blue-300 to-cyan-300 bg-clip-text text-transparent mb-2">
               {stats.actionItems}
             </div>
-            <div className="text-sm text-slate-300 mb-3">Active Action Items</div>
+            <div className="text-sm text-slate-300 mb-3">Action Items</div>
             <div className="text-xs text-slate-400">
-              Generated from messages
+              High-priority messages needing response
             </div>
           </div>
 
@@ -161,11 +200,11 @@ const CommunicationMode = () => {
               <Sparkles className="h-4 w-4 text-cyan-400 opacity-50" />
             </div>
             <div className="text-4xl font-bold bg-gradient-to-r from-cyan-300 to-indigo-300 bg-clip-text text-transparent mb-2">
-              {stats.clarityScore}
+              {stats.clarityScore}%
             </div>
             <div className="text-sm text-slate-300 mb-3">Inbox Clarity Score</div>
             <div className="text-xs text-slate-400">
-              How organized your communications are
+              {gmailMessages.length} total messages synced
             </div>
           </div>
         </div>
@@ -204,41 +243,104 @@ const CommunicationMode = () => {
                 <h3 className="text-xl font-sora font-semibold text-white">
                   Smart Inbox
                 </h3>
-                <button className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-500 text-white text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  Filter
-                </button>
+                <div className="flex items-center gap-2">
+                  {selectedMessages.length > 0 && (
+                    <Button
+                      onClick={handleReAnalyze}
+                      variant="outline"
+                      size="sm"
+                      className="border-indigo-500/50 text-indigo-300 hover:bg-indigo-500/20"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Re-Analyze ({selectedMessages.length})
+                    </Button>
+                  )}
+                  {isConnected && (
+                    <>
+                      <Button
+                        onClick={handleReAnalyzeAll}
+                        variant="outline"
+                        size="sm"
+                        className="border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/20"
+                      >
+                        <Brain className="h-4 w-4 mr-2" />
+                        Re-Analyze All
+                      </Button>
+                      <Button
+                        onClick={syncNow}
+                        disabled={syncing}
+                        size="sm"
+                        className="bg-gradient-to-r from-indigo-500 to-blue-500"
+                      >
+                        {syncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                        Sync Now
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
 
-              <div className="space-y-3">
-                {messages.map((msg) => (
-                  <div 
-                    key={msg.id}
-                    className="p-4 rounded-xl bg-slate-900/40 border border-slate-700/50 hover:border-indigo-500/50 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <span className={`px-2 py-1 rounded-lg text-xs border ${getPriorityColor(msg.priority)}`}>
-                          {getPriorityIcon(msg.priority)} {msg.priority}
-                        </span>
-                        <span className="text-sm text-slate-400">{msg.platform}</span>
+              {messagesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+                </div>
+              ) : gmailMessages.length === 0 ? (
+                <div className="text-center py-12">
+                  <Mail className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+                  <p className="text-slate-400 mb-4">
+                    {isConnected ? "No emails synced yet" : "Connect Gmail to see your messages"}
+                  </p>
+                  {isConnected && (
+                    <Button onClick={syncNow} disabled={syncing} className="bg-gradient-to-r from-indigo-500 to-blue-500">
+                      {syncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      Sync Emails
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {gmailMessages.map((msg) => {
+                    const priority = getPriorityLabel(msg.priority_score);
+                    const isSelected = selectedMessages.includes(msg.id);
+                    return (
+                      <div 
+                        key={msg.id}
+                        onClick={() => toggleMessageSelection(msg.id)}
+                        className={`p-4 rounded-xl bg-slate-900/40 border transition-all cursor-pointer group ${
+                          isSelected 
+                            ? 'border-indigo-500 bg-indigo-500/10' 
+                            : 'border-slate-700/50 hover:border-indigo-500/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <span className={`px-2 py-1 rounded-lg text-xs border ${getPriorityColor(msg.priority_score)}`}>
+                              {priority.icon} {priority.label}
+                            </span>
+                            <span className="text-sm text-slate-400">{msg.platform}</span>
+                            {msg.priority_score && (
+                              <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                                Score: {msg.priority_score}/5
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-slate-500">
+                            {msg.received_at ? formatDistanceToNow(new Date(msg.received_at), { addSuffix: true }) : ''}
+                          </span>
+                        </div>
+                        <div className="text-white font-medium mb-1">{msg.sender_name}</div>
+                        <div className="text-sm text-slate-300 mb-1">{msg.subject}</div>
+                        <div className="text-xs text-slate-400">{msg.preview}</div>
                       </div>
-                      <span className="text-xs text-slate-500">{msg.time}</span>
-                    </div>
-                    <div className="text-white font-medium mb-1">{msg.sender}</div>
-                    <div className="text-sm text-slate-300 mb-1">{msg.subject}</div>
-                    <div className="text-xs text-slate-400">{msg.preview}</div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-slate-400 mb-4">
-                  AI labels every message to help you focus on what matters
+                  AI scores every message 1-5 to help you focus on what matters
                 </p>
-                <button className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors">
-                  Train AI on your preferences →
-                </button>
               </div>
             </div>
           </TabsContent>
@@ -256,37 +358,41 @@ const CommunicationMode = () => {
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-gradient-to-br from-red-500/10 to-orange-500/10 border border-red-500/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-red-400">🔴 Urgent</span>
-                  </div>
-                  <div className="text-white font-medium mb-1">Review Q4 budget with Sarah</div>
-                  <div className="text-sm text-slate-300">Due: Today, 3 PM</div>
-                </div>
+              {gmailMessages.filter(m => m.priority_score && m.priority_score >= 4).length > 0 ? (
+                <div className="space-y-4">
+                  {gmailMessages
+                    .filter(m => m.priority_score === 5)
+                    .slice(0, 3)
+                    .map(msg => (
+                      <div key={msg.id} className="p-4 rounded-xl bg-gradient-to-br from-red-500/10 to-orange-500/10 border border-red-500/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-red-400">🔴 Urgent</span>
+                        </div>
+                        <div className="text-white font-medium mb-1">{msg.subject}</div>
+                        <div className="text-sm text-slate-300">From: {msg.sender_name}</div>
+                      </div>
+                    ))}
 
-                <div className="p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border border-yellow-500/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-yellow-400">🟡 This Week</span>
-                  </div>
-                  <div className="text-white font-medium mb-1">Analyze marketing campaign performance</div>
-                  <div className="text-sm text-slate-300">From: Marketing Team</div>
+                  {gmailMessages
+                    .filter(m => m.priority_score === 4)
+                    .slice(0, 3)
+                    .map(msg => (
+                      <div key={msg.id} className="p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border border-yellow-500/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-yellow-400">🟠 Important</span>
+                        </div>
+                        <div className="text-white font-medium mb-1">{msg.subject}</div>
+                        <div className="text-sm text-slate-300">From: {msg.sender_name}</div>
+                      </div>
+                    ))}
                 </div>
-
-                <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-blue-400">📋 Ongoing Projects</span>
-                  </div>
-                  <div className="text-white font-medium mb-1">Sync with product team on roadmap</div>
-                  <div className="text-sm text-slate-300">3 related messages</div>
+              ) : (
+                <div className="text-center py-8">
+                  <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto mb-4" />
+                  <p className="text-slate-300">No urgent action items right now</p>
+                  <p className="text-sm text-slate-400 mt-2">Sync your email to see priority actions</p>
                 </div>
-              </div>
-
-              <div className="mt-6 p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
-                <p className="text-sm text-slate-300 mb-2">
-                  💡 <strong>AI Insight:</strong> You tend to reply fastest to Sarah's messages. Want to prioritize her emails?
-                </p>
-              </div>
+              )}
             </div>
           </TabsContent>
 
@@ -311,30 +417,49 @@ const CommunicationMode = () => {
                 <div className="p-6 rounded-xl bg-gradient-to-br from-red-500/15 to-orange-500/15 border border-red-500/40">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-2xl">🔴</span>
-                    <h4 className="text-lg font-semibold text-white">Urgent (2)</h4>
+                    <h4 className="text-lg font-semibold text-white">
+                      Urgent ({gmailMessages.filter(m => m.priority_score === 5).length})
+                    </h4>
                   </div>
                   <ul className="space-y-2 text-sm text-slate-300">
-                    <li>• Sarah Chen needs budget review by 3 PM</li>
-                    <li>• Client approval needed for proposal</li>
+                    {gmailMessages
+                      .filter(m => m.priority_score === 5)
+                      .slice(0, 3)
+                      .map(msg => (
+                        <li key={msg.id}>• {msg.sender_name}: {msg.subject}</li>
+                      ))}
+                    {gmailMessages.filter(m => m.priority_score === 5).length === 0 && (
+                      <li className="text-slate-400">No urgent messages</li>
+                    )}
                   </ul>
                 </div>
 
                 <div className="p-6 rounded-xl bg-gradient-to-br from-blue-500/15 to-cyan-500/15 border border-blue-500/40">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-2xl">✨</span>
-                    <h4 className="text-lg font-semibold text-white">Opportunities (3)</h4>
+                    <h4 className="text-lg font-semibold text-white">
+                      Important ({gmailMessages.filter(m => m.priority_score === 4).length})
+                    </h4>
                   </div>
                   <ul className="space-y-2 text-sm text-slate-300">
-                    <li>• Speaking invitation for tech conference</li>
-                    <li>• Potential partnership inquiry</li>
-                    <li>• Press mention in industry newsletter</li>
+                    {gmailMessages
+                      .filter(m => m.priority_score === 4)
+                      .slice(0, 3)
+                      .map(msg => (
+                        <li key={msg.id}>• {msg.sender_name}: {msg.subject}</li>
+                      ))}
+                    {gmailMessages.filter(m => m.priority_score === 4).length === 0 && (
+                      <li className="text-slate-400">No important messages</li>
+                    )}
                   </ul>
                 </div>
 
                 <div className="p-6 rounded-xl bg-gradient-to-br from-slate-500/15 to-slate-600/15 border border-slate-500/40">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-2xl">⚪</span>
-                    <h4 className="text-lg font-semibold text-white">Can Wait (18)</h4>
+                    <h4 className="text-lg font-semibold text-white">
+                      Can Wait ({gmailMessages.filter(m => !m.priority_score || m.priority_score <= 2).length})
+                    </h4>
                   </div>
                   <p className="text-sm text-slate-400">
                     Newsletters, promotions, and low-priority updates
@@ -440,15 +565,80 @@ const CommunicationMode = () => {
                 </div>
                 <div>
                   <h3 className="text-xl font-sora font-semibold text-white">
-                    Preferences + Rules
+                    Preferences + Connections
                   </h3>
                   <p className="text-sm text-slate-400">
-                    Teach the AI how you like to reply, defer, or delegate
+                    Manage your email connections and AI preferences
                   </p>
                 </div>
               </div>
 
               <div className="space-y-4">
+                {/* Gmail Connection */}
+                <div className="p-6 rounded-xl bg-slate-900/40 border border-slate-700/50">
+                  <h4 className="text-white font-medium mb-4">Email Connections</h4>
+                  
+                  {isConnected && activeCredential ? (
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-yellow-500 flex items-center justify-center">
+                          <Mail className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-white font-medium">Gmail</div>
+                          <div className="text-xs text-emerald-400">{activeCredential.email_address}</div>
+                          {activeCredential.last_sync_at && (
+                            <div className="text-xs text-slate-400">
+                              Last sync: {formatDistanceToNow(new Date(activeCredential.last_sync_at), { addSuffix: true })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={syncNow}
+                          disabled={syncing}
+                          variant="outline"
+                          size="sm"
+                          className="border-emerald-500/50 text-emerald-300"
+                        >
+                          {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          onClick={() => disconnectGmail(activeCredential.id)}
+                          variant="outline"
+                          size="sm"
+                          className="border-red-500/50 text-red-300 hover:bg-red-500/20"
+                        >
+                          <Unlink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-yellow-500 flex items-center justify-center">
+                          <Mail className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-white font-medium">Gmail</div>
+                          <div className="text-xs text-slate-400">Not connected</div>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={connectGmail}
+                        disabled={gmailLoading}
+                        size="sm"
+                        className="bg-gradient-to-r from-red-500 to-yellow-500"
+                      >
+                        {gmailLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Connect
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Auto-Reply Rules */}
                 <div className="p-6 rounded-xl bg-slate-900/40 border border-slate-700/50">
                   <h4 className="text-white font-medium mb-3">Auto-Reply Rules</h4>
                   <div className="space-y-3">
@@ -484,16 +674,6 @@ const CommunicationMode = () => {
                     <option>Direct & Efficient</option>
                     <option>Creative & Casual</option>
                   </select>
-                </div>
-
-                <div className="p-6 rounded-xl bg-slate-900/40 border border-slate-700/50">
-                  <h4 className="text-white font-medium mb-3">VIP Senders</h4>
-                  <p className="text-sm text-slate-400 mb-4">
-                    Always prioritize messages from these contacts
-                  </p>
-                  <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-blue-500 text-white text-sm font-medium hover:opacity-90 transition-opacity">
-                    Add VIP Contact
-                  </button>
                 </div>
               </div>
             </div>
