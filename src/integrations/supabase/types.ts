@@ -41,6 +41,54 @@ export type Database = {
         }
         Relationships: []
       }
+      email_credentials: {
+        Row: {
+          access_token_encrypted: string
+          created_at: string | null
+          email_address: string
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          provider: string
+          refresh_token_encrypted: string
+          scopes: string[] | null
+          sync_error: string | null
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token_encrypted: string
+          created_at?: string | null
+          email_address: string
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          provider: string
+          refresh_token_encrypted: string
+          scopes?: string[] | null
+          sync_error?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token_encrypted?: string
+          created_at?: string | null
+          email_address?: string
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          provider?: string
+          refresh_token_encrypted?: string
+          scopes?: string[] | null
+          sync_error?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       focus_levels: {
         Row: {
           level: number
@@ -445,63 +493,81 @@ export type Database = {
       messages: {
         Row: {
           ai_summary: string | null
+          channel_type: string | null
           content: string
           created_at: string | null
+          external_message_id: string | null
           id: string
           is_archived: boolean | null
           is_read: boolean | null
+          labels: Json | null
           metadata: Json | null
           platform: string
           preview: string | null
           priority: Database["public"]["Enums"]["priority_level"] | null
+          priority_score: number | null
           received_at: string | null
           sender_avatar: string | null
           sender_email: string | null
+          sender_handle: string | null
           sender_name: string
           sentiment: Database["public"]["Enums"]["sentiment_type"] | null
           subject: string
+          thread_id: string | null
           type: Database["public"]["Enums"]["message_type"]
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           ai_summary?: string | null
+          channel_type?: string | null
           content: string
           created_at?: string | null
+          external_message_id?: string | null
           id?: string
           is_archived?: boolean | null
           is_read?: boolean | null
+          labels?: Json | null
           metadata?: Json | null
           platform: string
           preview?: string | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
+          priority_score?: number | null
           received_at?: string | null
           sender_avatar?: string | null
           sender_email?: string | null
+          sender_handle?: string | null
           sender_name: string
           sentiment?: Database["public"]["Enums"]["sentiment_type"] | null
           subject: string
+          thread_id?: string | null
           type: Database["public"]["Enums"]["message_type"]
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           ai_summary?: string | null
+          channel_type?: string | null
           content?: string
           created_at?: string | null
+          external_message_id?: string | null
           id?: string
           is_archived?: boolean | null
           is_read?: boolean | null
+          labels?: Json | null
           metadata?: Json | null
           platform?: string
           preview?: string | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
+          priority_score?: number | null
           received_at?: string | null
           sender_avatar?: string | null
           sender_email?: string | null
+          sender_handle?: string | null
           sender_name?: string
           sentiment?: Database["public"]["Enums"]["sentiment_type"] | null
           subject?: string
+          thread_id?: string | null
           type?: Database["public"]["Enums"]["message_type"]
           updated_at?: string | null
           user_id?: string | null
