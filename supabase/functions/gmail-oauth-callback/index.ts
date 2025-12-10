@@ -55,14 +55,20 @@ serve(async (req) => {
     if (error) {
       console.error('gmail-oauth-callback: OAuth error:', error);
       return new Response(
-        `<html><body><script>window.opener?.postMessage({type:'gmail-oauth-error',error:'${error}'},'*');window.close();</script></body></html>`,
+        `<html><body><p>Connection failed. This window will close.</p><script>
+          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'${error}',timestamp:Date.now()})); } catch(e) {}
+          setTimeout(() => window.close(), 1000);
+        </script></body></html>`,
         { status: 200, headers: { 'Content-Type': 'text/html' } }
       );
     }
 
     if (!code || !state) {
       return new Response(
-        `<html><body><script>window.opener?.postMessage({type:'gmail-oauth-error',error:'missing_params'},'*');window.close();</script></body></html>`,
+        `<html><body><p>Missing parameters. This window will close.</p><script>
+          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'missing_params',timestamp:Date.now()})); } catch(e) {}
+          setTimeout(() => window.close(), 1000);
+        </script></body></html>`,
         { status: 200, headers: { 'Content-Type': 'text/html' } }
       );
     }
@@ -73,7 +79,10 @@ serve(async (req) => {
       stateData = JSON.parse(atob(state));
     } catch {
       return new Response(
-        `<html><body><script>window.opener?.postMessage({type:'gmail-oauth-error',error:'invalid_state'},'*');window.close();</script></body></html>`,
+        `<html><body><p>Invalid state. This window will close.</p><script>
+          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'invalid_state',timestamp:Date.now()})); } catch(e) {}
+          setTimeout(() => window.close(), 1000);
+        </script></body></html>`,
         { status: 200, headers: { 'Content-Type': 'text/html' } }
       );
     }
@@ -103,7 +112,10 @@ serve(async (req) => {
     if (tokenData.error) {
       console.error('gmail-oauth-callback: Token exchange error:', tokenData.error);
       return new Response(
-        `<html><body><script>window.opener?.postMessage({type:'gmail-oauth-error',error:'${tokenData.error}'},'*');window.close();</script></body></html>`,
+        `<html><body><p>Token exchange failed. This window will close.</p><script>
+          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'${tokenData.error}',timestamp:Date.now()})); } catch(e) {}
+          setTimeout(() => window.close(), 1000);
+        </script></body></html>`,
         { status: 200, headers: { 'Content-Type': 'text/html' } }
       );
     }
@@ -124,7 +136,10 @@ serve(async (req) => {
     if (!encryptionKey) {
       console.error('gmail-oauth-callback: Missing TOKEN_ENCRYPTION_KEY');
       return new Response(
-        `<html><body><script>window.opener?.postMessage({type:'gmail-oauth-error',error:'config_error'},'*');window.close();</script></body></html>`,
+        `<html><body><p>Configuration error. This window will close.</p><script>
+          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'config_error',timestamp:Date.now()})); } catch(e) {}
+          setTimeout(() => window.close(), 1000);
+        </script></body></html>`,
         { status: 200, headers: { 'Content-Type': 'text/html' } }
       );
     }
@@ -159,21 +174,31 @@ serve(async (req) => {
     if (upsertError) {
       console.error('gmail-oauth-callback: Database error:', upsertError);
       return new Response(
-        `<html><body><script>window.opener?.postMessage({type:'gmail-oauth-error',error:'db_error'},'*');window.close();</script></body></html>`,
+        `<html><body><p>Database error. This window will close.</p><script>
+          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'db_error',timestamp:Date.now()})); } catch(e) {}
+          setTimeout(() => window.close(), 1000);
+        </script></body></html>`,
         { status: 200, headers: { 'Content-Type': 'text/html' } }
       );
     }
 
     console.log('gmail-oauth-callback: Credentials stored successfully');
 
-    // Return success page that posts message to opener
+    // Return success page that writes to localStorage (COOP workaround)
+    console.log('gmail-oauth-callback: Credentials stored successfully');
     return new Response(
       `<html>
         <body>
           <p>Gmail connected successfully! This window will close automatically.</p>
           <script>
-            window.opener?.postMessage({type:'gmail-oauth-success',email:'${emailAddress}'},'*');
-            setTimeout(() => window.close(), 1500);
+            try {
+              localStorage.setItem('gmail-oauth-result', JSON.stringify({
+                type: 'success',
+                email: '${emailAddress}',
+                timestamp: Date.now()
+              }));
+            } catch(e) { console.error('localStorage error:', e); }
+            setTimeout(() => window.close(), 1000);
           </script>
         </body>
       </html>`,
@@ -182,7 +207,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('gmail-oauth-callback error:', error);
     return new Response(
-      `<html><body><script>window.opener?.postMessage({type:'gmail-oauth-error',error:'server_error'},'*');window.close();</script></body></html>`,
+      `<html><body><p>Server error. This window will close.</p><script>
+        try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'server_error',timestamp:Date.now()})); } catch(e) {}
+        setTimeout(() => window.close(), 1000);
+      </script></body></html>`,
       { status: 200, headers: { 'Content-Type': 'text/html' } }
     );
   }

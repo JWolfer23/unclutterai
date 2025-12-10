@@ -37,21 +37,35 @@ export function useGmailAuth() {
     fetchCredentials();
   }, [fetchCredentials]);
 
-  // Listen for OAuth callback messages
+  // Poll localStorage for OAuth result (COOP workaround for popup communication)
   useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'gmail-oauth-success') {
-        toast.success(`Gmail connected: ${event.data.email}`);
-        fetchCredentials();
-        // Trigger initial sync
-        syncNow();
-      } else if (event.data?.type === 'gmail-oauth-error') {
-        toast.error(`Gmail connection failed: ${event.data.error}`);
+    const checkOAuthResult = () => {
+      const result = localStorage.getItem('gmail-oauth-result');
+      if (result) {
+        try {
+          const data = JSON.parse(result);
+          // Only process recent results (within 30 seconds)
+          if (Date.now() - data.timestamp < 30000) {
+            if (data.type === 'success') {
+              toast.success(`Gmail connected: ${data.email}`);
+              fetchCredentials();
+              // Trigger initial sync
+              syncNow();
+            } else if (data.type === 'error') {
+              toast.error(`Gmail connection failed: ${data.error}`);
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing OAuth result:', e);
+        }
+        localStorage.removeItem('gmail-oauth-result');
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    // Poll every 500ms for OAuth result
+    const pollInterval = setInterval(checkOAuthResult, 500);
+    
+    return () => clearInterval(pollInterval);
   }, [fetchCredentials]);
 
   // Start OAuth flow
