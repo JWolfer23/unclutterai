@@ -13,38 +13,28 @@ serve(async (req) => {
   }
 
   try {
-    // Verify cron secret for scheduled calls
+    // SECURITY: Only allow cron-triggered calls with CRON_SECRET
+    // This prevents unauthorized users from triggering mass emails
     const authHeader = req.headers.get('Authorization');
     const cronSecret = Deno.env.get('CRON_SECRET');
     
-    // Allow both cron calls and authenticated user calls
-    let userId: string | null = null;
-    let isCronCall = false;
-    
-    if (authHeader === `Bearer ${cronSecret}`) {
-      isCronCall = true;
-      console.log('Cron-triggered scheduled news delivery');
-    } else {
-      // Regular authenticated call
-      const supabaseClient = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-        {
-          global: {
-            headers: { Authorization: authHeader! },
-          },
-        }
+    if (!cronSecret) {
+      console.error('CRON_SECRET not configured');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-      
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) {
-        return new Response(
-          JSON.stringify({ error: 'Not authenticated' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      userId = user.id;
     }
+    
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      console.warn('Unauthorized attempt to trigger scheduled news');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized. This endpoint is cron-triggered only.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    console.log('Cron-triggered scheduled news delivery');
 
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
@@ -63,15 +53,11 @@ serve(async (req) => {
     );
 
     // Get users with email delivery enabled
-    let schedulesQuery = supabaseAdmin
+    const schedulesQuery = supabaseAdmin
       .from('news_schedules')
       .select('*, profiles!inner(email)')
       .eq('is_enabled', true)
       .contains('channels', ['email']);
-
-    if (userId) {
-      schedulesQuery = schedulesQuery.eq('user_id', userId);
-    }
 
     const { data: schedules, error: schedulesError } = await schedulesQuery;
 
