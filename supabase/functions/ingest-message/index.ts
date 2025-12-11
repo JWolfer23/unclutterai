@@ -27,6 +27,15 @@ interface AIEnrichment {
   ai_summary: string;
   priority_score: number;
   priority: 'low' | 'medium' | 'high';
+  // Extended fields from AI_Simplify
+  key_points?: string[];
+  hidden_context?: string[];
+  what_this_means?: string;
+  suggested_action?: string;
+  tone?: string;
+  extracted_dates?: string[];
+  tags?: string[];
+  confidence?: number;
 }
 
 // Validate webhook signature (HMAC-SHA256)
@@ -132,8 +141,8 @@ function getMessageType(source: MessageSource): 'email' | 'text' | 'social' | 'v
   }
 }
 
-// AI enrichment using Lovable AI gateway
-async function enrichWithAI(subject: string, body: string, sender: string): Promise<AIEnrichment> {
+// AI enrichment using AI_Simplify block via Lovable AI gateway
+async function enrichWithAI(subject: string, body: string, sender: string, metadata?: Record<string, unknown>): Promise<AIEnrichment> {
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   
   if (!lovableApiKey) {
@@ -145,6 +154,29 @@ async function enrichWithAI(subject: string, body: string, sender: string): Prom
     };
   }
   
+  const systemPrompt = `You are UnclutterAI's message analyst. Output strict JSON only.
+
+Produce JSON:
+{
+  "one_sentence_summary": "<concise summary>",
+  "key_points": ["...","..."],
+  "hidden_context": ["deadline: YYYY-MM-DD", "sentiment: irritated", ...],
+  "what_this_means": "<short practical explanation>",
+  "suggested_action": "<reply|schedule|ignore|archive|create_task>",
+  "tone": "<urgent|irritated|casual|automated|neutral|trap>",
+  "extracted_dates": [ "YYYY-MM-DD", ... ],
+  "tags": ["invoice","client","meeting","spam?"],
+  "priority_score": 1-5,
+  "confidence": 0.0-1.0
+}
+
+Rules:
+- priority_score: 1=low, 5=urgent. Consider deadlines, sender importance, required actions.
+- If you detect an explicit date/time, put it in extracted_dates.
+- If body contains financial request, tag "payment".
+- Keep outputs terse and machine-parseable.
+- Return ONLY valid JSON, no markdown or explanation.`;
+
   try {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -153,29 +185,20 @@ async function enrichWithAI(subject: string, body: string, sender: string): Prom
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'google/gemini-2.5-flash',
         messages: [
-          {
-            role: 'system',
-            content: `You are an AI assistant that analyzes messages and provides:
-1. A concise summary (max 100 words)
-2. A priority score from 1-5 (1=low, 5=urgent)
-
-Consider urgency indicators, sender importance, required actions, and time sensitivity.
-
-Respond in JSON format only:
-{"summary": "...", "priority_score": 1-5}`
-          },
+          { role: 'system', content: systemPrompt },
           {
             role: 'user',
             content: `Analyze this message:
 From: ${sender}
 Subject: ${subject}
-Body: ${body.substring(0, 2000)}`
+Body: ${body.substring(0, 3000)}
+${metadata ? `Metadata: ${JSON.stringify(metadata)}` : ''}`
           }
         ],
-        max_tokens: 300,
-        temperature: 0.3,
+        max_tokens: 800,
+        temperature: 0.1,
       }),
     });
 
@@ -187,15 +210,26 @@ Body: ${body.substring(0, 2000)}`
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
     
-    // Parse JSON response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
+    // Parse JSON response - handle potential markdown code blocks
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || content.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]).trim() : content.trim();
+    
+    if (jsonStr) {
+      const parsed = JSON.parse(jsonStr);
       const score = Math.min(5, Math.max(1, parseInt(parsed.priority_score) || 3));
+      
       return {
-        ai_summary: parsed.summary || body.substring(0, 200),
+        ai_summary: parsed.one_sentence_summary || body.substring(0, 200),
         priority_score: score,
         priority: score >= 4 ? 'high' : score >= 2 ? 'medium' : 'low',
+        key_points: parsed.key_points || [],
+        hidden_context: parsed.hidden_context || [],
+        what_this_means: parsed.what_this_means,
+        suggested_action: parsed.suggested_action,
+        tone: parsed.tone,
+        extracted_dates: parsed.extracted_dates || [],
+        tags: parsed.tags || [],
+        confidence: parsed.confidence,
       };
     }
     
@@ -262,11 +296,12 @@ serve(async (req) => {
     const messageData = raw_message || payload;
     const normalized = normalizePayload(messageData, source as MessageSource);
     
-    // Enrich with AI
+    // Enrich with AI (using AI_Simplify block)
     const enrichment = await enrichWithAI(
       normalized.subject || '',
       normalized.body || '',
-      normalized.sender_name || normalized.sender_email || 'Unknown'
+      normalized.sender_name || normalized.sender_email || 'Unknown',
+      { source, thread_id: normalized.thread_id }
     );
     
     // Create Supabase client with service role
@@ -314,7 +349,20 @@ serve(async (req) => {
         ai_summary: enrichment.ai_summary,
         priority_score: enrichment.priority_score,
         priority: enrichment.priority,
-        metadata: { raw: payload.raw_message || payload },
+        metadata: { 
+          raw: payload.raw_message || payload,
+          ai_enrichment: {
+            key_points: enrichment.key_points,
+            hidden_context: enrichment.hidden_context,
+            what_this_means: enrichment.what_this_means,
+            suggested_action: enrichment.suggested_action,
+            tone: enrichment.tone,
+            extracted_dates: enrichment.extracted_dates,
+            tags: enrichment.tags,
+            confidence: enrichment.confidence,
+          }
+        },
+        labels: enrichment.tags ? JSON.stringify(enrichment.tags) : null,
       })
       .select('id')
       .single();
