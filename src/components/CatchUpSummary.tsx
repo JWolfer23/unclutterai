@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,8 +13,12 @@ import {
   Users,
   Mail,
   Star,
-  Target
+  Target,
+  Loader2,
+  Send,
+  Calendar
 } from "lucide-react";
+import { useActionPlan, ActionPlan } from "@/hooks/useActionPlan";
 
 interface MissedMessage {
   id: number;
@@ -43,7 +46,14 @@ const CatchUpSummary = ({
   missedMessages, 
   focusScore 
 }: CatchUpSummaryProps) => {
-  const [showActionPlan, setShowActionPlan] = useState(false);
+  const { 
+    actionPlan, 
+    isGenerating, 
+    generateActionPlan,
+    claimTask,
+    completeTask,
+    isClaiming 
+  } = useActionPlan();
 
   const highPriorityMessages = missedMessages.filter(m => m.priority === 'high');
   const quickActionMessages = missedMessages.filter(m => m.priority === 'medium');
@@ -80,9 +90,9 @@ const CatchUpSummary = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-700 text-white">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2 text-xl">
+          <DialogTitle className="flex items-center space-x-2 text-xl text-white">
             <span className="text-2xl">{getScoreEmoji(focusScore)}</span>
             <span>Focus Score: {focusScore}% – {focusScore >= 90 ? 'Excellent!' : focusScore >= 70 ? 'Great job!' : 'Good effort!'}</span>
           </DialogTitle>
@@ -90,71 +100,199 @@ const CatchUpSummary = ({
 
         <div className="space-y-6">
           {/* Enhanced Focus Summary */}
-          <Card className="glass-card bg-gradient-to-r from-purple-500/10 to-indigo-500/10">
+          <Card className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border-purple-500/30">
             <CardContent className="p-6">
               <div className="text-center mb-4">
-                <div className="text-lg font-semibold text-gray-900 mb-2">
+                <div className="text-lg font-semibold text-white mb-2">
                   📩 You missed {missedMessages.length} messages total
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">🔥 {highPriorityMessages.length}</div>
-                    <div className="text-sm text-gray-600">High Priority</div>
+                    <div className="text-2xl font-bold text-red-400">🔥 {highPriorityMessages.length}</div>
+                    <div className="text-sm text-slate-400">High Priority</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">✅ {quickActionMessages.length}</div>
-                    <div className="text-sm text-gray-600">Quick Actions</div>
+                    <div className="text-2xl font-bold text-yellow-400">✅ {quickActionMessages.length}</div>
+                    <div className="text-sm text-slate-400">Quick Actions</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">🗂 {batchMessages.length}</div>
-                    <div className="text-sm text-gray-600">Batch for Later</div>
+                    <div className="text-2xl font-bold text-blue-400">🗂 {batchMessages.length}</div>
+                    <div className="text-sm text-slate-400">Batch for Later</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-600">💤 {spamMessages.length}</div>
-                    <div className="text-sm text-gray-600">Low Priority</div>
+                    <div className="text-2xl font-bold text-slate-400">💤 {spamMessages.length}</div>
+                    <div className="text-sm text-slate-400">Low Priority</div>
                   </div>
                 </div>
               </div>
               
-              <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+              <div className="flex items-center justify-center space-x-4 text-sm text-slate-400">
                 <div className="flex items-center space-x-1">
                   <Clock className="w-4 h-4" />
                   <span>{focusDuration} focused</span>
                 </div>
-                <Badge className="bg-green-100 text-green-800 border-green-200">
+                <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
                   Session Complete
                 </Badge>
               </div>
             </CardContent>
           </Card>
 
+          {/* AI Action Plan Section */}
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Star className="w-5 h-5 text-purple-400" />
+                  <span className="text-white">🚀 AI Action Plan</span>
+                </div>
+                {!actionPlan && (
+                  <Button 
+                    onClick={() => generateActionPlan()}
+                    disabled={isGenerating}
+                    className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:opacity-90"
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Target className="w-4 h-4 mr-2" />
+                    )}
+                    {isGenerating ? 'Generating...' : 'Generate Action Plan'}
+                  </Button>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {actionPlan ? (
+                <div className="space-y-4">
+                  {/* UCT Reward */}
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-cyan-500/20 border border-purple-500/40">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🪙</span>
+                      <div>
+                        <div className="text-white font-semibold">+{actionPlan.uct_reward_estimate.toFixed(1)} UCT Earned</div>
+                        <div className="text-xs text-slate-400">{actionPlan.messages_processed} messages analyzed</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Urgent Tasks */}
+                  {actionPlan.urgent_tasks.length > 0 && (
+                    <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/30">
+                      <h4 className="font-medium text-red-300 mb-2 flex items-center space-x-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>✅ Immediate Actions ({actionPlan.urgent_tasks.length})</span>
+                      </h4>
+                      <ul className="text-sm text-red-200 space-y-2">
+                        {actionPlan.urgent_tasks.map((task, idx) => (
+                          <li key={idx} className="flex items-center justify-between">
+                            <span>• {task.title}</span>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-red-500/50 text-red-300 h-7"
+                              onClick={() => task.id && claimTask(task.id)}
+                              disabled={isClaiming || !task.id}
+                            >
+                              Claim
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Quick Wins */}
+                  {actionPlan.quick_wins.length > 0 && (
+                    <div className="p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
+                      <h4 className="font-medium text-emerald-300 mb-2 flex items-center space-x-2">
+                        <Zap className="w-4 h-4" />
+                        <span>⚡ Quick Wins ({actionPlan.quick_wins.length})</span>
+                      </h4>
+                      <ul className="text-sm text-emerald-200 space-y-2">
+                        {actionPlan.quick_wins.slice(0, 5).map((task, idx) => (
+                          <li key={idx} className="flex items-center justify-between">
+                            <span>• {task.title}</span>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="border-emerald-500/50 text-emerald-300 h-7"
+                              onClick={() => task.id && completeTask(task.id)}
+                              disabled={!task.id}
+                            >
+                              Do Now
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Auto Replies */}
+                  {actionPlan.auto_replies.length > 0 && (
+                    <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                      <h4 className="font-medium text-blue-300 mb-2 flex items-center space-x-2">
+                        <Send className="w-4 h-4" />
+                        <span>✉️ Ready to Send ({actionPlan.auto_replies.length})</span>
+                      </h4>
+                      <p className="text-sm text-blue-200">
+                        {actionPlan.auto_replies.length} AI-drafted replies ready for review
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Batch Recommendations */}
+                  {actionPlan.batch_recommendations.length > 0 && (
+                    <div className="p-4 bg-slate-500/10 rounded-lg border border-slate-500/30">
+                      <h4 className="font-medium text-slate-300 mb-2 flex items-center space-x-2">
+                        <Clock className="w-4 h-4" />
+                        <span>🗂 Batch Processing</span>
+                      </h4>
+                      <ul className="text-sm text-slate-200 space-y-1">
+                        {actionPlan.batch_recommendations.map((batch, idx) => (
+                          <li key={idx}>• {batch.goal} ({batch.batch_size} items)</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-slate-400 text-sm">
+                    Generate an AI-powered action plan to prioritize your catch-up
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* High Priority Messages Preview */}
-          {highPriorityMessages.length > 0 && (
-            <Card className="glass-card">
+          {highPriorityMessages.length > 0 && !actionPlan && (
+            <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center space-x-2">
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                <CardTitle className="text-lg flex items-center space-x-2 text-white">
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
                   <span>🔥 High Priority Messages</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {highPriorityMessages.slice(0, 3).map((message) => (
-                  <div key={message.id} className="flex items-center space-x-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                  <div key={message.id} className="flex items-center space-x-3 p-3 bg-red-500/10 rounded-lg border border-red-500/30">
                     <div className="flex items-center space-x-2">
                       {getTypeIcon(message.type)}
-                      <span className="font-medium text-gray-900">{message.from}</span>
+                      <span className="font-medium text-white">{message.from}</span>
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm text-gray-800 truncate">{message.subject}</p>
-                      <p className="text-xs text-gray-500">{message.time}</p>
+                      <p className="text-sm text-slate-300 truncate">{message.subject}</p>
+                      <p className="text-xs text-slate-500">{message.time}</p>
                     </div>
-                    <Badge className="bg-red-100 text-red-800 border-red-200">
+                    <Badge className="bg-red-500/20 text-red-300 border-red-500/30">
                       🔥 High Priority
                     </Badge>
                   </div>
                 ))}
                 {highPriorityMessages.length > 3 && (
-                  <p className="text-sm text-gray-500 text-center">
+                  <p className="text-sm text-slate-500 text-center">
                     +{highPriorityMessages.length - 3} more high priority messages
                   </p>
                 )}
@@ -162,70 +300,11 @@ const CatchUpSummary = ({
             </Card>
           )}
 
-          {/* Enhanced Action Plan */}
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center space-x-2">
-                <Star className="w-5 h-5 text-purple-600" />
-                <span>🚀 Recommended Action Plan</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!showActionPlan ? (
-                <Button 
-                  onClick={() => setShowActionPlan(true)}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
-                >
-                  <Target className="w-4 h-4 mr-2" />
-                  Generate Action Plan
-                </Button>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                    <h4 className="font-medium text-red-900 mb-2 flex items-center space-x-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>✅ Immediate Actions (Next 5 mins)</span>
-                    </h4>
-                    <ul className="text-sm text-red-800 space-y-1">
-                      <li>• Respond to {highPriorityMessages.length} high-priority messages</li>
-                      <li>• Quick scan of urgent emails from key contacts</li>
-                      <li>• Check for any time-sensitive requests</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-                    <h4 className="font-medium text-orange-900 mb-2 flex items-center space-x-2">
-                      <MessageCircle className="w-4 h-4" />
-                      <span>✉️ Quick Replies (Next 10 mins)</span>
-                    </h4>
-                    <ul className="text-sm text-orange-800 space-y-1">
-                      <li>• Use AI-suggested responses for routine messages</li>
-                      <li>• Archive or delete non-essential notifications</li>
-                      <li>• Schedule follow-ups for complex messages</li>
-                    </ul>
-                  </div>
-
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="font-medium text-blue-900 mb-2 flex items-center space-x-2">
-                      <Clock className="w-4 h-4" />
-                      <span>🗂 Batch Processing (Later)</span>
-                    </h4>
-                    <ul className="text-sm text-blue-800 space-y-1">
-                      <li>• Process remaining {missedMessages.length - highPriorityMessages.length} messages in batch</li>
-                      <li>• Update calendar with any new meetings or deadlines</li>
-                      <li>• Review and respond to social media interactions</li>
-                    </ul>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Action Buttons */}
           <div className="flex space-x-3">
             <Button 
               onClick={onClose}
-              className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
+              className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-600 hover:opacity-90"
             >
               <Zap className="w-4 h-4 mr-2" />
               Start Catch Up
@@ -233,7 +312,7 @@ const CatchUpSummary = ({
             <Button 
               variant="outline" 
               onClick={onClose}
-              className="flex-1"
+              className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800"
             >
               <Clock className="w-4 h-4 mr-2" />
               Review Later

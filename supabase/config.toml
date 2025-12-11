@@ -44,3 +44,6 @@ verify_jwt = true
 
 [functions.ingest-message]
 verify_jwt = false
+
+[functions.instant-catchup]
+verify_jwt = true
