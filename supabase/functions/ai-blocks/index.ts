@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type AIAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply' | 'cluster_topics';
+type AIAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply' | 'cluster_topics' | 'batch_brain';
 
 interface SimplifyInput {
   subject: string;
@@ -136,7 +136,25 @@ Rules:
 - Keep reply ≤ max_words constraint if provided
 - Include a clear call-to-action if needed
 - Match the requested tone
-- Return ONLY valid JSON, no markdown or explanation.`
+- Return ONLY valid JSON, no markdown or explanation.`,
+
+  batch_brain: `You are UnclutterAI's Batch Brain. Group messages into cognitive-friendly batches.
+
+Input: Array of messages with { id, subject, summary, sender, urgency, effort, tags }
+Output JSON:
+{
+  "batches": [
+    { "size": 3, "messages": ["id1", "id2", "id3"], "purpose": "respond to clients", "priority": "high" },
+    { "size": 5, "messages": [...], "purpose": "admin/HR tasks", "priority": "medium" }
+  ]
+}
+
+Rules:
+- Prefer grouping by contact/project
+- Balance urgency and effort within each batch
+- Keep batch sizes between 3-10 messages
+- Assign priority: "high" | "medium" | "low" based on urgency scores
+- Return ONLY valid JSON.`
 };
 
 // Call Lovable AI Gateway
@@ -297,9 +315,9 @@ serve(async (req) => {
 
     const { action, data } = await req.json();
     
-    if (!action || !['simplify', 'signal_score', 'thread_sense', 'auto_reply'].includes(action)) {
+    if (!action || !['simplify', 'signal_score', 'thread_sense', 'auto_reply', 'batch_brain'].includes(action)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid action. Use: simplify, signal_score, thread_sense, or auto_reply' }),
+        JSON.stringify({ error: 'Invalid action. Use: simplify, signal_score, thread_sense, auto_reply, or batch_brain' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -353,7 +371,20 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        result = await handleAutoReply(data as AutoReplyInput);
+        result = await handleAutoReply(data);
+        break;
+
+      case 'batch_brain':
+        if (!data.messages || !Array.isArray(data.messages)) {
+          return new Response(
+            JSON.stringify({ error: 'batch_brain requires: messages[]' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        const batchPrompt = `Group these messages into cognitive batches:
+${JSON.stringify(data.messages, null, 2)}`;
+        const batchResponse = await callAI(SYSTEM_PROMPTS.batch_brain, batchPrompt, 0.2);
+        result = parseAIJson(batchResponse);
         break;
     }
 

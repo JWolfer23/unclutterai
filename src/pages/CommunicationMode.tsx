@@ -29,6 +29,7 @@ import { useMessages } from "@/hooks/useMessages";
 import { useActionPlan } from "@/hooks/useActionPlan";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
+import { SmartStreamView } from "@/components/smart-stream";
 
 const CommunicationMode = () => {
   const navigate = useNavigate();
@@ -358,13 +359,18 @@ const CommunicationMode = () => {
             </div>
           </TabsContent>
 
-          {/* Action Plan Tab */}
+          {/* Action Plan Tab - Now using Smart Stream */}
           <TabsContent value="action" className="space-y-4">
-            <div className="learning-panel">
+            <div className="learning-panel p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-sora font-semibold text-white">
-                  AI Action Plan
-                </h3>
+                <div>
+                  <h3 className="text-xl font-sora font-semibold text-white">
+                    Smart Stream
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    AI-organized tasks and messages for cognitive flow
+                  </p>
+                </div>
                 <Button
                   onClick={() => generateActionPlan()}
                   disabled={isGenerating}
@@ -375,173 +381,12 @@ const CommunicationMode = () => {
                   ) : (
                     <Sparkles className="h-4 w-4 mr-2" />
                   )}
-                  {isGenerating ? 'Generating...' : 'Generate Plan'}
+                  {isGenerating ? 'Generating...' : 'Refresh Plan'}
                 </Button>
               </div>
 
-              {actionPlan ? (
-                <div className="space-y-6">
-                  {/* UCT Reward Banner */}
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-cyan-500/20 border border-purple-500/40 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">🪙</span>
-                      <div>
-                        <div className="text-white font-semibold">+{actionPlan.uct_reward_estimate.toFixed(1)} UCT Earned</div>
-                        <div className="text-xs text-slate-400">{actionPlan.messages_processed} messages processed</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Urgent Tasks */}
-                  {actionPlan.urgent_tasks.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <span className="text-red-400">🔴</span> Urgent Tasks ({actionPlan.urgent_tasks.length})
-                      </h4>
-                      {actionPlan.urgent_tasks.map((task, idx) => (
-                        <div key={idx} className="p-4 rounded-xl bg-gradient-to-br from-red-500/10 to-orange-500/10 border border-red-500/30">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1">
-                              <div className="text-white font-medium mb-1">{task.title}</div>
-                              <div className="text-sm text-slate-300">{task.description}</div>
-                              {task.due_date && (
-                                <div className="text-xs text-red-400 mt-2 flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  Due: {task.due_date}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => task.id && claimTask(task.id)}
-                                disabled={isClaiming || !task.id}
-                                size="sm"
-                                variant="outline"
-                                className="border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20"
-                              >
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Claim
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Quick Wins */}
-                  {actionPlan.quick_wins.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <span className="text-emerald-400">⚡</span> Quick Wins ({actionPlan.quick_wins.length})
-                      </h4>
-                      {actionPlan.quick_wins.map((task, idx) => (
-                        <div key={idx} className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/30">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="text-white font-medium mb-1">{task.title}</div>
-                              <div className="text-sm text-slate-300">{task.description}</div>
-                              <div className="text-xs text-emerald-400 mt-2">Effort: {task.effort}/10</div>
-                            </div>
-                            <Button
-                              onClick={() => task.id && completeTask(task.id)}
-                              disabled={!task.id}
-                              size="sm"
-                              variant="outline"
-                              className="border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20"
-                            >
-                              <Zap className="h-3 w-3 mr-1" />
-                              Do Now
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Auto Replies */}
-                  {actionPlan.auto_replies.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <span className="text-blue-400">✉️</span> Suggested Replies ({actionPlan.auto_replies.length})
-                      </h4>
-                      {actionPlan.auto_replies.map((reply, idx) => (
-                        <div key={idx} className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/30">
-                          <div className="text-white font-medium mb-2">{reply.draft.subject}</div>
-                          <div className="text-sm text-slate-300 mb-3">{reply.draft.body}</div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-blue-400">Tone: {reply.draft.tone}</span>
-                            <Button size="sm" variant="outline" className="border-blue-500/50 text-blue-300">
-                              <Send className="h-3 w-3 mr-1" />
-                              Send Reply
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Batch Recommendations */}
-                  {actionPlan.batch_recommendations.length > 0 && (
-                    <div className="space-y-3">
-                      <h4 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <span className="text-purple-400">📦</span> Batch Later ({actionPlan.batch_recommendations.length})
-                      </h4>
-                      {actionPlan.batch_recommendations.map((batch, idx) => (
-                        <div key={idx} className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/30">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="text-white font-medium">{batch.goal}</div>
-                              <div className="text-xs text-slate-400">{batch.batch_size} messages to process</div>
-                            </div>
-                            <Button size="sm" variant="outline" className="border-purple-500/50 text-purple-300">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Schedule
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : gmailMessages.filter(m => m.priority_score && m.priority_score >= 4).length > 0 ? (
-                <div className="space-y-4">
-                  <p className="text-slate-400 text-sm mb-4">
-                    Click "Generate Plan" to create an AI-powered action plan from your unread messages
-                  </p>
-                  {gmailMessages
-                    .filter(m => m.priority_score === 5)
-                    .slice(0, 3)
-                    .map(msg => (
-                      <div key={msg.id} className="p-4 rounded-xl bg-gradient-to-br from-red-500/10 to-orange-500/10 border border-red-500/30">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-red-400">🔴 Urgent</span>
-                        </div>
-                        <div className="text-white font-medium mb-1">{msg.subject}</div>
-                        <div className="text-sm text-slate-300">From: {msg.sender_name}</div>
-                      </div>
-                    ))}
-
-                  {gmailMessages
-                    .filter(m => m.priority_score === 4)
-                    .slice(0, 3)
-                    .map(msg => (
-                      <div key={msg.id} className="p-4 rounded-xl bg-gradient-to-br from-yellow-500/10 to-amber-500/10 border border-yellow-500/30">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-yellow-400">🟠 Important</span>
-                        </div>
-                        <div className="text-white font-medium mb-1">{msg.subject}</div>
-                        <div className="text-sm text-slate-300">From: {msg.sender_name}</div>
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Target className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-                  <p className="text-slate-300">No action items yet</p>
-                  <p className="text-sm text-slate-400 mt-2">Sync your email and generate an action plan</p>
-                </div>
-              )}
+              {/* Smart Stream View */}
+              <SmartStreamView defaultFilter="today" />
             </div>
           </TabsContent>
 
