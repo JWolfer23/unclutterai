@@ -7,6 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// The app URL to redirect back to after OAuth
+const APP_URL = 'https://c60e33de-49ec-4dd9-ac69-f86f4e5a2b40.lovableproject.com';
+
 // Simple encryption using Web Crypto API
 async function encryptToken(token: string, key: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -52,25 +55,26 @@ serve(async (req) => {
 
     console.log('gmail-oauth-callback: Received callback');
 
+    // Helper function to redirect back to app with status
+    const redirectToApp = (status: 'success' | 'error', params: Record<string, string> = {}) => {
+      const redirectUrl = new URL('/communication', APP_URL);
+      redirectUrl.searchParams.set('gmail_oauth', status);
+      Object.entries(params).forEach(([key, value]) => {
+        redirectUrl.searchParams.set(key, value);
+      });
+      return new Response(null, {
+        status: 302,
+        headers: { 'Location': redirectUrl.toString() },
+      });
+    };
+
     if (error) {
       console.error('gmail-oauth-callback: OAuth error:', error);
-      return new Response(
-        `<html><body><p>Connection failed. This window will close.</p><script>
-          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'${error}',timestamp:Date.now()})); } catch(e) {}
-          setTimeout(() => window.close(), 1000);
-        </script></body></html>`,
-        { status: 200, headers: { 'Content-Type': 'text/html' } }
-      );
+      return redirectToApp('error', { error });
     }
 
     if (!code || !state) {
-      return new Response(
-        `<html><body><p>Missing parameters. This window will close.</p><script>
-          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'missing_params',timestamp:Date.now()})); } catch(e) {}
-          setTimeout(() => window.close(), 1000);
-        </script></body></html>`,
-        { status: 200, headers: { 'Content-Type': 'text/html' } }
-      );
+      return redirectToApp('error', { error: 'missing_params' });
     }
 
     // Decode state to get user_id
@@ -78,13 +82,7 @@ serve(async (req) => {
     try {
       stateData = JSON.parse(atob(state));
     } catch {
-      return new Response(
-        `<html><body><p>Invalid state. This window will close.</p><script>
-          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'invalid_state',timestamp:Date.now()})); } catch(e) {}
-          setTimeout(() => window.close(), 1000);
-        </script></body></html>`,
-        { status: 200, headers: { 'Content-Type': 'text/html' } }
-      );
+      return redirectToApp('error', { error: 'invalid_state' });
     }
 
     const userId = stateData.user_id;
@@ -111,13 +109,7 @@ serve(async (req) => {
 
     if (tokenData.error) {
       console.error('gmail-oauth-callback: Token exchange error:', tokenData.error);
-      return new Response(
-        `<html><body><p>Token exchange failed. This window will close.</p><script>
-          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'${tokenData.error}',timestamp:Date.now()})); } catch(e) {}
-          setTimeout(() => window.close(), 1000);
-        </script></body></html>`,
-        { status: 200, headers: { 'Content-Type': 'text/html' } }
-      );
+      return redirectToApp('error', { error: tokenData.error });
     }
 
     console.log('gmail-oauth-callback: Token exchange successful');
@@ -135,13 +127,7 @@ serve(async (req) => {
     const encryptionKey = Deno.env.get('TOKEN_ENCRYPTION_KEY');
     if (!encryptionKey) {
       console.error('gmail-oauth-callback: Missing TOKEN_ENCRYPTION_KEY');
-      return new Response(
-        `<html><body><p>Configuration error. This window will close.</p><script>
-          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'config_error',timestamp:Date.now()})); } catch(e) {}
-          setTimeout(() => window.close(), 1000);
-        </script></body></html>`,
-        { status: 200, headers: { 'Content-Type': 'text/html' } }
-      );
+      return redirectToApp('error', { error: 'config_error' });
     }
 
     const accessTokenEncrypted = await encryptToken(tokenData.access_token, encryptionKey);
@@ -173,45 +159,21 @@ serve(async (req) => {
 
     if (upsertError) {
       console.error('gmail-oauth-callback: Database error:', upsertError);
-      return new Response(
-        `<html><body><p>Database error. This window will close.</p><script>
-          try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'db_error',timestamp:Date.now()})); } catch(e) {}
-          setTimeout(() => window.close(), 1000);
-        </script></body></html>`,
-        { status: 200, headers: { 'Content-Type': 'text/html' } }
-      );
+      return redirectToApp('error', { error: 'db_error' });
     }
 
     console.log('gmail-oauth-callback: Credentials stored successfully');
 
-    // Return success page that writes to localStorage (COOP workaround)
-    console.log('gmail-oauth-callback: Credentials stored successfully');
-    return new Response(
-      `<html>
-        <body>
-          <p>Gmail connected successfully! This window will close automatically.</p>
-          <script>
-            try {
-              localStorage.setItem('gmail-oauth-result', JSON.stringify({
-                type: 'success',
-                email: '${emailAddress}',
-                timestamp: Date.now()
-              }));
-            } catch(e) { console.error('localStorage error:', e); }
-            setTimeout(() => window.close(), 1000);
-          </script>
-        </body>
-      </html>`,
-      { status: 200, headers: { 'Content-Type': 'text/html' } }
-    );
+    // Redirect back to app with success
+    return redirectToApp('success', { email: emailAddress });
   } catch (error) {
     console.error('gmail-oauth-callback error:', error);
-    return new Response(
-      `<html><body><p>Server error. This window will close.</p><script>
-        try { localStorage.setItem('gmail-oauth-result', JSON.stringify({type:'error',error:'server_error',timestamp:Date.now()})); } catch(e) {}
-        setTimeout(() => window.close(), 1000);
-      </script></body></html>`,
-      { status: 200, headers: { 'Content-Type': 'text/html' } }
-    );
+    const redirectUrl = new URL('/communication', APP_URL);
+    redirectUrl.searchParams.set('gmail_oauth', 'error');
+    redirectUrl.searchParams.set('error', 'server_error');
+    return new Response(null, {
+      status: 302,
+      headers: { 'Location': redirectUrl.toString() },
+    });
   }
 });

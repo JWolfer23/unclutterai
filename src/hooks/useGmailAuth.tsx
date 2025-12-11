@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface EmailCredential {
   id: string;
@@ -14,6 +16,8 @@ interface EmailCredential {
 
 export function useGmailAuth() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const [credentials, setCredentials] = useState<EmailCredential[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -37,36 +41,73 @@ export function useGmailAuth() {
     fetchCredentials();
   }, [fetchCredentials]);
 
-  // Poll localStorage for OAuth result (COOP workaround for popup communication)
-  useEffect(() => {
-    const checkOAuthResult = () => {
-      const result = localStorage.getItem('gmail-oauth-result');
-      if (result) {
-        try {
-          const data = JSON.parse(result);
-          // Only process recent results (within 30 seconds)
-          if (Date.now() - data.timestamp < 30000) {
-            if (data.type === 'success') {
-              toast.success(`Gmail connected: ${data.email}`);
-              fetchCredentials();
-              // Trigger initial sync
-              syncNow();
-            } else if (data.type === 'error') {
-              toast.error(`Gmail connection failed: ${data.error}`);
-            }
-          }
-        } catch (e) {
-          console.error('Error parsing OAuth result:', e);
-        }
-        localStorage.removeItem('gmail-oauth-result');
-      }
-    };
+  // Sync emails function (defined before useEffect that uses it)
+  const syncNow = useCallback(async () => {
+    if (!user) return;
 
-    // Poll every 500ms for OAuth result
-    const pollInterval = setInterval(checkOAuthResult, 500);
+    setSyncing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Session expired');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('gmail-sync', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      const { synced } = response.data;
+      toast.success(`Synced ${synced} new emails`);
+      fetchCredentials();
+      // Invalidate messages query to refresh the inbox
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      const message = error?.message || 'Failed to sync emails';
+      if (message.includes('Gmail API has not been used') || message.includes('accessNotConfigured')) {
+        toast.error('Gmail API not enabled. Please enable it in Google Cloud Console.');
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setSyncing(false);
+    }
+  }, [user, fetchCredentials, queryClient]);
+
+  // Handle OAuth redirect result from URL parameters
+  useEffect(() => {
+    const oauthStatus = searchParams.get('gmail_oauth');
     
-    return () => clearInterval(pollInterval);
-  }, [fetchCredentials]);
+    if (oauthStatus) {
+      if (oauthStatus === 'success') {
+        const email = searchParams.get('email');
+        toast.success(`Gmail connected: ${email || 'successfully'}`);
+        fetchCredentials();
+        // Auto-trigger initial sync after connection
+        setTimeout(() => syncNow(), 1000);
+      } else if (oauthStatus === 'error') {
+        const error = searchParams.get('error') || 'Unknown error';
+        toast.error(`Gmail connection failed: ${error}`);
+      }
+      
+      // Clear OAuth params from URL
+      searchParams.delete('gmail_oauth');
+      searchParams.delete('email');
+      searchParams.delete('error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, fetchCredentials, syncNow]);
 
   // Start OAuth flow
   const connectGmail = async () => {
@@ -95,17 +136,8 @@ export function useGmailAuth() {
 
       const { authUrl } = response.data;
       
-      // Open OAuth popup
-      const width = 600;
-      const height = 700;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      
-      window.open(
-        authUrl,
-        'Gmail OAuth',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
+      // Redirect directly to OAuth (will redirect back to app after completion)
+      window.location.href = authUrl;
     } catch (error) {
       console.error('Gmail connect error:', error);
       toast.error('Failed to start Gmail connection');
@@ -119,64 +151,19 @@ export function useGmailAuth() {
     if (!user) return;
 
     try {
-      const { error, count } = await supabase
+      const { error } = await supabase
         .from('email_credentials')
         .delete()
         .eq('id', credentialId)
-        .eq('user_id', user.id)
-        .select();
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
-      // Verify deletion actually happened
       await fetchCredentials();
       toast.success('Gmail disconnected');
     } catch (error: any) {
       console.error('Disconnect error:', error);
       toast.error(error?.message || 'Failed to disconnect Gmail');
-    }
-  };
-
-  // Sync emails
-  const syncNow = async () => {
-    if (!user) return;
-
-    setSyncing(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Session expired');
-        return;
-      }
-
-      const response = await supabase.functions.invoke('gmail-sync', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      if (response.data?.error) {
-        throw new Error(response.data.error);
-      }
-
-      const { synced } = response.data;
-      toast.success(`Synced ${synced} new emails`);
-      fetchCredentials();
-    } catch (error: any) {
-      console.error('Sync error:', error);
-      const message = error?.message || 'Failed to sync emails';
-      // Check for common errors
-      if (message.includes('Gmail API has not been used') || message.includes('accessNotConfigured')) {
-        toast.error('Gmail API not enabled. Please enable it in Google Cloud Console.');
-      } else {
-        toast.error(message);
-      }
-    } finally {
-      setSyncing(false);
     }
   };
 
@@ -203,6 +190,8 @@ export function useGmailAuth() {
       }
 
       toast.success(`Re-analyzed ${messageIds.length} message(s)`);
+      // Invalidate messages to refresh with new scores
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
       return response.data.results;
     } catch (error) {
       console.error('Re-analyze error:', error);
