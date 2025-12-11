@@ -8,7 +8,8 @@ const corsHeaders = {
 };
 
 // The app URL to redirect back to after OAuth
-const APP_URL = 'https://c60e33de-49ec-4dd9-ac69-f86f4e5a2b40.lovableproject.com';
+// TODO: Change to production URL before release
+const APP_URL = 'https://id-preview--fbb9180c-f7fc-4517-adb8-3ac85ee01f78.lovable.app';
 
 // Simple encryption using Web Crypto API
 async function encryptToken(token: string, key: string): Promise<string> {
