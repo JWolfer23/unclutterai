@@ -19,6 +19,7 @@ import {
   Calendar
 } from "lucide-react";
 import { useActionPlan, ActionPlan } from "@/hooks/useActionPlan";
+import { SmartStreamView } from "@/components/smart-stream";
 
 interface MissedMessage {
   id: number;
@@ -176,85 +177,8 @@ const CatchUpSummary = ({
                     </div>
                   </div>
 
-                  {/* Urgent Tasks */}
-                  {actionPlan.urgent_tasks.length > 0 && (
-                    <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/30">
-                      <h4 className="font-medium text-red-300 mb-2 flex items-center space-x-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>✅ Immediate Actions ({actionPlan.urgent_tasks.length})</span>
-                      </h4>
-                      <ul className="text-sm text-red-200 space-y-2">
-                        {actionPlan.urgent_tasks.map((task, idx) => (
-                          <li key={idx} className="flex items-center justify-between">
-                            <span>• {task.title}</span>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-red-500/50 text-red-300 h-7"
-                              onClick={() => task.id && claimTask(task.id)}
-                              disabled={isClaiming || !task.id}
-                            >
-                              Claim
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {/* Quick Wins */}
-                  {actionPlan.quick_wins.length > 0 && (
-                    <div className="p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
-                      <h4 className="font-medium text-emerald-300 mb-2 flex items-center space-x-2">
-                        <Zap className="w-4 h-4" />
-                        <span>⚡ Quick Wins ({actionPlan.quick_wins.length})</span>
-                      </h4>
-                      <ul className="text-sm text-emerald-200 space-y-2">
-                        {actionPlan.quick_wins.slice(0, 5).map((task, idx) => (
-                          <li key={idx} className="flex items-center justify-between">
-                            <span>• {task.title}</span>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-emerald-500/50 text-emerald-300 h-7"
-                              onClick={() => task.id && completeTask(task.id)}
-                              disabled={!task.id}
-                            >
-                              Do Now
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Auto Replies */}
-                  {actionPlan.auto_replies.length > 0 && (
-                    <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30">
-                      <h4 className="font-medium text-blue-300 mb-2 flex items-center space-x-2">
-                        <Send className="w-4 h-4" />
-                        <span>✉️ Ready to Send ({actionPlan.auto_replies.length})</span>
-                      </h4>
-                      <p className="text-sm text-blue-200">
-                        {actionPlan.auto_replies.length} AI-drafted replies ready for review
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Batch Recommendations */}
-                  {actionPlan.batch_recommendations.length > 0 && (
-                    <div className="p-4 bg-slate-500/10 rounded-lg border border-slate-500/30">
-                      <h4 className="font-medium text-slate-300 mb-2 flex items-center space-x-2">
-                        <Clock className="w-4 h-4" />
-                        <span>🗂 Batch Processing</span>
-                      </h4>
-                      <ul className="text-sm text-slate-200 space-y-1">
-                        {actionPlan.batch_recommendations.map((batch, idx) => (
-                          <li key={idx}>• {batch.goal} ({batch.batch_size} items)</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {/* Smart Stream View - Condensed */}
+                  <SmartStreamView defaultFilter="today" compact maxItems={5} />
                 </div>
               ) : (
                 <div className="text-center py-4">
