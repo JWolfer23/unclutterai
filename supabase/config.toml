@@ -3,6 +3,9 @@ project_id = "aihlehujbzkkugzmcobn"
 [functions.ai-assistant]
 verify_jwt = true
 
+[functions.ai-blocks]
+verify_jwt = true
+
 [functions.biometric-auth]
 verify_jwt = true
 
