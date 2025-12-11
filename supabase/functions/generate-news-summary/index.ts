@@ -68,6 +68,34 @@ serve(async (req) => {
     }
 
     console.log('generate-news-summary: User authenticated', user.id);
+
+    // Rate limiting: Check daily usage (max 10 news summaries per day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const { count: dailyUsageCount, error: usageError } = await supabaseClient
+      .from('ai_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('type', 'news_summary')
+      .gte('used_at', today.toISOString());
+
+    if (usageError) {
+      console.error('Error checking usage:', usageError);
+    }
+
+    const DAILY_LIMIT = 10;
+    if ((dailyUsageCount || 0) >= DAILY_LIMIT) {
+      console.log(`User ${user.id} exceeded daily news summary limit`);
+      return new Response(
+        JSON.stringify({ error: `Daily limit of ${DAILY_LIMIT} news summaries reached. Please try again tomorrow.` }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     const { promptId } = await req.json();
 
     // Get the user's prompt
@@ -175,6 +203,19 @@ Include:
 
     if (saveError) {
       console.error('Error saving summary:', saveError);
+    }
+
+    // Track AI usage for rate limiting
+    const { error: trackError } = await supabaseClient
+      .from('ai_usage')
+      .insert({
+        user_id: user.id,
+        type: 'news_summary',
+        used_at: new Date().toISOString(),
+      });
+
+    if (trackError) {
+      console.error('Error tracking usage:', trackError);
     }
 
     return new Response(
