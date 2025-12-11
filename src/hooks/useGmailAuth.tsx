@@ -119,20 +119,21 @@ export function useGmailAuth() {
     if (!user) return;
 
     try {
-      // We mark as inactive rather than delete to preserve any synced messages
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('email_credentials')
         .delete()
         .eq('id', credentialId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select();
 
       if (error) throw error;
 
+      // Verify deletion actually happened
+      await fetchCredentials();
       toast.success('Gmail disconnected');
-      fetchCredentials();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Disconnect error:', error);
-      toast.error('Failed to disconnect Gmail');
+      toast.error(error?.message || 'Failed to disconnect Gmail');
     }
   };
 
@@ -158,12 +159,22 @@ export function useGmailAuth() {
         throw new Error(response.error.message);
       }
 
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
       const { synced } = response.data;
       toast.success(`Synced ${synced} new emails`);
       fetchCredentials();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Sync error:', error);
-      toast.error('Failed to sync emails');
+      const message = error?.message || 'Failed to sync emails';
+      // Check for common errors
+      if (message.includes('Gmail API has not been used') || message.includes('accessNotConfigured')) {
+        toast.error('Gmail API not enabled. Please enable it in Google Cloud Console.');
+      } else {
+        toast.error(message);
+      }
     } finally {
       setSyncing(false);
     }
