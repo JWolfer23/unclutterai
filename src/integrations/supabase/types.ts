@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_plans: {
+        Row: {
+          auto_replies: Json | null
+          batch_recommendations: Json | null
+          created_at: string
+          id: string
+          ledger_id: string | null
+          messages_processed: number | null
+          quick_wins: Json | null
+          uct_estimate: number | null
+          urgent_tasks: Json | null
+          user_id: string
+        }
+        Insert: {
+          auto_replies?: Json | null
+          batch_recommendations?: Json | null
+          created_at?: string
+          id?: string
+          ledger_id?: string | null
+          messages_processed?: number | null
+          quick_wins?: Json | null
+          uct_estimate?: number | null
+          urgent_tasks?: Json | null
+          user_id: string
+        }
+        Update: {
+          auto_replies?: Json | null
+          batch_recommendations?: Json | null
+          created_at?: string
+          id?: string
+          ledger_id?: string | null
+          messages_processed?: number | null
+          quick_wins?: Json | null
+          uct_estimate?: number | null
+          urgent_tasks?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plans_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "focus_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_usage: {
         Row: {
           created_at: string
@@ -85,6 +132,36 @@ export type Database = {
           sync_error?: string | null
           token_expires_at?: string | null
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      focus_ledger: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          message_ids: string[] | null
+          payload: Json | null
+          uct_reward: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          message_ids?: string[] | null
+          payload?: Json | null
+          uct_reward?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          message_ids?: string[] | null
+          payload?: Json | null
+          uct_reward?: number | null
           user_id?: string
         }
         Relationships: []

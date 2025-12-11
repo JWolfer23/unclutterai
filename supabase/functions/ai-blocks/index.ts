@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type AIAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply';
+type AIAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply' | 'cluster_topics';
 
 interface SimplifyInput {
   subject: string;
