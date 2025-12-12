@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { usePrivyWallet } from "@/hooks/usePrivyWallet";
-import { Wallet, Copy, Check, LogOut, Loader2 } from "lucide-react";
+import { useUCTBalance } from "@/hooks/useUCTBalance";
+import { Wallet, Copy, Check, LogOut, Loader2, ArrowUpRight, Clock, Coins } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ClaimUCTModal } from "./ClaimUCTModal";
+
 export const WalletConnection = () => {
   const { 
     walletAddress, 
@@ -15,6 +17,18 @@ export const WalletConnection = () => {
     isConnecting,
     isDisconnecting 
   } = usePrivyWallet();
+  
+  const {
+    balance,
+    availableBalance,
+    pendingBalance,
+    onChainBalance,
+    isLoadingBalance,
+    confirmPending,
+    isConfirmingPending,
+    requestSettlement,
+    isSettling,
+  } = useUCTBalance();
   
   const [copied, setCopied] = useState(false);
 
@@ -131,6 +145,72 @@ export const WalletConnection = () => {
             </p>
           </div>
         </div>
+        
+        {/* UCT Balance Display */}
+        {!isLoadingBalance && (
+          <div className="space-y-2 py-2 border-t border-white/5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-400 flex items-center gap-1">
+                <Coins className="w-3 h-3" />
+                Available
+              </span>
+              <span className="text-white font-medium">{availableBalance.toFixed(2)} UCT</span>
+            </div>
+            {pendingBalance > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Pending
+                </span>
+                <span className="text-amber-400 font-medium">{pendingBalance.toFixed(2)} UCT</span>
+              </div>
+            )}
+            {onChainBalance > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 flex items-center gap-1">
+                  <ArrowUpRight className="w-3 h-3" />
+                  On-Chain
+                </span>
+                <span className="text-emerald-400 font-medium">{onChainBalance.toFixed(2)} UCT</span>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Confirm Pending Button */}
+        {pendingBalance > 0 && (
+          <Button
+            onClick={() => confirmPending()}
+            disabled={isConfirmingPending}
+            variant="outline"
+            size="sm"
+            className="w-full border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300"
+          >
+            {isConfirmingPending ? (
+              <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+            ) : (
+              <Check className="w-3.5 h-3.5 mr-2" />
+            )}
+            Confirm {pendingBalance.toFixed(2)} UCT
+          </Button>
+        )}
+        
+        {/* Settlement Button */}
+        {availableBalance >= 1 && walletAddress && (
+          <Button
+            onClick={() => requestSettlement({ wallet_address: walletAddress })}
+            disabled={isSettling}
+            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border-0"
+            size="sm"
+          >
+            {isSettling ? (
+              <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+            ) : (
+              <ArrowUpRight className="w-3.5 h-3.5 mr-2" />
+            )}
+            Settle to Wallet
+          </Button>
+        )}
         
         {/* Claim UCT Button */}
         <ClaimUCTModal />
