@@ -10,7 +10,7 @@ interface SidebarSectionProps {
   onMessageTypeFilter: (type: string | null) => void;
   onViewMessage: (messageId: number) => void;
   messages?: any[];
-  onMessageAction?: (messageId: number, action: 'block' | 'unsubscribe' | 'safe' | 'quarantine') => void;
+  onMessageAction?: (messageId: string, action: 'block' | 'unsubscribe' | 'safe' | 'quarantine') => void;
 }
 
 const SidebarSection = ({ 

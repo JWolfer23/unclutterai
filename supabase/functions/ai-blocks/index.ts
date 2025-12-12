@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type AIAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply' | 'cluster_topics' | 'batch_brain';
+type AIAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply' | 'cluster_topics' | 'batch_brain' | 'spam_guard';
 
 interface SimplifyInput {
   subject: string;
@@ -154,6 +154,27 @@ Rules:
 - Balance urgency and effort within each batch
 - Keep batch sizes between 3-10 messages
 - Assign priority: "high" | "medium" | "low" based on urgency scores
+- Return ONLY valid JSON.`,
+
+  spam_guard: `You are UnclutterAI's SpamGuard+ detector.
+Flag messages that are emotional manipulation, guilt-trap, or low-value.
+
+Input: { ai_summary, body, sender_domain, sender_name }
+Output JSON:
+{
+  "is_spam": true|false,
+  "reason": "guilt_invoke|pyramid|promo|low_value|phishing|manipulation|safe",
+  "confidence": 0.0-1.0,
+  "details": "explanation of detection",
+  "recommended_action": "archive|quarantine|block|allow"
+}
+
+Rules:
+- Newsletter list + no personalization → likely low_value
+- Language contains "you must", "urgent action", "limited time", "send money" → high-risk
+- Guilt language ("I'm disappointed", "after everything I did") → guilt_invoke
+- Pyramid/MLM indicators ("opportunity", "passive income", "be your own boss") → pyramid
+- Phishing indicators ("verify account", "suspended", "click to confirm") → phishing
 - Return ONLY valid JSON.`
 };
 
@@ -315,9 +336,9 @@ serve(async (req) => {
 
     const { action, data } = await req.json();
     
-    if (!action || !['simplify', 'signal_score', 'thread_sense', 'auto_reply', 'batch_brain'].includes(action)) {
+    if (!action || !['simplify', 'signal_score', 'thread_sense', 'auto_reply', 'batch_brain', 'spam_guard'].includes(action)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid action. Use: simplify, signal_score, thread_sense, auto_reply, or batch_brain' }),
+        JSON.stringify({ error: 'Invalid action. Use: simplify, signal_score, thread_sense, auto_reply, batch_brain, or spam_guard' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -385,6 +406,21 @@ serve(async (req) => {
 ${JSON.stringify(data.messages, null, 2)}`;
         const batchResponse = await callAI(SYSTEM_PROMPTS.batch_brain, batchPrompt, 0.2);
         result = parseAIJson(batchResponse);
+        break;
+
+      case 'spam_guard':
+        if (!data.body) {
+          return new Response(
+            JSON.stringify({ error: 'spam_guard requires: body (and optionally ai_summary, sender_domain, sender_name)' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        const spamPrompt = `Analyze this message for spam/manipulation:
+Summary: ${data.ai_summary || 'N/A'}
+Sender: ${data.sender_name || 'Unknown'} (${data.sender_domain || 'unknown domain'})
+Body: ${data.body.substring(0, 2000)}`;
+        const spamResponse = await callAI(SYSTEM_PROMPTS.spam_guard, spamPrompt, 0.1);
+        result = parseAIJson(spamResponse);
         break;
     }
 

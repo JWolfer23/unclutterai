@@ -88,6 +88,56 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_send_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          reply_body: string
+          reply_subject: string | null
+          status: string
+          trust_level: number
+          tx_hash: string | null
+          uct_fee: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          reply_body: string
+          reply_subject?: string | null
+          status?: string
+          trust_level: number
+          tx_hash?: string | null
+          uct_fee?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          reply_body?: string
+          reply_subject?: string | null
+          status?: string
+          trust_level?: number
+          tx_hash?: string | null
+          uct_fee?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_send_logs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_credentials: {
         Row: {
           access_token_encrypted: string
@@ -570,6 +620,7 @@ export type Database = {
       messages: {
         Row: {
           ai_summary: string | null
+          auto_archived_at: string | null
           channel_type: string | null
           content: string
           created_at: string | null
@@ -577,6 +628,7 @@ export type Database = {
           id: string
           is_archived: boolean | null
           is_read: boolean | null
+          is_spam: boolean | null
           labels: Json | null
           metadata: Json | null
           platform: string
@@ -589,6 +641,7 @@ export type Database = {
           sender_handle: string | null
           sender_name: string
           sentiment: Database["public"]["Enums"]["sentiment_type"] | null
+          spam_guard_result: Json | null
           subject: string
           thread_id: string | null
           type: Database["public"]["Enums"]["message_type"]
@@ -597,6 +650,7 @@ export type Database = {
         }
         Insert: {
           ai_summary?: string | null
+          auto_archived_at?: string | null
           channel_type?: string | null
           content: string
           created_at?: string | null
@@ -604,6 +658,7 @@ export type Database = {
           id?: string
           is_archived?: boolean | null
           is_read?: boolean | null
+          is_spam?: boolean | null
           labels?: Json | null
           metadata?: Json | null
           platform: string
@@ -616,6 +671,7 @@ export type Database = {
           sender_handle?: string | null
           sender_name: string
           sentiment?: Database["public"]["Enums"]["sentiment_type"] | null
+          spam_guard_result?: Json | null
           subject: string
           thread_id?: string | null
           type: Database["public"]["Enums"]["message_type"]
@@ -624,6 +680,7 @@ export type Database = {
         }
         Update: {
           ai_summary?: string | null
+          auto_archived_at?: string | null
           channel_type?: string | null
           content?: string
           created_at?: string | null
@@ -631,6 +688,7 @@ export type Database = {
           id?: string
           is_archived?: boolean | null
           is_read?: boolean | null
+          is_spam?: boolean | null
           labels?: Json | null
           metadata?: Json | null
           platform?: string
@@ -643,6 +701,7 @@ export type Database = {
           sender_handle?: string | null
           sender_name?: string
           sentiment?: Database["public"]["Enums"]["sentiment_type"] | null
+          spam_guard_result?: Json | null
           subject?: string
           thread_id?: string | null
           type?: Database["public"]["Enums"]["message_type"]
@@ -774,6 +833,51 @@ export type Database = {
           updated_at?: string | null
           wallet_address?: string | null
           wallet_provider?: string | null
+        }
+        Relationships: []
+      }
+      sender_trust: {
+        Row: {
+          auto_send_allowed: boolean
+          created_at: string
+          id: string
+          interaction_count: number
+          is_vip: boolean
+          last_interaction: string | null
+          open_count: number
+          reply_count: number
+          sender_email: string
+          trust_level: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_send_allowed?: boolean
+          created_at?: string
+          id?: string
+          interaction_count?: number
+          is_vip?: boolean
+          last_interaction?: string | null
+          open_count?: number
+          reply_count?: number
+          sender_email: string
+          trust_level?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_send_allowed?: boolean
+          created_at?: string
+          id?: string
+          interaction_count?: number
+          is_vip?: boolean
+          last_interaction?: string | null
+          open_count?: number
+          reply_count?: number
+          sender_email?: string
+          trust_level?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
