@@ -56,3 +56,6 @@ verify_jwt = true
 
 [functions.settle-uct]
 verify_jwt = true
+
+[functions.agent-marketplace]
+verify_jwt = true
