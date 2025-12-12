@@ -50,3 +50,9 @@ verify_jwt = true
 
 [functions.auto-response]
 verify_jwt = true
+
+[functions.compute-uct-rewards]
+verify_jwt = true
+
+[functions.settle-uct]
+verify_jwt = true
