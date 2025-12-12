@@ -77,7 +77,22 @@ export interface AutoReplyOutput {
   confidence: number;
 }
 
-type AIBlockAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply';
+export interface SpamGuardInput {
+  body: string;
+  ai_summary?: string;
+  sender_domain?: string;
+  sender_name?: string;
+}
+
+export interface SpamGuardOutput {
+  is_spam: boolean;
+  reason: 'guilt_invoke' | 'pyramid' | 'promo' | 'low_value' | 'phishing' | 'manipulation' | 'safe';
+  confidence: number;
+  details: string;
+  recommended_action: 'archive' | 'quarantine' | 'block' | 'allow';
+}
+
+type AIBlockAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply' | 'spam_guard';
 
 async function invokeAIBlock<T>(action: AIBlockAction, data: unknown): Promise<T> {
   const { data: result, error } = await supabase.functions.invoke('ai-blocks', {
@@ -161,40 +176,61 @@ export function useAIBlocks() {
     },
   });
 
+  // AI_SpamGuard - Spam detection
+  const spamGuardMutation = useMutation({
+    mutationFn: (input: SpamGuardInput) => invokeAIBlock<SpamGuardOutput>('spam_guard', input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-usage'] });
+    },
+    onError: (error: Error) => {
+      if (error.message.includes('Rate limit')) {
+        toast.error("Rate limit exceeded. Please try again later.");
+      } else {
+        toast.error(`Spam detection failed: ${error.message}`);
+      }
+    },
+  });
+
   return {
     // Mutation functions
     simplifyMessage: simplifyMutation.mutateAsync,
     scoreSignal: signalScoreMutation.mutateAsync,
     analyzeThread: threadSenseMutation.mutateAsync,
     draftReply: autoReplyMutation.mutateAsync,
+    detectSpam: spamGuardMutation.mutateAsync,
 
     // Sync mutation wrappers (for fire-and-forget)
     simplify: simplifyMutation.mutate,
     score: signalScoreMutation.mutate,
     analyze: threadSenseMutation.mutate,
     draft: autoReplyMutation.mutate,
+    spamGuard: spamGuardMutation.mutate,
 
     // Loading states
     isSimplifying: simplifyMutation.isPending,
     isScoring: signalScoreMutation.isPending,
     isAnalyzing: threadSenseMutation.isPending,
     isDrafting: autoReplyMutation.isPending,
+    isDetectingSpam: spamGuardMutation.isPending,
     isProcessing: 
       simplifyMutation.isPending || 
       signalScoreMutation.isPending || 
       threadSenseMutation.isPending || 
-      autoReplyMutation.isPending,
+      autoReplyMutation.isPending ||
+      spamGuardMutation.isPending,
 
     // Results (for accessing last result)
     simplifyResult: simplifyMutation.data,
     scoreResult: signalScoreMutation.data,
     threadResult: threadSenseMutation.data,
     replyResult: autoReplyMutation.data,
+    spamResult: spamGuardMutation.data,
 
     // Error states
     simplifyError: simplifyMutation.error,
     scoreError: signalScoreMutation.error,
     threadError: threadSenseMutation.error,
     replyError: autoReplyMutation.error,
+    spamError: spamGuardMutation.error,
   };
 }

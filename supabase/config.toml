@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.instant-catchup]
 verify_jwt = true
+
+[functions.auto-response]
+verify_jwt = true
