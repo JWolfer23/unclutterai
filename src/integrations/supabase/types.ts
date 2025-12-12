@@ -61,6 +61,42 @@ export type Database = {
           },
         ]
       }
+      ai_feedback: {
+        Row: {
+          ai_block_type: string
+          created_at: string
+          feedback_text: string | null
+          id: string
+          input_hash: string | null
+          output_preview: string | null
+          rating: number | null
+          thumbs_up: boolean | null
+          user_id: string
+        }
+        Insert: {
+          ai_block_type: string
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          input_hash?: string | null
+          output_preview?: string | null
+          rating?: number | null
+          thumbs_up?: boolean | null
+          user_id: string
+        }
+        Update: {
+          ai_block_type?: string
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          input_hash?: string | null
+          output_preview?: string | null
+          rating?: number | null
+          thumbs_up?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_usage: {
         Row: {
           created_at: string
@@ -183,6 +219,39 @@ export type Database = {
           token_expires_at?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      feature_flags: {
+        Row: {
+          allowed_user_ids: string[] | null
+          created_at: string
+          description: string | null
+          flag_name: string
+          id: string
+          is_enabled: boolean | null
+          rollout_percentage: number | null
+          updated_at: string
+        }
+        Insert: {
+          allowed_user_ids?: string[] | null
+          created_at?: string
+          description?: string | null
+          flag_name: string
+          id?: string
+          is_enabled?: boolean | null
+          rollout_percentage?: number | null
+          updated_at?: string
+        }
+        Update: {
+          allowed_user_ids?: string[] | null
+          created_at?: string
+          description?: string | null
+          flag_name?: string
+          id?: string
+          is_enabled?: boolean | null
+          rollout_percentage?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -836,6 +905,42 @@ export type Database = {
         }
         Relationships: []
       }
+      qa_test_runs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error_details: Json | null
+          id: string
+          metadata: Json | null
+          run_by: string | null
+          status: string | null
+          test_category: string
+          test_name: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error_details?: Json | null
+          id?: string
+          metadata?: Json | null
+          run_by?: string | null
+          status?: string | null
+          test_category: string
+          test_name: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error_details?: Json | null
+          id?: string
+          metadata?: Json | null
+          run_by?: string | null
+          status?: string | null
+          test_category?: string
+          test_name?: string
+        }
+        Relationships: []
+      }
       sender_trust: {
         Row: {
           auto_send_allowed: boolean
@@ -954,6 +1059,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      telemetry_events: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_name: string
+          event_type: string
+          id: string
+          latency_ms: number | null
+          payload: Json | null
+          success: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_name: string
+          event_type: string
+          id?: string
+          latency_ms?: number | null
+          payload?: Json | null
+          success?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_name?: string
+          event_type?: string
+          id?: string
+          latency_ms?: number | null
+          payload?: Json | null
+          success?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       tokens: {
         Row: {

@@ -59,3 +59,9 @@ verify_jwt = true
 
 [functions.agent-marketplace]
 verify_jwt = true
+
+[functions.ops-health]
+verify_jwt = false
+
+[functions.telemetry]
+verify_jwt = false
