@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.telemetry]
 verify_jwt = false
+
+[functions.gdpr-compliance]
+verify_jwt = true
