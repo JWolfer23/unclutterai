@@ -61,10 +61,10 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.ops-health]
-verify_jwt = false
+verify_jwt = true
 
 [functions.telemetry]
-verify_jwt = false
+verify_jwt = true
 
 [functions.gdpr-compliance]
 verify_jwt = true
