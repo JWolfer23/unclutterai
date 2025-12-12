@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type AIAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply' | 'cluster_topics' | 'batch_brain' | 'spam_guard';
+type AIAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply' | 'cluster_topics' | 'batch_brain' | 'spam_guard' | 'relationship_intel';
 
 interface SimplifyInput {
   subject: string;
@@ -35,6 +35,36 @@ interface SignalScoreInput {
   user_profile?: {
     vips?: string[];
     priorities?: string[];
+  };
+  relationship_intel?: {
+    relationship: string;
+    importance: number;
+  };
+}
+
+interface RelationshipIntelInput {
+  sender_email: string;
+  sender_name?: string;
+  conversation_history?: Array<{
+    subject: string;
+    direction: 'sent' | 'received';
+    timestamp: string;
+  }>;
+  vip_contacts?: string[];
+  domain?: string;
+}
+
+interface RelationshipIntelOutput {
+  relationship: 'family' | 'client' | 'vendor' | 'newsletter' | 'acquaintance' | 'drainer' | 'unknown';
+  importance: number;
+  notes: string[];
+  confidence: number;
+  signals: {
+    is_vip_match: boolean;
+    domain_match: string;
+    frequency: string;
+    money_keywords: boolean;
+    sentiment_history: string;
   };
 }
 
@@ -112,9 +142,39 @@ Output JSON only:
 Rules:
 - Urgency increases with explicit deadlines, threat language, "ASAP" (0-10)
 - Effort = estimated minutes of work converted into 0-10 scale (0=no work, 10=hours of work)
-- Relationship uses VIP detection -> +3 for known VIPs (clients/family)
+- Relationship base from VIP detection, then ADD relationship boost based on type:
+  - family: +3, client: +3, vendor: +1, newsletter: -2, drainer: -3, acquaintance: 0
 - Impact estimates alignment with user's priorities (0-10)
 - Return ONLY valid JSON, no markdown or explanation.`,
+
+  relationship_intel: `You are UnclutterAI's Relationship Intelligence analyzer.
+Classify the relationship type and importance based on conversation history.
+
+Input: sender_email, sender_name, conversation_history, vip_contacts, domain
+
+Output JSON only:
+{
+  "relationship": "family|client|vendor|newsletter|acquaintance|drainer|unknown",
+  "importance": 0-10,
+  "notes": ["client tier 1", "high response rate", "money-related communication"],
+  "confidence": 0.0-1.0,
+  "signals": {
+    "is_vip_match": true|false,
+    "domain_match": "company|personal|newsletter|unknown",
+    "frequency": "high|medium|low",
+    "money_keywords": true|false,
+    "sentiment_history": "positive|neutral|negative|mixed"
+  }
+}
+
+Rules:
+- VIP list matches → relationship likely "family" or "client", importance +3
+- Domain matches company domains (salesforce.com, stripe.com) → likely "vendor"
+- Newsletter/noreply domains → "newsletter", importance 1-3
+- Money-related keywords (invoice, payment, contract) → likely "client", importance +2
+- Guilt-tripping or draining patterns → "drainer", importance 1-2
+- High reply frequency from user → higher importance
+- Return ONLY valid JSON.`,
 
   thread_sense: `You are UnclutterAI's thread analyzer. Inspect thread text and determine whether action is needed.
 
@@ -248,15 +308,59 @@ ${input.metadata ? `Metadata: ${JSON.stringify(input.metadata)}` : ''}`;
 
 // Handler: AI_SignalScore
 async function handleSignalScore(input: SignalScoreInput): Promise<SignalScoreOutput> {
+  const relationshipBoost = input.relationship_intel ? getRelationshipBoost(input.relationship_intel.relationship, input.relationship_intel.importance) : 0;
+  
   const userPrompt = `Score this message:
 Summary: ${input.ai_summary}
 Body: ${input.body.substring(0, 2000)}
 Sender: ${input.sender}
 ${input.user_profile?.vips ? `VIP contacts: ${input.user_profile.vips.join(', ')}` : ''}
-${input.user_profile?.priorities ? `User priorities: ${input.user_profile.priorities.join(', ')}` : ''}`;
+${input.user_profile?.priorities ? `User priorities: ${input.user_profile.priorities.join(', ')}` : ''}
+${input.relationship_intel ? `Relationship type: ${input.relationship_intel.relationship}, importance: ${input.relationship_intel.importance}` : ''}`;
 
   const response = await callAI(SYSTEM_PROMPTS.signal_score, userPrompt, 0.1);
-  return parseAIJson<SignalScoreOutput>(response);
+  const result = parseAIJson<SignalScoreOutput>(response);
+  
+  // Apply relationship boost
+  result.relationship = Math.min(10, Math.max(0, (result.relationship || 0) + relationshipBoost));
+  
+  return result;
+}
+
+// Helper to calculate relationship boost
+function getRelationshipBoost(relationship: string, importance: number): number {
+  const baseBoost: Record<string, number> = {
+    family: 3,
+    client: 3,
+    vendor: 1,
+    newsletter: -2,
+    drainer: -3,
+    acquaintance: 0,
+    unknown: 0,
+  };
+  const base = baseBoost[relationship] || 0;
+  // Add small bonus for high importance
+  const importanceBonus = importance >= 8 ? 1 : importance >= 6 ? 0.5 : 0;
+  return base + importanceBonus;
+}
+
+// Handler: AI_RelationshipIntel
+async function handleRelationshipIntel(input: RelationshipIntelInput): Promise<RelationshipIntelOutput> {
+  const historyText = input.conversation_history?.length 
+    ? input.conversation_history.map(h => `[${h.direction}] ${h.subject} (${h.timestamp})`).join('\n')
+    : 'No conversation history available';
+  
+  const userPrompt = `Analyze relationship for sender:
+Email: ${input.sender_email}
+Name: ${input.sender_name || 'Unknown'}
+Domain: ${input.domain || 'Unknown'}
+VIP contacts: ${input.vip_contacts?.join(', ') || 'None'}
+
+Conversation history (last 90 days):
+${historyText}`;
+
+  const response = await callAI(SYSTEM_PROMPTS.relationship_intel, userPrompt, 0.2);
+  return parseAIJson<RelationshipIntelOutput>(response);
 }
 
 // Handler: AI_ThreadSense
@@ -336,9 +440,9 @@ serve(async (req) => {
 
     const { action, data } = await req.json();
     
-    if (!action || !['simplify', 'signal_score', 'thread_sense', 'auto_reply', 'batch_brain', 'spam_guard'].includes(action)) {
+    if (!action || !['simplify', 'signal_score', 'thread_sense', 'auto_reply', 'batch_brain', 'spam_guard', 'relationship_intel'].includes(action)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid action. Use: simplify, signal_score, thread_sense, auto_reply, batch_brain, or spam_guard' }),
+        JSON.stringify({ error: 'Invalid action. Use: simplify, signal_score, thread_sense, auto_reply, batch_brain, spam_guard, or relationship_intel' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -421,6 +525,16 @@ Sender: ${data.sender_name || 'Unknown'} (${data.sender_domain || 'unknown domai
 Body: ${data.body.substring(0, 2000)}`;
         const spamResponse = await callAI(SYSTEM_PROMPTS.spam_guard, spamPrompt, 0.1);
         result = parseAIJson(spamResponse);
+        break;
+        
+      case 'relationship_intel':
+        if (!data.sender_email) {
+          return new Response(
+            JSON.stringify({ error: 'relationship_intel requires: sender_email' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        result = await handleRelationshipIntel(data as RelationshipIntelInput);
         break;
     }
 

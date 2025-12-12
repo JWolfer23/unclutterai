@@ -30,6 +30,10 @@ export interface SignalScoreInput {
     vips?: string[];
     priorities?: string[];
   };
+  relationship_intel?: {
+    relationship: string;
+    importance: number;
+  };
 }
 
 export interface SignalScoreOutput {
@@ -37,6 +41,32 @@ export interface SignalScoreOutput {
   effort: number;
   impact: number;
   relationship: number;
+}
+
+export interface RelationshipIntelInput {
+  sender_email: string;
+  sender_name?: string;
+  conversation_history?: Array<{
+    subject: string;
+    direction: 'sent' | 'received';
+    timestamp: string;
+  }>;
+  vip_contacts?: string[];
+  domain?: string;
+}
+
+export interface RelationshipIntelOutput {
+  relationship: 'family' | 'client' | 'vendor' | 'newsletter' | 'acquaintance' | 'drainer' | 'unknown';
+  importance: number;
+  notes: string[];
+  confidence: number;
+  signals: {
+    is_vip_match: boolean;
+    domain_match: string;
+    frequency: string;
+    money_keywords: boolean;
+    sentiment_history: string;
+  };
 }
 
 export interface ThreadMessage {
@@ -92,7 +122,7 @@ export interface SpamGuardOutput {
   recommended_action: 'archive' | 'quarantine' | 'block' | 'allow';
 }
 
-type AIBlockAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply' | 'spam_guard';
+type AIBlockAction = 'simplify' | 'signal_score' | 'thread_sense' | 'auto_reply' | 'spam_guard' | 'relationship_intel';
 
 async function invokeAIBlock<T>(action: AIBlockAction, data: unknown): Promise<T> {
   const { data: result, error } = await supabase.functions.invoke('ai-blocks', {
@@ -191,6 +221,22 @@ export function useAIBlocks() {
     },
   });
 
+  // AI_RelationshipIntel - Relationship classification
+  const relationshipIntelMutation = useMutation({
+    mutationFn: (input: RelationshipIntelInput) => invokeAIBlock<RelationshipIntelOutput>('relationship_intel', input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-usage'] });
+      queryClient.invalidateQueries({ queryKey: ['sender-relationships'] });
+    },
+    onError: (error: Error) => {
+      if (error.message.includes('Rate limit')) {
+        toast.error("Rate limit exceeded. Please try again later.");
+      } else {
+        toast.error(`Relationship analysis failed: ${error.message}`);
+      }
+    },
+  });
+
   return {
     // Mutation functions
     simplifyMessage: simplifyMutation.mutateAsync,
@@ -198,6 +244,7 @@ export function useAIBlocks() {
     analyzeThread: threadSenseMutation.mutateAsync,
     draftReply: autoReplyMutation.mutateAsync,
     detectSpam: spamGuardMutation.mutateAsync,
+    analyzeRelationship: relationshipIntelMutation.mutateAsync,
 
     // Sync mutation wrappers (for fire-and-forget)
     simplify: simplifyMutation.mutate,
@@ -205,6 +252,7 @@ export function useAIBlocks() {
     analyze: threadSenseMutation.mutate,
     draft: autoReplyMutation.mutate,
     spamGuard: spamGuardMutation.mutate,
+    relationshipIntel: relationshipIntelMutation.mutate,
 
     // Loading states
     isSimplifying: simplifyMutation.isPending,
@@ -212,12 +260,14 @@ export function useAIBlocks() {
     isAnalyzing: threadSenseMutation.isPending,
     isDrafting: autoReplyMutation.isPending,
     isDetectingSpam: spamGuardMutation.isPending,
+    isAnalyzingRelationship: relationshipIntelMutation.isPending,
     isProcessing: 
       simplifyMutation.isPending || 
       signalScoreMutation.isPending || 
       threadSenseMutation.isPending || 
       autoReplyMutation.isPending ||
-      spamGuardMutation.isPending,
+      spamGuardMutation.isPending ||
+      relationshipIntelMutation.isPending,
 
     // Results (for accessing last result)
     simplifyResult: simplifyMutation.data,
@@ -225,6 +275,7 @@ export function useAIBlocks() {
     threadResult: threadSenseMutation.data,
     replyResult: autoReplyMutation.data,
     spamResult: spamGuardMutation.data,
+    relationshipResult: relationshipIntelMutation.data,
 
     // Error states
     simplifyError: simplifyMutation.error,
@@ -232,5 +283,6 @@ export function useAIBlocks() {
     threadError: threadSenseMutation.error,
     replyError: autoReplyMutation.error,
     spamError: spamGuardMutation.error,
+    relationshipError: relationshipIntelMutation.error,
   };
 }
