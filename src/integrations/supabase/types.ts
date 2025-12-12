@@ -843,8 +843,12 @@ export type Database = {
           id: string
           interaction_count: number
           is_vip: boolean
+          last_analyzed_at: string | null
           last_interaction: string | null
           open_count: number
+          relationship_importance: number | null
+          relationship_notes: Json | null
+          relationship_type: string | null
           reply_count: number
           sender_email: string
           trust_level: number
@@ -857,8 +861,12 @@ export type Database = {
           id?: string
           interaction_count?: number
           is_vip?: boolean
+          last_analyzed_at?: string | null
           last_interaction?: string | null
           open_count?: number
+          relationship_importance?: number | null
+          relationship_notes?: Json | null
+          relationship_type?: string | null
           reply_count?: number
           sender_email: string
           trust_level?: number
@@ -871,8 +879,12 @@ export type Database = {
           id?: string
           interaction_count?: number
           is_vip?: boolean
+          last_analyzed_at?: string | null
           last_interaction?: string | null
           open_count?: number
+          relationship_importance?: number | null
+          relationship_notes?: Json | null
+          relationship_type?: string | null
           reply_count?: number
           sender_email?: string
           trust_level?: number

@@ -12,6 +12,7 @@ interface EnrichedMessage {
   subject: string;
   body: string;
   sender: string;
+  sender_email?: string;
   ai_summary?: string;
   urgency: number;
   effort: number;
@@ -21,6 +22,11 @@ interface EnrichedMessage {
   tags: string[];
   suggested_action: string;
   cluster?: string;
+  thread_id?: string;
+  relationship_intel?: {
+    relationship: string;
+    importance: number;
+  };
 }
 
 interface ActionPlanTask {
@@ -82,7 +88,9 @@ Rules:
 - Urgency: 0=no rush, 10=immediate action needed
 - Effort: 0=no work, 10=hours of work
 - Impact: 0=trivial, 10=critical to goals
-- Relationship: 0=unknown sender, 10=VIP/family
+- Relationship base from VIP detection, then ADD relationship boost based on type:
+  - family: +3, client: +3, vendor: +1, newsletter: -2, drainer: -3
+- If relationship_intel is provided, use it to boost relationship score
 
 Return ONLY valid JSON.`;
 
@@ -170,8 +178,8 @@ function parseAIJson<T>(content: string): T {
   }
 }
 
-// Process messages in batches
-async function enrichMessages(messages: any[]): Promise<EnrichedMessage[]> {
+// Process messages in batches with relationship intel
+async function enrichMessages(messages: any[], senderRelationships: Map<string, { relationship: string; importance: number }>): Promise<EnrichedMessage[]> {
   const enriched: EnrichedMessage[] = [];
   
   // Process in batches of 5 for performance
@@ -182,29 +190,45 @@ async function enrichMessages(messages: any[]): Promise<EnrichedMessage[]> {
     const batchResults = await Promise.all(
       batch.map(async (msg) => {
         try {
+          const senderEmail = msg.sender_email || '';
+          const relationshipIntel = senderRelationships.get(senderEmail);
+          
           // Call AI_Simplify
           const simplifyPrompt = `From: ${msg.sender_name || msg.sender_email}\nSubject: ${msg.subject}\nBody: ${(msg.content || '').substring(0, 2000)}`;
           const simplifyResult = await callAI(SIMPLIFY_PROMPT, simplifyPrompt, 0.1);
           const simplified = parseAIJson<any>(simplifyResult);
           
-          // Call AI_SignalScore
-          const scorePrompt = `Summary: ${simplified.one_sentence_summary}\nBody: ${(msg.content || '').substring(0, 1000)}\nSender: ${msg.sender_name || msg.sender_email}`;
+          // Call AI_SignalScore with relationship intel
+          let scorePrompt = `Summary: ${simplified.one_sentence_summary}\nBody: ${(msg.content || '').substring(0, 1000)}\nSender: ${msg.sender_name || msg.sender_email}`;
+          if (relationshipIntel) {
+            scorePrompt += `\nRelationship type: ${relationshipIntel.relationship}, importance: ${relationshipIntel.importance}`;
+          }
           const scoreResult = await callAI(SIGNAL_SCORE_PROMPT, scorePrompt, 0.1);
           const scored = parseAIJson<any>(scoreResult);
+          
+          // Apply relationship boost if intel available
+          let relationshipScore = scored.relationship || 0;
+          if (relationshipIntel) {
+            const boosts: Record<string, number> = { family: 3, client: 3, vendor: 1, newsletter: -2, drainer: -3 };
+            relationshipScore = Math.min(10, Math.max(0, relationshipScore + (boosts[relationshipIntel.relationship] || 0)));
+          }
           
           return {
             id: msg.id,
             subject: msg.subject,
             body: msg.content || '',
             sender: msg.sender_name || msg.sender_email || 'Unknown',
+            sender_email: senderEmail,
             ai_summary: simplified.one_sentence_summary,
             urgency: scored.urgency || 0,
             effort: scored.effort || 0,
             impact: scored.impact || 0,
-            relationship: scored.relationship || 0,
+            relationship: relationshipScore,
             extracted_dates: simplified.extracted_dates || [],
             tags: simplified.tags || [],
             suggested_action: simplified.suggested_action || 'ignore',
+            thread_id: msg.thread_id,
+            relationship_intel: relationshipIntel,
           };
         } catch (e) {
           console.error('Error enriching message:', msg.id, e);
@@ -213,6 +237,7 @@ async function enrichMessages(messages: any[]): Promise<EnrichedMessage[]> {
             subject: msg.subject,
             body: msg.content || '',
             sender: msg.sender_name || msg.sender_email || 'Unknown',
+            sender_email: msg.sender_email || '',
             urgency: 0,
             effort: 0,
             impact: 0,
@@ -220,6 +245,7 @@ async function enrichMessages(messages: any[]): Promise<EnrichedMessage[]> {
             extracted_dates: [],
             tags: [],
             suggested_action: 'ignore',
+            thread_id: msg.thread_id,
           };
         }
       })
@@ -354,9 +380,29 @@ serve(async (req) => {
       );
     }
 
-    // 2. Enrich messages with AI_Simplify and AI_SignalScore
+    // 1b. Fetch sender relationships for enrichment
+    const senderEmails = [...new Set(messages.map(m => m.sender_email).filter(Boolean))];
+    const { data: senderTrustData } = await supabase
+      .from('sender_trust')
+      .select('sender_email, relationship_type, relationship_importance')
+      .eq('user_id', user.id)
+      .in('sender_email', senderEmails);
+
+    const senderRelationships = new Map<string, { relationship: string; importance: number }>();
+    for (const st of senderTrustData || []) {
+      if (st.sender_email) {
+        senderRelationships.set(st.sender_email, {
+          relationship: st.relationship_type || 'unknown',
+          importance: st.relationship_importance || 5,
+        });
+      }
+    }
+
+    console.log(`Loaded ${senderRelationships.size} sender relationships`);
+
+    // 2. Enrich messages with AI_Simplify and AI_SignalScore (with relationship intel)
     console.log('Enriching messages with AI...');
-    const enrichedMessages = await enrichMessages(messages);
+    const enrichedMessages = await enrichMessages(messages, senderRelationships);
 
     // 3. Cluster messages by topic
     console.log('Clustering messages by topic...');
