@@ -198,7 +198,9 @@ serve(async (req) => {
         'profiles',
       ];
 
+      // Track deletion results server-side only (never expose to client)
       const deletionResults: Record<string, string> = {};
+      let hasErrors = false;
 
       for (const table of deletionOrder) {
         try {
@@ -214,28 +216,38 @@ serve(async (req) => {
                 .from('profiles')
                 .delete()
                 .eq('id', user.id);
-              deletionResults[table] = profileError ? `error: ${profileError.message}` : 'deleted';
+              deletionResults[table] = profileError ? `error` : 'deleted';
+              if (profileError) hasErrors = true;
             } else {
-              deletionResults[table] = `error: ${error.message}`;
+              deletionResults[table] = 'error';
+              hasErrors = true;
             }
           } else {
             deletionResults[table] = 'deleted';
           }
         } catch (e) {
-          deletionResults[table] = `error: ${e instanceof Error ? e.message : 'unknown'}`;
+          deletionResults[table] = 'error';
+          hasErrors = true;
         }
       }
 
       // Finally delete the auth user
       const { error: authDeleteError } = await supabase.auth.admin.deleteUser(user.id);
 
-      return new Response(JSON.stringify({
-        success: !authDeleteError,
-        message: authDeleteError 
-          ? 'Data deleted but auth user removal failed. Contact support.'
-          : 'Account and all data permanently deleted.',
+      // Log detailed results server-side for debugging (never sent to client)
+      console.log(`Account deletion completed for user ${user.id}:`, {
         deletion_results: deletionResults,
         auth_deleted: !authDeleteError,
+        has_errors: hasErrors || !!authDeleteError,
+      });
+
+      // Return only generic success/failure to client (no schema exposure)
+      const success = !authDeleteError && !hasErrors;
+      return new Response(JSON.stringify({
+        success,
+        message: success 
+          ? 'Your account and all associated data have been permanently deleted.'
+          : 'Account deletion encountered issues. Please contact support for assistance.',
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
