@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.batch-mint-uct]
 verify_jwt = false
+
+[functions.uct-founder-metrics]
+verify_jwt = false
