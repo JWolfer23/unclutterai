@@ -1156,6 +1156,27 @@ export type Database = {
         }
         Relationships: []
       }
+      uct_balances: {
+        Row: {
+          balance: number | null
+          pending: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          balance?: number | null
+          pending?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          balance?: number | null
+          pending?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       uct_claim_history: {
         Row: {
           amount: number
@@ -1207,6 +1228,39 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_wallets: {
+        Row: {
+          chain: string
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          user_id: string
+          wallet_address: string
+          wallet_provider: string
+          wallet_type: string
+        }
+        Insert: {
+          chain: string
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          user_id: string
+          wallet_address: string
+          wallet_provider: string
+          wallet_type: string
+        }
+        Update: {
+          chain?: string
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          user_id?: string
+          wallet_address?: string
+          wallet_provider?: string
+          wallet_type?: string
         }
         Relationships: []
       }
