@@ -71,3 +71,6 @@ verify_jwt = true
 
 [functions.uct-decay]
 verify_jwt = false
+
+[functions.uct-pricing]
+verify_jwt = false

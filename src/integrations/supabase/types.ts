@@ -1213,6 +1213,42 @@ export type Database = {
         }
         Relationships: []
       }
+      uct_pricing: {
+        Row: {
+          avg_focus_sessions: number | null
+          calculated_at: string
+          created_at: string
+          demand_score: number
+          id: string
+          price: number
+          price_multiplier: number
+          total_active_users: number | null
+          total_uct_spent_24h: number | null
+        }
+        Insert: {
+          avg_focus_sessions?: number | null
+          calculated_at?: string
+          created_at?: string
+          demand_score?: number
+          id?: string
+          price?: number
+          price_multiplier?: number
+          total_active_users?: number | null
+          total_uct_spent_24h?: number | null
+        }
+        Update: {
+          avg_focus_sessions?: number | null
+          calculated_at?: string
+          created_at?: string
+          demand_score?: number
+          id?: string
+          price?: number
+          price_multiplier?: number
+          total_active_users?: number | null
+          total_uct_spent_24h?: number | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
