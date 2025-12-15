@@ -57,18 +57,32 @@ serve(async (req) => {
 
     switch (action) {
       case 'confirm_pending': {
-        // Move pending to available (off-chain confirmation)
+        // STEP 1: Validate pending > 0
         if (balance.pending <= 0) {
           return new Response(
-            JSON.stringify({ error: 'No pending balance to confirm' }),
+            JSON.stringify({ error: 'No UCT to claim', status: 'no_pending' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
+        const amountClaimed = balance.pending;
+        const newBalance = (balance.balance || 0) + amountClaimed;
+
+        // Get wallet address for logging
+        const { data: walletData } = await supabase
+          .from('user_wallets')
+          .select('wallet_address')
+          .eq('user_id', user.id)
+          .eq('is_primary', true)
+          .maybeSingle();
+
+        const walletAddress = walletData?.wallet_address || null;
+
+        // STEP 2: Move pending → balance
         const { error: updateError } = await supabase
           .from('uct_balances')
           .update({
-            available: balance.available + balance.pending,
+            balance: newBalance,
             pending: 0,
             updated_at: new Date().toISOString(),
           })
@@ -76,11 +90,26 @@ serve(async (req) => {
 
         if (updateError) throw updateError;
 
+        // STEP 3: Log to focus_ledger
+        await supabase.from('focus_ledger').insert({
+          user_id: user.id,
+          event_type: 'uct_claimed_offchain',
+          payload: {
+            wallet_address: walletAddress,
+            amount_claimed: amountClaimed,
+          },
+          uct_reward: amountClaimed,
+        });
+
+        console.log(`UCT claimed off-chain: user=${user.id}, amount=${amountClaimed}, new_balance=${newBalance}`);
+
+        // STEP 4: Return confirmation
         return new Response(
           JSON.stringify({
             success: true,
-            action: 'confirm_pending',
-            new_available: balance.available + balance.pending,
+            claimed: amountClaimed,
+            new_balance: newBalance,
+            status: 'claim_confirmed',
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
