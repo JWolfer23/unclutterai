@@ -29,6 +29,44 @@ export const PrivyProvider = ({ children }: Props) => {
             createOnLogin: 'users-without-wallets',
           },
         },
+        defaultChain: {
+          id: 84532,
+          name: 'Base Sepolia',
+          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+          rpcUrls: {
+            default: { http: ['https://sepolia.base.org'] },
+          },
+          blockExplorers: {
+            default: { name: 'BaseScan', url: 'https://sepolia.basescan.org' },
+          },
+          testnet: true,
+        },
+        supportedChains: [
+          {
+            id: 84532,
+            name: 'Base Sepolia',
+            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+            rpcUrls: {
+              default: { http: ['https://sepolia.base.org'] },
+            },
+            blockExplorers: {
+              default: { name: 'BaseScan', url: 'https://sepolia.basescan.org' },
+            },
+            testnet: true,
+          },
+          {
+            id: 8453,
+            name: 'Base',
+            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+            rpcUrls: {
+              default: { http: ['https://mainnet.base.org'] },
+            },
+            blockExplorers: {
+              default: { name: 'BaseScan', url: 'https://basescan.org' },
+            },
+            testnet: false,
+          },
+        ],
       }}
     >
       {children}
