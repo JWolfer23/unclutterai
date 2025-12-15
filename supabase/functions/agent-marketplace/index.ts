@@ -280,49 +280,172 @@ serve(async (req) => {
       });
     }
 
-    // LIST available agents
+    // LIST available agents (from database + built-in)
     if (action === 'list') {
-      const agents = [
+      // Fetch marketplace agents
+      const { data: marketplaceAgents, error: listError } = await supabase
+        .from('ai_agent_marketplace')
+        .select('*')
+        .eq('status', 'active')
+        .order('usage_count', { ascending: false });
+
+      if (listError) {
+        console.error('Error fetching marketplace agents:', listError);
+      }
+
+      // Built-in agents
+      const builtInAgents = [
         {
-          id: 'auto_reply',
+          agent_id: 'auto_reply',
           name: 'Auto Reply',
           description: 'Generate and optionally send smart replies to messages',
-          base_complexity: 'medium',
-          estimated_time: 2,
-          icon: 'mail-reply'
+          complexity: 'medium',
+          estimated_time_mins: 2,
+          icon: 'mail-reply',
+          uct_cost: 0.25,
+          category: 'communication',
+          creator_id: null,
+          is_builtin: true,
         },
         {
-          id: 'polish_text',
+          agent_id: 'polish_text',
           name: 'Polish & Rewrite',
           description: 'Improve clarity and tone of any text',
-          base_complexity: 'low',
-          estimated_time: 1,
-          icon: 'sparkles'
+          complexity: 'low',
+          estimated_time_mins: 1,
+          icon: 'sparkles',
+          uct_cost: 0.15,
+          category: 'writing',
+          creator_id: null,
+          is_builtin: true,
         },
         {
-          id: 'schedule_meeting',
+          agent_id: 'schedule_meeting',
           name: 'Schedule Meeting',
           description: 'Find optimal times and create calendar invites',
-          base_complexity: 'medium',
-          estimated_time: 5,
-          icon: 'calendar'
+          complexity: 'medium',
+          estimated_time_mins: 5,
+          icon: 'calendar',
+          uct_cost: 0.35,
+          category: 'productivity',
+          creator_id: null,
+          is_builtin: true,
         },
         {
-          id: 'send_email',
+          agent_id: 'send_email',
           name: 'Send Email',
           description: 'Compose and send emails on your behalf',
-          base_complexity: 'high',
-          estimated_time: 3,
-          icon: 'send'
+          complexity: 'high',
+          estimated_time_mins: 3,
+          icon: 'send',
+          uct_cost: 0.40,
+          category: 'communication',
+          creator_id: null,
+          is_builtin: true,
         }
       ];
 
-      return new Response(JSON.stringify({ agents }), {
+      // Combine built-in and marketplace agents
+      const allAgents = [
+        ...builtInAgents,
+        ...(marketplaceAgents || []).map(a => ({ ...a, is_builtin: false }))
+      ];
+
+      return new Response(JSON.stringify({ agents: allAgents }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+    // PUBLISH new agent to marketplace
+    if (action === 'publish') {
+      const { agent_id, name, description, category, uct_cost, icon, estimated_time_mins, complexity } = body;
+
+      // STEP 1: Validate pricing
+      if (!uct_cost || uct_cost <= 0) {
+        return new Response(JSON.stringify({ 
+          error: 'Invalid pricing',
+          status: 'validation_failed'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Validate required fields
+      if (!agent_id || !name || !category) {
+        return new Response(JSON.stringify({ 
+          error: 'Missing required fields: agent_id, name, category',
+          status: 'validation_failed'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // STEP 2: Insert marketplace entry
+      const { data: marketplaceEntry, error: insertError } = await supabase
+        .from('ai_agent_marketplace')
+        .insert({
+          agent_id,
+          name,
+          description: description || '',
+          category,
+          uct_cost,
+          creator_id: user.id,
+          icon: icon || 'bot',
+          estimated_time_mins: estimated_time_mins || 5,
+          complexity: complexity || 'medium',
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error publishing agent:', insertError);
+        return new Response(JSON.stringify({ 
+          error: insertError.message,
+          status: 'publish_failed'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log(`Agent published: ${agent_id} by user ${user.id}`);
+
+      // STEP 3: Return success
+      return new Response(JSON.stringify({ 
+        status: 'listed',
+        agent_id: marketplaceEntry.agent_id,
+        marketplace_id: marketplaceEntry.id,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // UNPUBLISH agent
+    if (action === 'unpublish') {
+      const { agent_id } = body;
+
+      const { error: updateError } = await supabase
+        .from('ai_agent_marketplace')
+        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .eq('agent_id', agent_id)
+        .eq('creator_id', user.id);
+
+      if (updateError) {
+        return new Response(JSON.stringify({ error: updateError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ status: 'unlisted', agent_id }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: 'Invalid action. Use: list, publish, unpublish, execute, or price' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
