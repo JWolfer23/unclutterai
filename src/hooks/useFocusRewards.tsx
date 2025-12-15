@@ -108,6 +108,16 @@ export const useFocusRewards = () => {
         title: `🎉 +${data.uct_earned?.toFixed(2) || '0.00'} UCT Earned!`,
         description: `Focus score: ${data.focus_score || 0}%${tierMessage}. Streak: ${data.streak?.current_streak || 1} days.`,
       });
+
+      // Show streak bonus toast if milestone achieved
+      if (data.streak_bonus) {
+        setTimeout(() => {
+          toast({
+            title: `🔥 ${data.streak_bonus.milestone_days}-Day Streak Bonus!`,
+            description: `+${data.streak_bonus.bonus_uct} UCT bonus for your consistency!`,
+          });
+        }, 1500); // Slight delay so it appears after main toast
+      }
     },
     onError: (error) => {
       console.error('Failed to complete session:', error);

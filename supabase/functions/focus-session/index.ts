@@ -424,6 +424,7 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
   }
 
   // Update streak (upsert)
+  const previousStreak = streakData?.current_streak || 0;
   const { error: streakError } = await supabase
     .from('focus_streaks')
     .upsert({
@@ -435,6 +436,78 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
 
   if (streakError) {
     console.error('Error updating streak:', streakError);
+  }
+
+  // ========================================
+  // STREAK MILESTONE BONUS LOGIC
+  // ========================================
+  const STREAK_MILESTONES: Record<number, number> = {
+    3: 1,    // 3-day streak → 1 UCT
+    7: 3,    // 7-day streak → 3 UCT
+    14: 7,   // 14-day streak → 7 UCT
+    30: 20,  // 30-day streak → 20 UCT
+  };
+
+  let streakBonusUct = 0;
+  let streakMilestoneAchieved: number | null = null;
+
+  // Check if a new milestone was achieved
+  for (const [milestone, bonus] of Object.entries(STREAK_MILESTONES)) {
+    const milestoneNum = parseInt(milestone);
+    if (currentStreak >= milestoneNum && previousStreak < milestoneNum) {
+      streakBonusUct = bonus;
+      streakMilestoneAchieved = milestoneNum;
+      console.log(`Streak milestone achieved: ${milestoneNum} days → +${bonus} UCT bonus`);
+      break; // Only award highest new milestone
+    }
+  }
+
+  // Award streak bonus if milestone achieved
+  if (streakBonusUct > 0 && streakMilestoneAchieved) {
+    // Log to Focus Ledger
+    const { error: streakLedgerError } = await supabase
+      .from('focus_ledger')
+      .insert({
+        user_id: userId,
+        event_type: 'focus_streak_bonus',
+        payload: {
+          streak_days: streakMilestoneAchieved,
+          previous_streak: previousStreak,
+        },
+        uct_reward: streakBonusUct,
+        onchain_tx: null,
+      });
+
+    if (streakLedgerError) {
+      console.error('Error logging streak bonus to ledger:', streakLedgerError);
+    }
+
+    // Credit to uct_balances.pending
+    const { data: existingBalance } = await supabase
+      .from('uct_balances')
+      .select('pending')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingBalance) {
+      await supabase
+        .from('uct_balances')
+        .update({
+          pending: (existingBalance.pending || 0) + streakBonusUct,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+    } else {
+      await supabase
+        .from('uct_balances')
+        .insert({
+          user_id: userId,
+          balance: 0,
+          pending: streakBonusUct,
+        });
+    }
+
+    console.log(`Streak bonus of ${streakBonusUct} UCT credited to pending balance`);
   }
 
   // Update or create focus_levels row
@@ -552,37 +625,15 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
     }
   }
 
-  console.log(`UCT pending balance updated: ${newPendingBalance}`);
-
-  // Also update legacy tokens table for backwards compatibility
-  let walletBalance = 0;
-  const { data: wallet } = await supabase
-    .from('tokens')
-    .select('balance')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (wallet) {
-    walletBalance = (wallet.balance || 0) + reward.total;
-    await supabase
-      .from('tokens')
-      .update({ balance: walletBalance, updated_at: new Date().toISOString() })
-      .eq('user_id', userId);
-  } else {
-    walletBalance = reward.total;
-    await supabase
-      .from('tokens')
-      .insert({ user_id: userId, balance: walletBalance, updated_at: new Date().toISOString() });
-  }
-
-  console.log(`Legacy wallet updated: ${walletBalance} UCT`);
+  // Add streak bonus to pending balance total (already credited separately above)
+  const totalPendingWithBonus = newPendingBalance + streakBonusUct;
 
   // STEP 9: Return standardized response
   return new Response(
     JSON.stringify({
       focus_session_id: session_id,
       uct_earned: reward.total,
-      new_pending_balance: newPendingBalance,
+      new_pending_balance: totalPendingWithBonus,
       status: 'recorded',
       // Additional data for UI
       duration_minutes: durationMinutes,
@@ -596,7 +647,14 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
       streak: {
         current_streak: currentStreak,
         longest_streak: longestStreak,
+        previous_streak: previousStreak,
       },
+      // Streak bonus info
+      streak_bonus: streakBonusUct > 0 ? {
+        milestone_days: streakMilestoneAchieved,
+        bonus_uct: streakBonusUct,
+        status: 'awarded',
+      } : null,
       tier: reward.tier,
       xp: {
         xp_earned: xpResult.xp_earned,
