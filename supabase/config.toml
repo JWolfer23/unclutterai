@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.gdpr-compliance]
 verify_jwt = true
+
+[functions.uct-decay]
+verify_jwt = false
