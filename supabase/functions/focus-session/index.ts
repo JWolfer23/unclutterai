@@ -5,12 +5,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Mode multipliers for reward calculation
+// Mode multipliers for reward calculation (updated per new spec)
 const MODE_MULTIPLIERS: Record<string, number> = {
+  deep_work: 1.5,
+  catch_up: 1.25,
   learning: 1.3,
   career: 1.2,
   wealth: 1.1,
   health: 1.0,
+  focus: 1.0,
 };
 
 // Tier thresholds based on weekly sessions
@@ -101,30 +104,45 @@ function processLevelUp(
   };
 }
 
-// Calculate reward based on session parameters
+// NEW: Duration-based tiered base reward (per spec)
+function getBaseReward(durationMinutes: number): number {
+  if (durationMinutes >= 60) return 2.0;
+  if (durationMinutes >= 30) return 1.0;
+  if (durationMinutes >= 15) return 0.5;
+  if (durationMinutes >= 5) return 0.25;
+  return 0; // Under 5 minutes = no reward
+}
+
+// Calculate reward based on session parameters (updated per new spec)
 function calculateReward(
   durationMinutes: number,
   mode: string,
-  currentStreak: number,
+  interruptions: number,
   sessionsThisWeek: number
 ): RewardCalculation {
-  const base = durationMinutes * 0.05;
-  const modeMultiplier = MODE_MULTIPLIERS[mode] || 1.0;
-  const modeBonus = base * (modeMultiplier - 1);
-  const streakBonus = durationMinutes * (currentStreak * 0.005);
+  // STEP 2: Tiered base reward
+  const base = getBaseReward(durationMinutes);
   
-  // Determine tier
+  // STEP 3: Mode multiplier
+  const modeMultiplier = MODE_MULTIPLIERS[mode?.toLowerCase()] || 1.0;
+  
+  // STEP 4: Interruption penalty (3+ interruptions = 0.75x)
+  const interruptionMultiplier = interruptions >= 3 ? 0.75 : 1.0;
+  
+  // Combined multiplier
+  const combinedMultiplier = modeMultiplier * interruptionMultiplier;
+  
+  // Determine tier for bonus display (not affecting main calc per spec)
   const tierInfo = TIER_THRESHOLDS.find(t => sessionsThisWeek >= t.minSessions) || TIER_THRESHOLDS[TIER_THRESHOLDS.length - 1];
   
-  const subtotal = base + modeBonus + streakBonus;
-  const tierBonus = subtotal * tierInfo.bonus;
-  const total = Math.round((subtotal + tierBonus) * 100) / 100;
+  // STEP 5: Final calculation
+  const total = Math.round(base * combinedMultiplier * 100) / 100;
   
   return {
     base: Math.round(base * 100) / 100,
-    modeBonus: Math.round(modeBonus * 100) / 100,
-    streakBonus: Math.round(streakBonus * 100) / 100,
-    tierBonus: Math.round(tierBonus * 100) / 100,
+    modeBonus: Math.round((base * (modeMultiplier - 1)) * 100) / 100,
+    streakBonus: 0, // Streak no longer in new formula
+    tierBonus: 0, // Tier no longer in new formula
     total,
     tier: tierInfo.tier,
   };
@@ -277,6 +295,39 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
 
   console.log(`Session duration: ${durationMinutes} minutes`);
 
+  // STEP 1: Validate minimum duration (5+ minutes required for rewards)
+  if (durationMinutes < 5) {
+    console.log('Session too short for rewards (< 5 minutes)');
+    
+    // Still update session as completed but with 0 reward
+    const { error: updateError } = await supabase
+      .from('focus_sessions')
+      .update({
+        end_time: endTime.toISOString(),
+        actual_minutes: durationMinutes,
+        uct_reward: 0,
+        is_completed: true,
+        interruptions,
+        focus_score: 0,
+      })
+      .eq('id', session_id);
+
+    if (updateError) {
+      console.error('Error updating short session:', updateError);
+    }
+
+    return new Response(
+      JSON.stringify({
+        focus_session_id: session_id,
+        uct_earned: 0,
+        new_pending_balance: 0,
+        status: 'too_short',
+        message: 'Sessions must be at least 5 minutes for rewards',
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Get or create streak
   const today = new Date().toISOString().split('T')[0];
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -318,9 +369,9 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
 
   const weeklySessionCount = (sessionsThisWeek || 0) + 1; // +1 for current session
 
-  // Calculate reward
-  const mode = session.mode || 'health';
-  const reward = calculateReward(durationMinutes, mode, currentStreak, weeklySessionCount);
+  // Calculate reward using NEW formula (with interruptions penalty)
+  const mode = session.mode || 'focus';
+  const reward = calculateReward(durationMinutes, mode, interruptions, weeklySessionCount);
   console.log(`Reward calculation:`, reward);
 
   // Calculate XP
@@ -431,7 +482,79 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
     console.error('Error inserting reward history:', rewardHistoryError);
   }
 
-  // Update wallet balance
+  // STEP 6: Log to Focus Ledger (idempotent - check for existing entry)
+  const { data: existingLedger } = await supabase
+    .from('focus_ledger')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('event_type', 'focus_session_completed')
+    .contains('payload', { focus_session_id: session_id })
+    .maybeSingle();
+
+  if (!existingLedger) {
+    const { error: ledgerError } = await supabase
+      .from('focus_ledger')
+      .insert({
+        user_id: userId,
+        event_type: 'focus_session_completed',
+        payload: {
+          focus_session_id: session_id,
+          duration_minutes: durationMinutes,
+          mode: mode,
+          interruptions: interruptions,
+        },
+        uct_reward: reward.total,
+        onchain_tx: null,
+      });
+
+    if (ledgerError) {
+      console.error('Error inserting focus_ledger:', ledgerError);
+    } else {
+      console.log('Focus ledger entry created');
+    }
+  } else {
+    console.log('Focus ledger entry already exists (idempotent check)');
+  }
+
+  // STEP 7: Credit to uct_balances.pending (new approach per spec)
+  let newPendingBalance = 0;
+  const { data: existingUctBalance } = await supabase
+    .from('uct_balances')
+    .select('balance, pending')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existingUctBalance) {
+    newPendingBalance = (existingUctBalance.pending || 0) + reward.total;
+    const { error: uctError } = await supabase
+      .from('uct_balances')
+      .update({
+        pending: newPendingBalance,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId);
+
+    if (uctError) {
+      console.error('Error updating uct_balances:', uctError);
+    }
+  } else {
+    newPendingBalance = reward.total;
+    const { error: uctError } = await supabase
+      .from('uct_balances')
+      .insert({
+        user_id: userId,
+        balance: 0,
+        pending: newPendingBalance,
+      });
+
+    if (uctError) {
+      console.error('Error inserting uct_balances:', uctError);
+    }
+  }
+
+  console.log(`UCT pending balance updated: ${newPendingBalance}`);
+
+  // Also update legacy tokens table for backwards compatibility
   let walletBalance = 0;
   const { data: wallet } = await supabase
     .from('tokens')
@@ -452,26 +575,29 @@ async function handleComplete(supabase: any, supabaseAdmin: any, userId: string,
       .insert({ user_id: userId, balance: walletBalance, updated_at: new Date().toISOString() });
   }
 
-  console.log(`Wallet updated: ${walletBalance} UCT`);
+  console.log(`Legacy wallet updated: ${walletBalance} UCT`);
 
+  // STEP 9: Return standardized response
   return new Response(
     JSON.stringify({
-      session_id,
+      focus_session_id: session_id,
+      uct_earned: reward.total,
+      new_pending_balance: newPendingBalance,
+      status: 'recorded',
+      // Additional data for UI
       duration_minutes: durationMinutes,
       focus_score: focusScore,
-      reward_total: reward.total,
       reward_breakdown: {
         base: reward.base,
-        mode_bonus: reward.modeBonus,
-        streak_bonus: reward.streakBonus,
-        tier_bonus: reward.tierBonus,
+        mode_multiplier: MODE_MULTIPLIERS[mode?.toLowerCase()] || 1.0,
+        interruption_penalty: interruptions >= 3 ? 0.75 : 1.0,
+        final: reward.total,
       },
       streak: {
         current_streak: currentStreak,
         longest_streak: longestStreak,
       },
       tier: reward.tier,
-      wallet_balance_after: walletBalance,
       xp: {
         xp_earned: xpResult.xp_earned,
         xp_total: xpResult.xp_total,

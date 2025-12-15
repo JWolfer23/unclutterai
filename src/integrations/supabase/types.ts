@@ -261,6 +261,7 @@ export type Database = {
           event_type: string
           id: string
           message_ids: string[] | null
+          onchain_tx: string | null
           payload: Json | null
           uct_reward: number | null
           user_id: string
@@ -270,6 +271,7 @@ export type Database = {
           event_type: string
           id?: string
           message_ids?: string[] | null
+          onchain_tx?: string | null
           payload?: Json | null
           uct_reward?: number | null
           user_id: string
@@ -279,6 +281,7 @@ export type Database = {
           event_type?: string
           id?: string
           message_ids?: string[] | null
+          onchain_tx?: string | null
           payload?: Json | null
           uct_reward?: number | null
           user_id?: string
