@@ -25,20 +25,22 @@ export function useUCTBalance() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch current UCT balance using edge function
+  // Fetch current UCT balance from uct_balances table
   const { data: balance, isLoading: isLoadingBalance, refetch: refetchBalance } = useQuery({
     queryKey: ['uct-balance'],
     queryFn: async (): Promise<UCTBalance | null> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      // Use the settle-uct function to get balance
-      const { data, error } = await supabase.functions.invoke('settle-uct', {
-        body: { action: 'get_balance' },
-      });
+      // Query the uct_balances table directly
+      const { data: uctBalance, error } = await supabase
+        .from('uct_balances')
+        .select('balance, pending')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
       if (error) {
-        console.error('Error fetching balance:', error);
+        console.error('Error fetching UCT balance:', error);
         return {
           available: 0,
           pending: 0,
@@ -47,8 +49,26 @@ export function useUCTBalance() {
           wallet_address: null,
         };
       }
-      
-      return data.balance as UCTBalance;
+
+      // Get lifetime earned from focus_sessions
+      const { data: lifetimeData } = await supabase
+        .rpc('get_lifetime_uct', { p_user_id: user.id });
+
+      // Get wallet address from user_wallets
+      const { data: walletData } = await supabase
+        .from('user_wallets')
+        .select('wallet_address')
+        .eq('user_id', user.id)
+        .eq('is_primary', true)
+        .maybeSingle();
+
+      return {
+        available: uctBalance?.balance || 0,
+        pending: uctBalance?.pending || 0,
+        on_chain: 0, // Will be tracked via settlement history
+        lifetime_earned: lifetimeData || 0,
+        wallet_address: walletData?.wallet_address || null,
+      };
     },
   });
 
