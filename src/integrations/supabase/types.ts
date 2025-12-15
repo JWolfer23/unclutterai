@@ -61,6 +61,60 @@ export type Database = {
           },
         ]
       }
+      ai_agent_marketplace: {
+        Row: {
+          agent_id: string
+          category: string
+          complexity: string | null
+          created_at: string
+          creator_id: string
+          description: string | null
+          estimated_time_mins: number | null
+          icon: string | null
+          id: string
+          name: string
+          rating: number | null
+          status: string
+          uct_cost: number
+          updated_at: string
+          usage_count: number | null
+        }
+        Insert: {
+          agent_id: string
+          category: string
+          complexity?: string | null
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          estimated_time_mins?: number | null
+          icon?: string | null
+          id?: string
+          name: string
+          rating?: number | null
+          status?: string
+          uct_cost: number
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Update: {
+          agent_id?: string
+          category?: string
+          complexity?: string | null
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          estimated_time_mins?: number | null
+          icon?: string | null
+          id?: string
+          name?: string
+          rating?: number | null
+          status?: string
+          uct_cost?: number
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       ai_feedback: {
         Row: {
           ai_block_type: string
