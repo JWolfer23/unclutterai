@@ -101,59 +101,70 @@ serve(async (req) => {
     // EXECUTE action - run agent and deduct UCT
     if (action === 'execute') {
       const { agent_type, task_payload, approved_cost } = body as AgentExecuteRequest;
+      const uct_cost = approved_cost;
 
-      // Check user balance
-      const { data: balance, error: balanceError } = await supabase
+      // STEP 1: Validate Balance
+      const { data: balanceData, error: balanceError } = await supabase
         .from('uct_balances')
-        .select('available')
+        .select('balance, pending')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (balanceError || !balance) {
+      if (balanceError) {
+        console.error('Balance fetch error:', balanceError);
         return new Response(JSON.stringify({ error: 'Could not fetch balance' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      if (balance.available < approved_cost) {
+      const currentBalance = balanceData?.balance || 0;
+
+      if (currentBalance < uct_cost) {
         return new Response(JSON.stringify({ 
-          error: 'Insufficient UCT balance',
-          required: approved_cost,
-          available: balance.available
+          error: 'Insufficient UCT',
+          approved: false,
+          required: uct_cost,
+          available: currentBalance,
+          status: 'insufficient_balance'
         }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Deduct UCT atomically before running agent
+      // STEP 2: Deduct UCT atomically
+      const newBalance = currentBalance - uct_cost;
       const { error: deductError } = await supabase
         .from('uct_balances')
-        .update({ available: balance.available - approved_cost })
+        .update({ 
+          balance: newBalance,
+          updated_at: new Date().toISOString()
+        })
         .eq('user_id', user.id)
-        .gte('available', approved_cost);
+        .gte('balance', uct_cost);
 
       if (deductError) {
+        console.error('UCT deduction error:', deductError);
         return new Response(JSON.stringify({ error: 'Failed to deduct UCT' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Log agent execution in focus_ledger
+      // STEP 3: Log Spend Ledger Entry
       const { data: ledgerEntry, error: ledgerError } = await supabase
         .from('focus_ledger')
         .insert({
           user_id: user.id,
-          event_type: 'agent_execution',
+          event_type: 'uct_spent',
           payload: {
             agent_type,
+            cost: uct_cost,
             task_payload,
-            cost_uct: approved_cost,
             status: 'started'
           },
-          uct_reward: -approved_cost, // Negative = cost
+          uct_reward: -uct_cost,
         })
         .select()
         .single();
@@ -161,6 +172,8 @@ serve(async (req) => {
       if (ledgerError) {
         console.error('Ledger error:', ledgerError);
       }
+
+      console.log(`UCT spent: user=${user.id}, agent=${agent_type}, cost=${uct_cost}, new_balance=${newBalance}`);
 
       // Execute agent based on type
       let result: Record<string, unknown> = {};
@@ -170,7 +183,6 @@ serve(async (req) => {
       try {
         switch (agent_type) {
           case 'auto_reply':
-            // Call ai-blocks for auto reply
             const { data: replyData, error: replyError } = await supabase.functions.invoke('ai-blocks', {
               body: { action: 'auto_reply', ...task_payload }
             });
@@ -179,7 +191,6 @@ serve(async (req) => {
             break;
 
           case 'polish_text':
-            // Call ai-blocks for simplify/polish
             const { data: polishData, error: polishError } = await supabase.functions.invoke('ai-blocks', {
               body: { action: 'simplify', ...task_payload }
             });
@@ -188,7 +199,6 @@ serve(async (req) => {
             break;
 
           case 'schedule_meeting':
-            // Mock implementation - would integrate with calendar API
             result = { 
               scheduled: true, 
               message: 'Meeting scheduling agent executed',
@@ -197,7 +207,6 @@ serve(async (req) => {
             break;
 
           case 'send_email':
-            // Would integrate with email sending
             result = { 
               sent: true, 
               message: 'Email agent executed',
@@ -215,8 +224,19 @@ serve(async (req) => {
         // Refund UCT on failure
         await supabase
           .from('uct_balances')
-          .update({ available: balance.available })
+          .update({ 
+            balance: currentBalance,
+            updated_at: new Date().toISOString()
+          })
           .eq('user_id', user.id);
+
+        // Log refund
+        await supabase.from('focus_ledger').insert({
+          user_id: user.id,
+          event_type: 'uct_refund',
+          payload: { agent_type, cost: uct_cost, reason: error_message },
+          uct_reward: uct_cost,
+        });
       }
 
       // Update ledger with result
@@ -226,8 +246,7 @@ serve(async (req) => {
           .update({
             payload: {
               agent_type,
-              task_payload,
-              cost_uct: approved_cost,
+              cost: uct_cost,
               status: success ? 'completed' : 'failed',
               result: success ? result : null,
               error: error_message
@@ -239,18 +258,22 @@ serve(async (req) => {
       if (!success) {
         return new Response(JSON.stringify({ 
           error: error_message,
-          refunded: true 
+          approved: false,
+          refunded: true,
+          status: 'agent_failed'
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
+      // STEP 4: Return authorization success
       return new Response(JSON.stringify({ 
-        success: true,
+        approved: true,
         result,
-        cost_uct: approved_cost,
-        new_balance: balance.available - approved_cost,
+        cost_uct: uct_cost,
+        remaining_balance: newBalance,
+        status: 'agent_authorized',
         ledger_id: ledgerEntry?.id
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
