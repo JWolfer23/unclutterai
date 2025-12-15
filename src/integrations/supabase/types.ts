@@ -1267,6 +1267,42 @@ export type Database = {
         }
         Relationships: []
       }
+      uct_metrics_daily: {
+        Row: {
+          agent_revenue_uct: number | null
+          avg_uct_per_user: number | null
+          created_at: string
+          daily_active_earners: number | null
+          id: string
+          metrics_json: Json
+          total_uct_decayed: number | null
+          total_uct_earned: number | null
+          total_uct_spent: number | null
+        }
+        Insert: {
+          agent_revenue_uct?: number | null
+          avg_uct_per_user?: number | null
+          created_at?: string
+          daily_active_earners?: number | null
+          id?: string
+          metrics_json: Json
+          total_uct_decayed?: number | null
+          total_uct_earned?: number | null
+          total_uct_spent?: number | null
+        }
+        Update: {
+          agent_revenue_uct?: number | null
+          avg_uct_per_user?: number | null
+          created_at?: string
+          daily_active_earners?: number | null
+          id?: string
+          metrics_json?: Json
+          total_uct_decayed?: number | null
+          total_uct_earned?: number | null
+          total_uct_spent?: number | null
+        }
+        Relationships: []
+      }
       uct_pricing: {
         Row: {
           avg_focus_sessions: number | null
