@@ -452,20 +452,59 @@ serve(async (req) => {
       }
     }
 
-    // 6. Create focus_ledger entry
+    // ========================================
+    // UCT BURST REWARD LOGIC (per spec)
+    // ========================================
+    const messagesProcessed = messages.length;
+    const tasksGenerated = actionPlanResult.urgent_tasks.length + actionPlanResult.quick_wins.length;
+    const tasksClaimed = 0; // Will be tracked when user claims tasks
+    
+    let catchUpReward = 0;
+    let rewardStatus = 'no_reward';
+    
+    // STEP 1: Validate minimum messages (5+ required)
+    if (messagesProcessed >= 5) {
+      // STEP 2: Calculate reward
+      // Base: 0.5 UCT
+      catchUpReward = 0.5;
+      
+      // Bonus: +0.25 if tasks_generated >= 3
+      if (tasksGenerated >= 3) {
+        catchUpReward += 0.25;
+      }
+      
+      // Bonus: +0.25 if tasks_claimed >= 1 (tracked separately later)
+      // For now, we award this bonus if user has generated any urgent tasks
+      if (actionPlanResult.urgent_tasks.length >= 1) {
+        catchUpReward += 0.25;
+      }
+      
+      // Maximum: 1.0 UCT
+      catchUpReward = Math.min(catchUpReward, 1.0);
+      rewardStatus = 'awarded';
+      
+      console.log(`Catch-up reward calculated: ${catchUpReward} UCT (messages: ${messagesProcessed}, tasks: ${tasksGenerated})`);
+    } else {
+      console.log(`Catch-up below minimum (${messagesProcessed} < 5 messages), no reward`);
+    }
+
+    // STEP 3: Log Focus Ledger Entry (different from old ledger entry)
     const { data: ledgerEntry, error: ledgerError } = await supabase
       .from('focus_ledger')
       .insert({
         user_id: user.id,
-        event_type: 'instant_catchup',
+        event_type: 'instant_catch_up_completed',
         payload: {
-          summary: `Processed ${messages.length} unread messages`,
-          urgent_count: actionPlanResult.urgent_tasks.length,
+          messages_processed: messagesProcessed,
+          tasks_generated: tasksGenerated,
+          tasks_claimed: tasksClaimed,
+          urgent_tasks_count: actionPlanResult.urgent_tasks.length,
           quick_wins_count: actionPlanResult.quick_wins.length,
           auto_replies_count: actionPlanResult.auto_replies.length,
         },
         message_ids: messages.map(m => m.id),
-        uct_reward: actionPlanResult.uct_reward_estimate,
+        uct_reward: catchUpReward,
+        onchain_tx: null,
       })
       .select()
       .single();
@@ -483,8 +522,8 @@ serve(async (req) => {
         quick_wins: actionPlanResult.quick_wins,
         auto_replies: actionPlanResult.auto_replies,
         batch_recommendations: actionPlanResult.batch_recommendations,
-        uct_estimate: actionPlanResult.uct_reward_estimate,
-        messages_processed: messages.length,
+        uct_estimate: catchUpReward, // Use new calculated reward
+        messages_processed: messagesProcessed,
         ledger_id: ledgerEntry?.id || null,
       })
       .select()
@@ -494,15 +533,47 @@ serve(async (req) => {
       console.error('Error saving action plan:', planError);
     }
 
-    // 8. Update UCT balance
+    // STEP 4: Credit to uct_balances.pending (new approach)
+    let newPendingBalance = 0;
+    if (catchUpReward > 0) {
+      const { data: existingUctBalance } = await supabase
+        .from('uct_balances')
+        .select('balance, pending')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingUctBalance) {
+        newPendingBalance = (existingUctBalance.pending || 0) + catchUpReward;
+        await supabase
+          .from('uct_balances')
+          .update({
+            pending: newPendingBalance,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id);
+      } else {
+        newPendingBalance = catchUpReward;
+        await supabase
+          .from('uct_balances')
+          .insert({
+            user_id: user.id,
+            balance: 0,
+            pending: newPendingBalance,
+          });
+      }
+
+      console.log(`UCT pending balance updated: ${newPendingBalance}`);
+    }
+
+    // Also update legacy tokens table for backwards compatibility
     const { data: existingTokens } = await supabase
       .from('tokens')
       .select('balance')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     const currentBalance = existingTokens?.balance || 0;
-    const newBalance = currentBalance + actionPlanResult.uct_reward_estimate;
+    const newBalance = currentBalance + catchUpReward;
 
     await supabase
       .from('tokens')
@@ -519,7 +590,7 @@ serve(async (req) => {
       used_at: new Date().toISOString(),
     });
 
-    console.log(`Instant catch-up completed. UCT earned: ${actionPlanResult.uct_reward_estimate}`);
+    console.log(`Instant catch-up completed. UCT earned: ${catchUpReward}`);
 
     // Map tasks to include inserted IDs
     const urgentTasksWithIds = actionPlanResult.urgent_tasks.map((t, i) => ({
@@ -532,19 +603,33 @@ serve(async (req) => {
       id: insertedTasks[actionPlanResult.urgent_tasks.length + i]?.id,
     }));
 
+    // STEP 5: Return summary with new fields
     const actionPlan: ActionPlan = {
       urgent_tasks: urgentTasksWithIds,
       quick_wins: quickWinsWithIds,
       auto_replies: actionPlanResult.auto_replies,
       batch_recommendations: actionPlanResult.batch_recommendations,
-      uct_reward_estimate: actionPlanResult.uct_reward_estimate,
-      messages_processed: messages.length,
+      uct_reward_estimate: catchUpReward,
+      messages_processed: messagesProcessed,
       ledger_id: ledgerEntry?.id || '',
       action_plan_id: actionPlanEntry?.id || '',
     };
 
     return new Response(
-      JSON.stringify({ success: true, action_plan: actionPlan }),
+      JSON.stringify({ 
+        success: true, 
+        action_plan: actionPlan,
+        // New standardized response per spec
+        uct_earned: catchUpReward,
+        new_pending_balance: newPendingBalance,
+        status: rewardStatus,
+        reward_breakdown: {
+          base: messagesProcessed >= 5 ? 0.5 : 0,
+          tasks_bonus: tasksGenerated >= 3 ? 0.25 : 0,
+          urgent_bonus: actionPlanResult.urgent_tasks.length >= 1 ? 0.25 : 0,
+          final: catchUpReward,
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
