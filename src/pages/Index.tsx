@@ -23,18 +23,18 @@ import {
 } from "@/components/focus";
 
 import {
-  ArrowUpRight,
-  Newspaper,
-  GraduationCap,
-  HeartPulse,
-  Briefcase,
-  DollarSign,
+  Sunrise,
+  Mic,
+  CheckCircle2,
+  Shield,
   MessageCircle,
+  Brain,
+  Zap,
+  TrendingUp,
+  Coins,
   SlidersHorizontal,
   Users,
-  Bitcoin,
-  Activity,
-  Coins,
+  BarChart3,
   Menu,
   LogOut,
 } from "lucide-react";
@@ -44,19 +44,59 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+// New Billionaire Assistant Mode IDs
 type ModeId =
-  | "focus"
-  | "news"
-  | "learning"
-  | "health"
-  | "career"
-  | "wealth"
-  | "communication"
-  | "uctTokens"
-  | "community"
-  | "crypto"
-  | "customize"
-  | "aiUsage";
+  | "morningBrief"
+  | "voiceCommand"
+  | "clearOpenLoops"
+  | "deepFocus"
+  | "communications"
+  | "intelligenceFeed"
+  | "energySystems"
+  | "strategyWealth"
+  | "tokenEconomy"
+  | "aiControl"
+  | "network"
+  | "performanceReport";
+
+interface Mode {
+  id: ModeId;
+  label: string;
+  subtitle: string;
+  icon: React.ComponentType<{ className?: string }>;
+  row: 1 | 2 | 3;
+  gradient: string;
+}
+
+// Row-based glow intensity styles
+const getRowStyles = (row: 1 | 2 | 3) => {
+  switch (row) {
+    case 1: // STRONGEST - Executive priority
+      return {
+        borderOpacity: "border-white/40",
+        shadow: "shadow-[0_0_35px_rgba(255,255,255,0.15)]",
+        hoverShadow: "group-hover:shadow-[0_0_50px_rgba(255,255,255,0.25)]",
+        glowOpacity: "opacity-50",
+        hoverGlowOpacity: "group-hover:opacity-80",
+      };
+    case 2: // BALANCED - Life systems
+      return {
+        borderOpacity: "border-white/25",
+        shadow: "shadow-[0_0_25px_rgba(255,255,255,0.08)]",
+        hoverShadow: "group-hover:shadow-[0_0_35px_rgba(255,255,255,0.15)]",
+        glowOpacity: "opacity-35",
+        hoverGlowOpacity: "group-hover:opacity-60",
+      };
+    case 3: // SUBDUED - System status
+      return {
+        borderOpacity: "border-white/15",
+        shadow: "shadow-[0_0_15px_rgba(255,255,255,0.04)]",
+        hoverShadow: "group-hover:shadow-[0_0_22px_rgba(255,255,255,0.08)]",
+        glowOpacity: "opacity-20",
+        hoverGlowOpacity: "group-hover:opacity-40",
+      };
+  }
+};
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -80,84 +120,106 @@ const Index = () => {
     isOnboardingComplete,
   } = useOnboarding();
 
-  // 🔹 Mode config used by the 12-button grid
-  const modes: {
-    id: ModeId;
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    color: string; // Tailwind gradient classes for the outline
-  }[] = [
+  // Billionaire Assistant Mode Configuration
+  const modes: Mode[] = [
+    // ROW 1 — PRIMARY EXECUTIVE MODES
     {
-      id: "focus",
-      label: "Focus Mode",
-      icon: ArrowUpRight,
-      color: "from-pink-500 via-purple-500 to-indigo-500",
+      id: "morningBrief",
+      label: "Morning Brief",
+      subtitle: "Your day, organized before it begins",
+      icon: Sunrise,
+      row: 1,
+      gradient: "from-amber-300/70 via-orange-200/50 to-yellow-100/30",
     },
     {
-      id: "news",
-      label: "News Mode",
-      icon: Newspaper,
-      color: "from-sky-400 to-blue-500",
+      id: "voiceCommand",
+      label: "Voice Command",
+      subtitle: "Hands-free execution",
+      icon: Mic,
+      row: 1,
+      gradient: "from-slate-200/70 via-zinc-200/50 to-white/30",
     },
     {
-      id: "learning",
-      label: "Learning Mode",
-      icon: GraduationCap,
-      color: "from-cyan-400 to-teal-400",
+      id: "clearOpenLoops",
+      label: "Clear Open Loops",
+      subtitle: "Close what's unfinished",
+      icon: CheckCircle2,
+      row: 1,
+      gradient: "from-emerald-300/70 via-teal-200/50 to-cyan-100/30",
     },
     {
-      id: "health",
-      label: "Health Mode",
-      icon: HeartPulse,
-      color: "from-green-400 to-teal-400",
+      id: "deepFocus",
+      label: "Deep Focus",
+      subtitle: "Protected execution",
+      icon: Shield,
+      row: 1,
+      gradient: "from-purple-400/70 via-indigo-300/50 to-blue-200/30",
     },
+    // ROW 2 — LIFE OPERATING SYSTEM
     {
-      id: "career",
-      label: "Career Mode",
-      icon: Briefcase,
-      color: "from-sky-400 to-indigo-500",
-    },
-    {
-      id: "wealth",
-      label: "Wealth Mode",
-      icon: DollarSign,
-      color: "from-yellow-400 to-amber-500",
-    },
-    {
-      id: "communication",
-      label: "Communication Mode",
+      id: "communications",
+      label: "Communications",
+      subtitle: "Prioritized, filtered, summarized",
       icon: MessageCircle,
-      color: "from-pink-500 to-purple-500",
+      row: 2,
+      gradient: "from-blue-400/50 via-indigo-300/35 to-violet-200/20",
     },
     {
-      id: "uctTokens", // ✅ 3rd row, middle
-      label: "UCT Tokens Earned",
+      id: "intelligenceFeed",
+      label: "Intelligence Feed",
+      subtitle: "Only what matters",
+      icon: Brain,
+      row: 2,
+      gradient: "from-cyan-400/50 via-sky-300/35 to-blue-200/20",
+    },
+    {
+      id: "energySystems",
+      label: "Energy Systems",
+      subtitle: "Body, recovery, performance",
+      icon: Zap,
+      row: 2,
+      gradient: "from-lime-400/50 via-emerald-300/35 to-teal-200/20",
+    },
+    {
+      id: "strategyWealth",
+      label: "Strategy & Wealth",
+      subtitle: "Build, decide, grow",
+      icon: TrendingUp,
+      row: 2,
+      gradient: "from-amber-400/50 via-yellow-300/35 to-orange-200/20",
+    },
+    // ROW 3 — SYSTEM & STATUS
+    {
+      id: "tokenEconomy",
+      label: "Token Economy",
+      subtitle: "Rewards, status, access",
       icon: Coins,
-      color: "from-sky-400 to-emerald-400",
+      row: 3,
+      gradient: "from-slate-400/35 via-zinc-300/25 to-gray-200/15",
     },
     {
-      id: "community",
-      label: "Community Ranking",
-      icon: Users,
-      color: "from-purple-500 to-pink-500",
-    },
-    {
-      id: "crypto",
-      label: "Crypto Hub",
-      icon: Bitcoin,
-      color: "from-amber-500 to-orange-500",
-    },
-    {
-      id: "customize",
-      label: "Customize AI",
+      id: "aiControl",
+      label: "AI Control",
+      subtitle: "Intelligence, tuned",
       icon: SlidersHorizontal,
-      color: "from-sky-400 to-blue-500",
+      row: 3,
+      gradient: "from-indigo-400/35 via-purple-300/25 to-violet-200/15",
     },
     {
-      id: "aiUsage",
-      label: "AI Usage",
-      icon: Activity,
-      color: "from-pink-500 to-purple-500",
+      id: "network",
+      label: "Network",
+      subtitle: "Rank, challenges, access",
+      icon: Users,
+      row: 3,
+      gradient: "from-rose-400/35 via-pink-300/25 to-fuchsia-200/15",
+    },
+    {
+      id: "performanceReport",
+      label: "Performance Report",
+      subtitle: "Time saved. Impact gained.",
+      icon: BarChart3,
+      row: 3,
+      gradient: "from-teal-400/35 via-cyan-300/25 to-sky-200/15",
     },
   ];
 
@@ -206,23 +268,23 @@ const Index = () => {
   const handleSelectMode = (modeId: ModeId) => {
     // Route mapping for each mode
     const routes: Record<ModeId, string> = {
-      focus: "/focus",
-      news: "/news",
-      learning: "/learning",
-      health: "/health",
-      career: "/career",
-      wealth: "/wealth",
-      communication: "/communication",
-      uctTokens: "/uct-tokens",
-      community: "/community",
-      crypto: "/crypto-integration",
-      customize: "/customize",
-      aiUsage: "", // Special case - opens dashboard
+      morningBrief: "/morning-brief",
+      voiceCommand: "/voice",
+      clearOpenLoops: "/open-loops",
+      deepFocus: "/focus",
+      communications: "/communication",
+      intelligenceFeed: "/intelligence",
+      energySystems: "/health",
+      strategyWealth: "/strategy",
+      tokenEconomy: "/uct-tokens",
+      aiControl: "/customize",
+      network: "/community",
+      performanceReport: "/performance",
     };
 
-    // AI Usage button opens the dashboard
-    if (modeId === "aiUsage") {
-      setSelectedMode("focus");
+    // Performance Report opens the dashboard inline
+    if (modeId === "performanceReport") {
+      setSelectedMode("performanceReport");
       return;
     }
 
@@ -247,7 +309,7 @@ const Index = () => {
     navigate('/auth');
   };
 
-  // ---------- VIEW 1: Neon Outline 12-button home screen ----------
+  // ---------- VIEW 1: Billionaire Assistant Home Screen ----------
   const renderModesHome = () => (
     <div className="min-h-screen w-full flex flex-col items-center px-6 py-10 text-white bg-gradient-to-b from-black via-slate-950 to-slate-900">
       {/* Hamburger menu - top right */}
@@ -295,88 +357,93 @@ const Index = () => {
 
       {/* Logo + title */}
       <div className="flex flex-col items-center mb-10">
-        {/* App icon with purple gradient fill and glow */}
+        {/* App icon with refined premium glow */}
         <div className="relative">
           {/* Ambient glow behind */}
-          <div className="absolute -inset-3 rounded-[28px] bg-purple-500/20 blur-2xl" />
+          <div className="absolute -inset-3 rounded-[28px] bg-purple-500/15 blur-2xl" />
           
           {/* Main container with gradient fill */}
-          <div className="relative w-36 h-36 flex items-center justify-center rounded-3xl bg-gradient-to-br from-purple-600/40 via-purple-800/60 to-slate-900/80 border border-purple-400/30 shadow-[0_0_40px_rgba(147,51,234,0.35)]">
+          <div className="relative w-32 h-32 flex items-center justify-center rounded-3xl bg-gradient-to-br from-purple-600/30 via-purple-800/50 to-slate-900/70 border border-purple-400/20 shadow-[0_0_30px_rgba(147,51,234,0.25)]">
             <img
               src={logoNew}
-              className="w-32 h-32 object-contain"
+              className="w-28 h-28 object-contain"
               alt="UnclutterAI logo"
             />
           </div>
         </div>
 
-        <h1 className="text-4xl font-bold mt-6 tracking-tight">unclutterAI</h1>
-        <p className="text-xs text-white/60 tracking-[0.25em] mt-2">
-          CHOOSE YOUR MODE
+        <h1 className="text-3xl font-semibold mt-6 tracking-tight text-white/95">unclutterAI</h1>
+        <p className="text-[10px] text-white/40 tracking-[0.3em] mt-2 uppercase">
+          Your Operating System
         </p>
       </div>
 
-      {/* Grid of 12 modes — dark tiles with neon outlines */}
-      <div className="grid grid-cols-3 gap-5 w-full max-w-md">
-        {modes.map((mode, index) => {
+      {/* Grid of 12 modes — Executive Aesthetic with Row Hierarchy */}
+      <div className="grid grid-cols-3 gap-4 w-full max-w-md">
+        {modes.map((mode) => {
           const Icon = mode.icon;
+          const rowStyles = getRowStyles(mode.row);
+          
           return (
             <button
               key={mode.id}
               onClick={() => handleSelectMode(mode.id)}
-              className="
-                group relative rounded-[28px] p-[2px]
-                shadow-[0_0_25px_rgba(15,23,42,0.9)]
-                transition-transform duration-200
+              className={`
+                group relative rounded-[24px] p-[1.5px]
+                ${rowStyles.shadow}
+                ${rowStyles.hoverShadow}
+                transition-all duration-300
                 active:scale-[0.97]
-                opacity-0 animate-[fadeInUp_0.4s_ease-out_forwards]
-              "
-              style={{
-                backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))`,
-              }}
+              `}
             >
-              {/* Outer gradient via Tailwind utility */}
-              <div className={`absolute inset-0 rounded-[28px] bg-gradient-to-br ${mode.color}`} />
+              {/* Outer gradient border */}
+              <div className={`absolute inset-0 rounded-[24px] bg-gradient-to-br ${mode.gradient}`} />
 
               {/* Inner dark tile */}
               <div
-                className="
-                  relative flex h-28 flex-col items-center justify-center
-                  rounded-[24px]
-                  bg-black/80
+                className={`
+                  relative flex h-32 flex-col items-center justify-center
+                  rounded-[22px]
+                  bg-black/85
                   backdrop-blur-2xl
-                  border border-white/10
+                  ${rowStyles.borderOpacity}
+                  border
                   overflow-hidden
-                "
+                `}
               >
-                {/* Glow halo */}
+                {/* Subtle top glow halo */}
                 <div
-                  className="
-                    pointer-events-none absolute inset-0 opacity-40
-                    group-hover:opacity-80 transition-opacity duration-300
-                  "
+                  className={`
+                    pointer-events-none absolute inset-0 
+                    ${rowStyles.glowOpacity}
+                    ${rowStyles.hoverGlowOpacity}
+                    transition-opacity duration-300
+                  `}
                   style={{
                     background:
-                      "radial-gradient(circle at 50% 0%, rgba(255,255,255,0.18), transparent 55%)",
+                      "radial-gradient(circle at 50% 0%, rgba(255,255,255,0.12), transparent 50%)",
                   }}
                 />
 
-                {/* Icon bubble */}
+                {/* Icon */}
                 <div
-                  className="
-                    relative mb-3 flex h-10 w-10 items-center justify-center
-                    rounded-2xl border border-white/60 bg-black/40
-                    shadow-[0_0_22px_rgba(148,163,184,0.55)]
-                    group-hover:shadow-[0_0_30px_rgba(148,163,184,0.9)]
-                    transition-shadow duration-300
-                  "
+                  className={`
+                    relative mb-2 flex h-9 w-9 items-center justify-center
+                    rounded-xl border ${rowStyles.borderOpacity} bg-black/30
+                    transition-all duration-300
+                  `}
                 >
-                  <Icon className="h-5 w-5 text-white" />
+                  <Icon className="h-4 w-4 text-white/90" />
                 </div>
 
-                {/* Label */}
-                <span className="relative mt-1 text-[12px] font-medium text-white/90 text-center leading-tight">
+                {/* Title */}
+                <span className="relative text-[11px] font-medium text-white/90 text-center leading-tight px-2">
                   {mode.label}
+                </span>
+                
+                {/* Subtitle */}
+                <span className="relative text-[9px] text-white/40 text-center leading-tight mt-1 px-2">
+                  {mode.subtitle}
                 </span>
               </div>
             </button>
@@ -386,8 +453,8 @@ const Index = () => {
     </div>
   );
 
-  // ---------- VIEW 2: Existing dashboard (Focus Mode) ----------
-  const renderFocusDashboard = () => (
+  // ---------- VIEW 2: Performance Report Dashboard ----------
+  const renderPerformanceDashboard = () => (
     <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-white pb-12">
       <HeaderSection onShowCommandPalette={() => setShowCommandPalette(true)} />
 
@@ -468,7 +535,7 @@ const Index = () => {
   // ---------- FINAL RENDER ----------
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900">
-      {selectedMode === "focus" ? renderFocusDashboard() : renderModesHome()}
+      {selectedMode === "performanceReport" ? renderPerformanceDashboard() : renderModesHome()}
     </div>
   );
 };

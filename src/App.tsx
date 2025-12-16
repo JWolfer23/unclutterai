@@ -20,6 +20,12 @@ import UCTTokens from "./pages/UCTTokens";
 import CommunityRanking from "./pages/CommunityRanking";
 import CustomizeAI from "./pages/CustomizeAI";
 import FocusMode from "./pages/FocusMode";
+import MorningBrief from "./pages/MorningBrief";
+import VoiceCommand from "./pages/VoiceCommand";
+import ClearOpenLoops from "./pages/ClearOpenLoops";
+import IntelligenceFeed from "./pages/IntelligenceFeed";
+import StrategyWealth from "./pages/StrategyWealth";
+import PerformanceReport from "./pages/PerformanceReport";
 import { useAuth } from "@/hooks/useAuth";
 import { SecurityProvider } from "@/components/SecurityProvider";
 
@@ -46,17 +52,29 @@ const App = () => {
               <Route path="/email-setup" element={user ? <EmailSetup /> : <Navigate to="/auth" replace />} />
               <Route path="/crypto-integration" element={user ? <CryptoIntegration /> : <Navigate to="/auth" replace />} />
               
-              {/* Mode Routes */}
+              {/* Executive Mode Routes */}
+              <Route path="/morning-brief" element={user ? <MorningBrief /> : <Navigate to="/auth" replace />} />
+              <Route path="/voice" element={user ? <VoiceCommand /> : <Navigate to="/auth" replace />} />
+              <Route path="/open-loops" element={user ? <ClearOpenLoops /> : <Navigate to="/auth" replace />} />
               <Route path="/focus" element={user ? <FocusMode /> : <Navigate to="/auth" replace />} />
+              
+              {/* Life OS Routes */}
+              <Route path="/communication" element={user ? <CommunicationMode /> : <Navigate to="/auth" replace />} />
+              <Route path="/intelligence" element={user ? <IntelligenceFeed /> : <Navigate to="/auth" replace />} />
+              <Route path="/health" element={user ? <HealthMode /> : <Navigate to="/auth" replace />} />
+              <Route path="/strategy" element={user ? <StrategyWealth /> : <Navigate to="/auth" replace />} />
+              
+              {/* System Routes */}
+              <Route path="/uct-tokens" element={user ? <UCTTokens /> : <Navigate to="/auth" replace />} />
+              <Route path="/customize" element={user ? <CustomizeAI /> : <Navigate to="/auth" replace />} />
+              <Route path="/community" element={user ? <CommunityRanking /> : <Navigate to="/auth" replace />} />
+              <Route path="/performance" element={user ? <PerformanceReport /> : <Navigate to="/auth" replace />} />
+              
+              {/* Legacy routes for backward compatibility */}
               <Route path="/news" element={user ? <NewsMode /> : <Navigate to="/auth" replace />} />
               <Route path="/learning" element={user ? <LearningMode /> : <Navigate to="/auth" replace />} />
-              <Route path="/health" element={user ? <HealthMode /> : <Navigate to="/auth" replace />} />
               <Route path="/career" element={user ? <CareerMode /> : <Navigate to="/auth" replace />} />
               <Route path="/wealth" element={user ? <WealthMode /> : <Navigate to="/auth" replace />} />
-              <Route path="/communication" element={user ? <CommunicationMode /> : <Navigate to="/auth" replace />} />
-              <Route path="/uct-tokens" element={user ? <UCTTokens /> : <Navigate to="/auth" replace />} />
-              <Route path="/community" element={user ? <CommunityRanking /> : <Navigate to="/auth" replace />} />
-              <Route path="/customize" element={user ? <CustomizeAI /> : <Navigate to="/auth" replace />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
