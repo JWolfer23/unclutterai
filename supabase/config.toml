@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.morning-brief]
 verify_jwt = true
+
+[functions.process-open-loops]
+verify_jwt = true
