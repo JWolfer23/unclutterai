@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
@@ -13,6 +13,8 @@ import AIUsageTracker from "@/components/AIUsageTracker";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { toast } from "@/hooks/use-toast";
 import logoNew from "@/assets/logo-transparent.png";
+
+const MORNING_BRIEF_SHOWN_KEY = "last_morning_brief_date";
 import { 
   FocusStatsRow, 
   FocusRewardsSection, 
@@ -294,6 +296,19 @@ const Index = () => {
       navigate(route);
     }
   };
+
+  // Auto-launch Morning Brief on first open of the day (5 AM - 12 PM)
+  useEffect(() => {
+    if (!user || onboardingState.showOnboarding) return;
+    
+    const currentHour = new Date().getHours();
+    const lastShown = localStorage.getItem(MORNING_BRIEF_SHOWN_KEY);
+    const today = new Date().toDateString();
+    
+    if (currentHour >= 5 && currentHour < 12 && lastShown !== today) {
+      navigate("/morning-brief");
+    }
+  }, [user, onboardingState.showOnboarding, navigate]);
 
   // Always show onboarding when user first logs in
   if (onboardingState.showOnboarding) {

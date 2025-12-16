@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.uct-founder-metrics]
 verify_jwt = false
+
+[functions.morning-brief]
+verify_jwt = true
