@@ -2,6 +2,32 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
+// Allowed origins for CORS
+const allowedOrigins = [
+  'https://c60e33de-49ec-4dd9-ac69-f86f4e5a2b40.lovableproject.com',
+  'https://lovable.dev',
+  /^https:\/\/.*\.lovable\.app$/,
+  /^https:\/\/.*\.lovableproject\.com$/,
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  return allowedOrigins.some(allowed => 
+    typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+  );
+}
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = isAllowedOrigin(origin) ? origin! : '';
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
+
 const AI_USAGE_LIMITS = {
   summary: 25,
   task_generation: 15,
@@ -11,7 +37,7 @@ const AI_USAGE_LIMITS = {
 // Enhanced rate limiting with IP tracking
 const rateLimitMap = new Map<string, { count: number; resetTime: number; ips: Set<string> }>()
 
-const checkRateLimit = (identifier: string, ipAddress?: string, maxRequests: number = 20, windowMs: number = 60000): boolean => {
+const checkRateLimitInternal = (identifier: string, ipAddress?: string, maxRequests: number = 20, windowMs: number = 60000): boolean => {
   const now = Date.now()
   const current = rateLimitMap.get(identifier)
   
@@ -52,19 +78,26 @@ const sanitizeInput = (input: string, maxLength: number = 5000): string => {
     .substring(0, maxLength)
 }
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Reject requests from disallowed origins
+  if (!isAllowedOrigin(origin)) {
+    console.warn(`[SECURITY] Blocked request from disallowed origin: ${origin}`);
+    return new Response(
+      JSON.stringify({ error: 'Forbidden' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
@@ -90,7 +123,7 @@ serve(async (req) => {
                     'unknown'
 
     // Enhanced rate limiting check
-    if (!checkRateLimit(user.id, clientIP, 20, 60000)) { // 20 requests per minute per user
+    if (!checkRateLimitInternal(user.id, clientIP, 20, 60000)) { // 20 requests per minute per user
       return new Response(
         JSON.stringify({ 
           error: 'RATE_LIMIT_EXCEEDED',
@@ -150,13 +183,13 @@ serve(async (req) => {
     let result;
     switch (action) {
       case 'summarize_message':
-        result = await summarizeMessage(data, openAIApiKey);
+        result = await summarizeMessage(data, openAIApiKey, corsHeaders);
         break;
       case 'generate_tasks':
-        result = await generateTasks(data, openAIApiKey);
+        result = await generateTasks(data, openAIApiKey, corsHeaders);
         break;
       case 'score_task':
-        result = await scoreTask(data, openAIApiKey);
+        result = await scoreTask(data, openAIApiKey, corsHeaders);
         break;
       default:
         throw new Error(`Unknown action: ${action}`);
@@ -175,7 +208,7 @@ serve(async (req) => {
   }
 });
 
-async function summarizeMessage(data: any, apiKey: string) {
+async function summarizeMessage(data: any, apiKey: string, corsHeaders: Record<string, string>) {
   const { messageId, content, subject } = data;
 
   // Sanitize inputs
@@ -226,7 +259,7 @@ async function summarizeMessage(data: any, apiKey: string) {
   );
 }
 
-async function generateTasks(data: any, apiKey: string) {
+async function generateTasks(data: any, apiKey: string, corsHeaders: Record<string, string>) {
   const { messageId, content, subject, userId } = data;
 
   // Sanitize inputs
@@ -303,7 +336,7 @@ async function generateTasks(data: any, apiKey: string) {
   );
 }
 
-async function scoreTask(data: any, apiKey: string) {
+async function scoreTask(data: any, apiKey: string, corsHeaders: Record<string, string>) {
   const { taskId, title, description } = data;
 
   // Sanitize inputs
