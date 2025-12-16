@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { ContextCard as ContextCardType } from '@/hooks/useDriverMode';
+import { CLASSIFICATION_LABELS, CLASSIFICATION_COLORS } from '@/lib/aiDecisionHeuristics';
 
 interface ContextualCardProps {
   card: ContextCardType | null;
@@ -28,6 +29,13 @@ export const ContextualCard: React.FC<ContextualCardProps> = ({ card, onDismiss 
 
   if (!card) return null;
 
+  const classificationLabel = card.classification 
+    ? CLASSIFICATION_LABELS[card.classification] 
+    : null;
+  const classificationColor = card.classification 
+    ? CLASSIFICATION_COLORS[card.classification] 
+    : 'text-white/60';
+
   return (
     <div 
       className={`
@@ -40,6 +48,15 @@ export const ContextualCard: React.FC<ContextualCardProps> = ({ card, onDismiss 
       `}
       onClick={onDismiss}
     >
+      {/* Classification badge */}
+      {classificationLabel && (
+        <div className="flex justify-center mb-3">
+          <span className={`text-xs font-medium uppercase tracking-wider ${classificationColor}`}>
+            {classificationLabel}
+          </span>
+        </div>
+      )}
+
       {/* Main text - one sentence only */}
       <p className="text-lg text-white/90 font-medium text-center">
         {card.text}
@@ -53,7 +70,7 @@ export const ContextualCard: React.FC<ContextualCardProps> = ({ card, onDismiss 
       )}
       
       {/* Urgency indicator */}
-      {card.urgency === 'critical' && (
+      {(card.urgency === 'critical' || card.breaksSomething) && (
         <div className="mt-3 flex justify-center">
           <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
         </div>

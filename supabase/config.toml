@@ -89,3 +89,6 @@ verify_jwt = true
 
 [functions.voice-command]
 verify_jwt = true
+
+[functions.ai-decision-heuristics]
+verify_jwt = true
