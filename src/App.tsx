@@ -30,6 +30,7 @@ import Pricing from "./pages/Pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { SecurityProvider } from "@/components/SecurityProvider";
 import { AssistantProfileProvider } from "@/components/AssistantProfileProvider";
+import { FocusProtectionProvider } from "@/contexts/FocusProtectionContext";
 
 const queryClient = new QueryClient();
 
@@ -44,11 +45,12 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <SecurityProvider>
         <AssistantProfileProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
+          <FocusProtectionProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
                 <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
                 <Route path="/reset" element={<PasswordReset />} />
                 <Route path="/" element={user ? <Index /> : <Navigate to="/auth" replace />} />
@@ -81,9 +83,10 @@ const App = () => {
                 <Route path="/wealth" element={user ? <WealthMode /> : <Navigate to="/auth" replace />} />
                 
                 <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </FocusProtectionProvider>
         </AssistantProfileProvider>
       </SecurityProvider>
     </QueryClientProvider>

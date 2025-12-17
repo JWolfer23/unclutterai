@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
 import { useFocusBackground, FocusBackgroundState } from "@/hooks/useFocusBackground";
+import { useFocusProtection, FocusSummary } from "@/hooks/useFocusProtection";
 import { toast } from "@/hooks/use-toast";
 import { FocusStreakStrip, SessionCompletionCard, FocusLevelIndicator, AutonomousReveal } from "@/components/focus";
 
@@ -28,6 +29,13 @@ const FocusMode = () => {
     hasAutonomyCapability,
   } = useFocusBackground();
 
+  const {
+    isInFocus,
+    enterFocus,
+    exitFocus,
+    queueItem,
+  } = useFocusProtection();
+
   const [taskInput, setTaskInput] = useState("");
   const [selectedTask, setSelectedTask] = useState<string>("");
   const [duration, setDuration] = useState(25);
@@ -37,6 +45,7 @@ const FocusMode = () => {
   const [sessionComplete, setSessionComplete] = useState(false);
   const [showAutonomousReveal, setShowAutonomousReveal] = useState(false);
   const [processedBackgroundState, setProcessedBackgroundState] = useState<FocusBackgroundState | null>(null);
+  const [focusSummary, setFocusSummary] = useState<FocusSummary | null>(null);
   const [tokensEarned, setTokensEarned] = useState(0);
   const [interruptions, setInterruptions] = useState(0);
   const [sessionNote, setSessionNote] = useState("");
@@ -81,7 +90,11 @@ const FocusMode = () => {
     }
 
     // Start background tracking for autonomous actions (uses timestamp-based tracking)
-    startTracking(`session-${Date.now()}`);
+    const sessionId = `session-${Date.now()}`;
+    startTracking(sessionId);
+    
+    // Enter focus protection mode - suppresses notifications
+    enterFocus(sessionId);
 
     // Start session with mode and goal
     startSession({
@@ -98,6 +111,8 @@ const FocusMode = () => {
     setInterruptions(0);
     setNoteSaved(false);
     setCompletedSessionId(null);
+    setFocusSummary(null);
+    actualMinutesRef.current = 0;
     actualMinutesRef.current = 0;
     
     toast({
@@ -130,16 +145,16 @@ const FocusMode = () => {
     setIsActive(false);
     setIsPaused(false);
 
+    // Exit focus protection and get summary of queued items
+    const summary = exitFocus();
+    setFocusSummary(summary);
+
     // Process background messages and show autonomous reveal
     const bgState = await processSessionMessages();
     setProcessedBackgroundState(bgState);
     
-    // Show autonomous reveal if there were any messages during session
-    if (bgState.messagesArrived > 0 || bgState.messagesAutoHandled > 0) {
-      setShowAutonomousReveal(true);
-    } else {
-      setSessionComplete(true);
-    }
+    // Always show autonomous reveal to display "Nothing important was missed."
+    setShowAutonomousReveal(true);
 
     toast({
       title: "Task Completed",
@@ -197,16 +212,16 @@ const FocusMode = () => {
       }
     }
 
+    // Exit focus protection and get summary of queued items
+    const summary = exitFocus();
+    setFocusSummary(summary);
+
     // Process background messages and show autonomous reveal
     const bgState = await processSessionMessages();
     setProcessedBackgroundState(bgState);
     
-    // Show autonomous reveal if there were any messages during session
-    if (bgState.messagesArrived > 0 || bgState.messagesAutoHandled > 0) {
-      setShowAutonomousReveal(true);
-    } else {
-      setSessionComplete(true);
-    }
+    // Always show autonomous reveal to display "Nothing important was missed."
+    setShowAutonomousReveal(true);
 
     toast({
       title: "Focus Session Complete",
@@ -304,6 +319,7 @@ const FocusMode = () => {
       {showAutonomousReveal && processedBackgroundState && (
         <AutonomousReveal
           backgroundState={processedBackgroundState}
+          focusSummary={focusSummary || undefined}
           onReview={handleReviewMessages}
           onContinue={handleContinueToRewards}
           hasAutonomyCapability={hasAutonomyCapability}

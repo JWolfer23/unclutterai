@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Check, ChevronDown, ChevronUp, Mail, Archive, AlertCircle, Sparkles } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Mail, Archive, AlertCircle, Sparkles, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FocusBackgroundState } from '@/hooks/useFocusBackground';
-import { AUTONOMOUS_REVEAL } from '@/lib/assistantPersonality';
+import { AUTONOMOUS_REVEAL, TRUST_MOMENTS } from '@/lib/assistantPersonality';
+import { FocusSummary } from '@/hooks/useFocusProtection';
 
 interface AutonomousRevealProps {
   backgroundState: FocusBackgroundState;
+  focusSummary?: FocusSummary;
   onReview: () => void;
   onContinue: () => void;
   hasAutonomyCapability: boolean;
@@ -13,29 +15,39 @@ interface AutonomousRevealProps {
 
 export const AutonomousReveal = ({
   backgroundState,
+  focusSummary,
   onReview,
   onContinue,
   hasAutonomyCapability,
 }: AutonomousRevealProps) => {
   const [showLine1, setShowLine1] = useState(false);
   const [showLine2, setShowLine2] = useState(false);
+  const [showLine3, setShowLine3] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
 
-  const { messagesAutoHandled, messagesNeedingReview, autoActions } = backgroundState;
-  const hasHandledMessages = messagesAutoHandled > 0;
-  const hasNeedingReview = messagesNeedingReview.length > 0;
+  const { messagesAutoHandled, messagesNeedingReview, autoActions, messagesArrived } = backgroundState;
+  
+  // Combine background state with focus summary for complete picture
+  const totalItemsReceived = (focusSummary?.itemsReceived || 0) + messagesArrived;
+  const totalItemsHandled = (focusSummary?.itemsHandled || 0) + messagesAutoHandled;
+  const totalNeedingAttention = (focusSummary?.itemsNeedingAttention || 0) + messagesNeedingReview.length;
+  
+  const hasHandledMessages = totalItemsHandled > 0;
+  const hasNeedingReview = totalNeedingAttention > 0;
 
   // Typewriter reveal animation
   useEffect(() => {
     const timer1 = setTimeout(() => setShowLine1(true), 300);
-    const timer2 = setTimeout(() => setShowLine2(true), 1800);
-    const timer3 = setTimeout(() => setShowDetails(true), 2800);
+    const timer2 = setTimeout(() => setShowLine2(true), 1500);
+    const timer3 = setTimeout(() => setShowLine3(true), 2500);
+    const timer4 = setTimeout(() => setShowDetails(true), 3200);
     
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
       clearTimeout(timer3);
+      clearTimeout(timer4);
     };
   }, []);
 
@@ -76,45 +88,55 @@ export const AutonomousReveal = ({
     );
   }
 
-  // Nothing happened during session
-  if (!hasHandledMessages && !hasNeedingReview) {
-    return null;
-  }
-
   return (
     <div className="max-w-2xl mx-auto mb-8">
       <div className="glass-card">
-        {/* Check Icon */}
+        {/* Shield Icon - Focus Protection */}
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
-            <Check className="w-8 h-8 text-emerald-400" />
+            <Shield className="w-8 h-8 text-emerald-400" />
           </div>
         </div>
 
-        {/* Line 1: What was handled */}
+        {/* Line 1: Summary Stats */}
         <div className={`text-center transition-all duration-700 ${showLine1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-          <p className="text-xl text-white font-light">
+          {totalItemsReceived > 0 ? (
+            <div className="flex justify-center gap-6 text-sm">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white">{totalItemsReceived}</div>
+                <div className="text-slate-400">items received</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-emerald-400">{totalItemsHandled}</div>
+                <div className="text-slate-400">items handled</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-amber-400">{totalNeedingAttention}</div>
+                <div className="text-slate-400">need attention</div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-lg text-slate-300">Your focus session is complete.</p>
+          )}
+        </div>
+
+        {/* Line 2: What was handled description */}
+        <div className={`text-center mt-6 transition-all duration-700 ${showLine2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+          <p className="text-lg text-white/80 font-light">
             {hasHandledMessages 
-              ? AUTONOMOUS_REVEAL.handled_multiple(messagesAutoHandled)
-              : AUTONOMOUS_REVEAL.nothing_handled
+              ? AUTONOMOUS_REVEAL.handled_multiple(totalItemsHandled)
+              : totalItemsReceived > 0 
+                ? `${totalNeedingAttention} item${totalNeedingAttention !== 1 ? 's' : ''} queued for your review.`
+                : 'No interruptions during your session.'
             }
           </p>
         </div>
 
-        {/* Line 2: What needs review */}
-        <div className={`text-center mt-4 transition-all duration-700 delay-500 ${showLine2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-          {hasNeedingReview ? (
-            <p className="text-lg text-slate-300">
-              {messagesNeedingReview.length === 1 
-                ? AUTONOMOUS_REVEAL.needs_one
-                : AUTONOMOUS_REVEAL.needs_multiple(messagesNeedingReview.length)
-              }
-            </p>
-          ) : (
-            <p className="text-lg text-emerald-400/80">
-              {AUTONOMOUS_REVEAL.nothing_missed}
-            </p>
-          )}
+        {/* Line 3: CRITICAL - "Nothing important was missed." */}
+        <div className={`text-center mt-6 transition-all duration-700 ${showLine3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+          <p className="text-xl text-emerald-400 font-medium">
+            {TRUST_MOMENTS.focusProtection.primary}
+          </p>
         </div>
 
         {/* Details Panel */}
