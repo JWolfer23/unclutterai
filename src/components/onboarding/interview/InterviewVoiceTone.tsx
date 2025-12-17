@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Minus, Heart, Brain, VolumeX } from "lucide-react";
+import { ChevronRight, Minus, Heart, Brain } from "lucide-react";
 
 interface InterviewVoiceToneProps {
   onNext: (tone: string) => void;
@@ -14,7 +14,7 @@ const OPTIONS = [
     description: "Short, no fluff"
   },
   { 
-    id: "supportive", 
+    id: "calm", 
     label: "Calm & supportive", 
     icon: Heart,
     description: "Encouraging, warm"
@@ -24,12 +24,6 @@ const OPTIONS = [
     label: "Strategic & analytical", 
     icon: Brain,
     description: "Data-driven, precise"
-  },
-  { 
-    id: "silent", 
-    label: "Silent unless needed", 
-    icon: VolumeX,
-    description: "Only speak when critical"
   },
 ];
 
@@ -42,10 +36,10 @@ export const InterviewVoiceTone = ({ onNext }: InterviewVoiceToneProps) => {
         {/* Question */}
         <div className="text-center space-y-3">
           <p className="text-sm text-muted-foreground uppercase tracking-wider">
-            Voice & Tone
+            Communication Style
           </p>
           <h2 className="text-2xl font-light text-foreground/90">
-            How should I speak to you?
+            How should I communicate with you?
           </h2>
         </div>
 
