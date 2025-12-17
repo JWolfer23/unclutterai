@@ -1,9 +1,30 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Allowed origins for CORS
+const allowedOrigins = [
+  'https://c60e33de-49ec-4dd9-ac69-f86f4e5a2b40.lovableproject.com',
+  'https://lovable.dev',
+  /^https:\/\/.*\.lovable\.app$/,
+  /^https:\/\/.*\.lovableproject\.com$/,
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  return allowedOrigins.some(allowed => 
+    typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+  );
+}
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = isAllowedOrigin(origin) ? origin! : '';
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
 
 const PARSER_PROMPT = `You are a voice command parser for a productivity assistant. Parse the user's voice command and extract:
 1. action - the specific action to take
@@ -25,6 +46,9 @@ Respond with valid JSON only. Example:
 {"action":"create_task","category":"tasks","context":"follow up with Jack","requiresConfirmation":false}`;
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

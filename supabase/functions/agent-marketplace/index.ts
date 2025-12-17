@@ -1,10 +1,31 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Allowed origins for CORS
+const allowedOrigins = [
+  'https://c60e33de-49ec-4dd9-ac69-f86f4e5a2b40.lovableproject.com',
+  'https://lovable.dev',
+  /^https:\/\/.*\.lovable\.app$/,
+  /^https:\/\/.*\.lovableproject\.com$/,
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  return allowedOrigins.some(allowed => 
+    typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+  );
+}
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = isAllowedOrigin(origin) ? origin! : '';
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
 
 interface AgentPriceRequest {
   action: 'price';
@@ -57,6 +78,9 @@ function calculateAgentPrice(
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
