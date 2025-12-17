@@ -11,6 +11,8 @@ import { UserStatsOverview } from "@/components/UserStatsOverview";
 import { AIUsageResetTimer } from "@/components/AIUsageResetTimer";
 import AIUsageTracker from "@/components/AIUsageTracker";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useAssistantPromotion } from "@/hooks/useAssistantPromotion";
+import { AssistantPromotionFlow } from "@/components/promotion";
 import { toast } from "@/hooks/use-toast";
 import logoNew from "@/assets/logo-transparent.png";
 
@@ -110,6 +112,7 @@ const Index = () => {
   } | null>(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showRecoveryDashboard, setShowRecoveryDashboard] = useState(false);
+  const [showPromotion, setShowPromotion] = useState(false);
 
   const [selectedMode, setSelectedMode] = useState<ModeId | null>(null);
 
@@ -121,6 +124,21 @@ const Index = () => {
     requiresPlatform,
     isOnboardingComplete,
   } = useOnboarding();
+
+  // Assistant promotion eligibility
+  const {
+    isEligible: isPromotionEligible,
+    isLoading: promotionLoading,
+    acceptPromotion,
+    declinePromotion,
+  } = useAssistantPromotion();
+
+  // Trigger promotion flow when eligible
+  useEffect(() => {
+    if (!promotionLoading && isPromotionEligible && !onboardingState.showOnboarding) {
+      setShowPromotion(true);
+    }
+  }, [isPromotionEligible, promotionLoading, onboardingState.showOnboarding]);
 
   // Billionaire Assistant Mode Configuration
   const modes: Mode[] = [
@@ -549,6 +567,15 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900">
       {selectedMode === "performanceReport" ? renderPerformanceDashboard() : renderModesHome()}
+      
+      {/* Assistant Promotion Flow */}
+      {showPromotion && (
+        <AssistantPromotionFlow
+          onAccept={acceptPromotion}
+          onDecline={declinePromotion}
+          onComplete={() => setShowPromotion(false)}
+        />
+      )}
     </div>
   );
 };
