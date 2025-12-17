@@ -22,7 +22,7 @@ import CustomizeAI from "./pages/CustomizeAI";
 import FocusMode from "./pages/FocusMode";
 import MorningBrief from "./pages/MorningBrief";
 import VoiceCommand from "./pages/VoiceCommand";
-import ClearOpenLoops from "./pages/ClearOpenLoops";
+import UnclutterMode from "./pages/UnclutterMode";
 import IntelligenceFeed from "./pages/IntelligenceFeed";
 import StrategyWealth from "./pages/StrategyWealth";
 import PerformanceReport from "./pages/PerformanceReport";
@@ -58,7 +58,7 @@ const App = () => {
                 {/* Executive Mode Routes */}
                 <Route path="/morning-brief" element={user ? <MorningBrief /> : <Navigate to="/auth" replace />} />
                 <Route path="/voice" element={user ? <VoiceCommand /> : <Navigate to="/auth" replace />} />
-                <Route path="/open-loops" element={user ? <ClearOpenLoops /> : <Navigate to="/auth" replace />} />
+                <Route path="/open-loops" element={user ? <UnclutterMode /> : <Navigate to="/auth" replace />} />
                 <Route path="/focus" element={user ? <FocusMode /> : <Navigate to="/auth" replace />} />
                 
                 {/* Life OS Routes */}
