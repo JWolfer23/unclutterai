@@ -92,3 +92,9 @@ verify_jwt = true
 
 [functions.ai-decision-heuristics]
 verify_jwt = true
+
+[functions.uct-stake]
+verify_jwt = true
+
+[functions.uct-burn]
+verify_jwt = true

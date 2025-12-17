@@ -5,6 +5,8 @@ import { useToast } from '@/hooks/use-toast';
 export interface UCTBalance {
   available: number;
   pending: number;
+  staked: number;
+  total_burned: number;
   on_chain: number;
   lifetime_earned: number;
   wallet_address: string | null;
@@ -35,7 +37,7 @@ export function useUCTBalance() {
       // Query the uct_balances table directly
       const { data: uctBalance, error } = await supabase
         .from('uct_balances')
-        .select('balance, pending')
+        .select('balance, pending, staked, total_burned')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -44,6 +46,8 @@ export function useUCTBalance() {
         return {
           available: 0,
           pending: 0,
+          staked: 0,
+          total_burned: 0,
           on_chain: 0,
           lifetime_earned: 0,
           wallet_address: null,
@@ -65,6 +69,8 @@ export function useUCTBalance() {
       return {
         available: uctBalance?.balance || 0,
         pending: uctBalance?.pending || 0,
+        staked: (uctBalance as { staked?: number })?.staked || 0,
+        total_burned: (uctBalance as { total_burned?: number })?.total_burned || 0,
         on_chain: 0, // Will be tracked via settlement history
         lifetime_earned: lifetimeData || 0,
         wallet_address: walletData?.wallet_address || null,
@@ -176,6 +182,8 @@ export function useUCTBalance() {
     totalBalance,
     availableBalance: balance?.available || 0,
     pendingBalance: balance?.pending || 0,
+    stakedBalance: balance?.staked || 0,
+    totalBurned: balance?.total_burned || 0,
     onChainBalance: balance?.on_chain || 0,
     lifetimeEarned: balance?.lifetime_earned || 0,
     

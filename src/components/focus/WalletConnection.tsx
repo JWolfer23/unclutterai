@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { usePrivyWallet } from "@/hooks/usePrivyWallet";
 import { useUCTBalance } from "@/hooks/useUCTBalance";
-import { Wallet, Copy, Check, LogOut, Loader2, ArrowUpRight, Clock, Coins } from "lucide-react";
+import { Wallet, Copy, Check, LogOut, Loader2, ArrowUpRight, Clock, Coins, Lock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ClaimUCTModal } from "./ClaimUCTModal";
 
@@ -22,6 +22,7 @@ export const WalletConnection = () => {
     balance,
     availableBalance,
     pendingBalance,
+    stakedBalance,
     onChainBalance,
     isLoadingBalance,
     confirmPending,
@@ -156,6 +157,15 @@ export const WalletConnection = () => {
               </span>
               <span className="text-white font-medium">{availableBalance.toFixed(2)} UCT</span>
             </div>
+            {stakedBalance > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  Staked
+                </span>
+                <span className="text-purple-400 font-medium">{stakedBalance.toFixed(2)} UCT</span>
+              </div>
+            )}
             {pendingBalance > 0 && (
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-400 flex items-center gap-1">
