@@ -26,6 +26,7 @@ import ClearOpenLoops from "./pages/ClearOpenLoops";
 import IntelligenceFeed from "./pages/IntelligenceFeed";
 import StrategyWealth from "./pages/StrategyWealth";
 import PerformanceReport from "./pages/PerformanceReport";
+import Pricing from "./pages/Pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { SecurityProvider } from "@/components/SecurityProvider";
 
@@ -67,7 +68,9 @@ const App = () => {
               {/* System Routes */}
               <Route path="/uct-tokens" element={user ? <UCTTokens /> : <Navigate to="/auth" replace />} />
               <Route path="/customize" element={user ? <CustomizeAI /> : <Navigate to="/auth" replace />} />
+              <Route path="/pricing" element={user ? <Pricing /> : <Navigate to="/auth" replace />} />
               <Route path="/community" element={user ? <CommunityRanking /> : <Navigate to="/auth" replace />} />
+              <Route path="/performance" element={user ? <PerformanceReport /> : <Navigate to="/auth" replace />} />
               <Route path="/performance" element={user ? <PerformanceReport /> : <Navigate to="/auth" replace />} />
               
               {/* Legacy routes for backward compatibility */}
