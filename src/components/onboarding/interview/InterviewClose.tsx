@@ -36,7 +36,7 @@ export const InterviewClose = ({ onComplete }: InterviewCloseProps) => {
             Understood.
           </p>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            I'll handle the rest.
+            I'll start with your morning brief.
           </p>
         </div>
 
@@ -62,7 +62,7 @@ export const InterviewClose = ({ onComplete }: InterviewCloseProps) => {
             className="px-8 py-6 text-lg bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 rounded-2xl shadow-lg"
           >
             <Sun className="w-5 h-5 mr-2" />
-            Begin
+            Begin Your Day
           </Button>
         </div>
       </div>

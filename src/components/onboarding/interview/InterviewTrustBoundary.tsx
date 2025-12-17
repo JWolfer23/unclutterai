@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Send, Calendar, DollarSign, Trash2, Share2 } from "lucide-react";
+import { ChevronRight, Send, Calendar, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface InterviewTrustBoundaryProps {
@@ -8,11 +8,9 @@ interface InterviewTrustBoundaryProps {
 }
 
 const BOUNDARIES = [
-  { id: "send_messages", label: "Send messages", icon: Send },
-  { id: "schedule_meetings", label: "Schedule meetings", icon: Calendar },
-  { id: "move_money", label: "Move money", icon: DollarSign },
-  { id: "delete_content", label: "Delete content", icon: Trash2 },
-  { id: "share_data", label: "Share data", icon: Share2 },
+  { id: "send_messages", label: "Sending messages", icon: Send },
+  { id: "schedule_meetings", label: "Scheduling", icon: Calendar },
+  { id: "delete_content", label: "Deleting content", icon: Trash2 },
 ];
 
 export const InterviewTrustBoundary = ({ onNext }: InterviewTrustBoundaryProps) => {

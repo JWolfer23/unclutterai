@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Zap, LayoutList, HelpCircle, Eye } from "lucide-react";
+import { ChevronRight, Zap, LayoutList, HelpCircle } from "lucide-react";
 
 interface InterviewDecisionStyleProps {
   onNext: (style: string) => void;
@@ -8,28 +8,22 @@ interface InterviewDecisionStyleProps {
 
 const OPTIONS = [
   { 
-    id: "autonomous", 
+    id: "decide_for_me", 
     label: "Decide for me when obvious", 
     icon: Zap,
     description: "Maximum autonomy, minimal interruption"
   },
   { 
-    id: "present_options", 
+    id: "suggest", 
     label: "Present options", 
     icon: LayoutList,
     description: "Show choices, let me pick"
   },
   { 
-    id: "ask_first", 
+    id: "ask", 
     label: "Ask before acting", 
     icon: HelpCircle,
     description: "Confirm every action"
-  },
-  { 
-    id: "observe", 
-    label: "Observe first", 
-    icon: Eye,
-    description: "Watch and learn before suggesting"
   },
 ];
 

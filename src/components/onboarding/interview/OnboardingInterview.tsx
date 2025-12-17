@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssistantProfile, DecisionStyle, InterruptionPreference, TonePreference } from "@/hooks/useAssistantProfile";
@@ -44,43 +45,33 @@ const SCREENS: Screen[] = [
   "close",
 ];
 
-// Map interview answers to assistant profile schema
+// Map interview answers to assistant profile schema (IDs now match directly)
 const mapDecisionStyle = (style: string): DecisionStyle => {
-  switch (style) {
-    case 'autonomous': return 'decide_for_me';
-    case 'present_options': return 'suggest';
-    case 'ask_first':
-    case 'observe':
-    default: return 'ask';
+  if (['decide_for_me', 'suggest', 'ask'].includes(style)) {
+    return style as DecisionStyle;
   }
+  return 'ask';
 };
 
 const mapInterruptionPreference = (preference: string): InterruptionPreference => {
-  switch (preference) {
-    case 'minimal':
-    case 'focus_first': return 'minimal';
-    case 'urgent_only':
-    case 'time_sensitive': return 'time_sensitive';
-    case 'balanced':
-    default: return 'balanced';
+  if (preference === 'only_when_urgent') return 'minimal';
+  if (['minimal', 'time_sensitive', 'balanced'].includes(preference)) {
+    return preference as InterruptionPreference;
   }
+  return 'balanced';
 };
 
 const mapTonePreference = (tone: string): TonePreference => {
-  switch (tone) {
-    case 'minimal':
-    case 'brief': return 'minimal';
-    case 'analytical':
-    case 'detailed': return 'analytical';
-    case 'calm':
-    case 'supportive':
-    default: return 'calm';
+  if (['minimal', 'calm', 'analytical'].includes(tone)) {
+    return tone as TonePreference;
   }
+  return 'calm';
 };
 
 export const OnboardingInterview = ({ onComplete }: OnboardingInterviewProps) => {
   const { user } = useAuth();
   const { createProfile } = useAssistantProfile();
+  const navigate = useNavigate();
   const [currentScreen, setCurrentScreen] = useState<Screen>("arrival");
   const [answers, setAnswers] = useState<InterviewAnswers>({
     priorities: [],
@@ -145,6 +136,7 @@ export const OnboardingInterview = ({ onComplete }: OnboardingInterviewProps) =>
   const handleComplete = async () => {
     await savePreferences();
     onComplete();
+    navigate('/morning-brief');
   };
 
   // Progress indicator

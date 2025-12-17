@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, AlertTriangle, Clock, Scale, Gauge } from "lucide-react";
+import { ChevronRight, AlertTriangle, Clock, Scale } from "lucide-react";
 
 interface InterviewAttentionProps {
   onNext: (preference: string) => void;
@@ -8,8 +8,8 @@ interface InterviewAttentionProps {
 
 const OPTIONS = [
   { 
-    id: "breaks_only", 
-    label: "Only when something breaks", 
+    id: "only_when_urgent", 
+    label: "Only when urgent", 
     icon: AlertTriangle,
     description: "Maximum focus protection"
   },
@@ -24,12 +24,6 @@ const OPTIONS = [
     label: "Balanced", 
     icon: Scale,
     description: "Smart filtering with some updates"
-  },
-  { 
-    id: "case_by_case", 
-    label: "I'll decide case by case", 
-    icon: Gauge,
-    description: "Ask me each time"
   },
 ];
 
