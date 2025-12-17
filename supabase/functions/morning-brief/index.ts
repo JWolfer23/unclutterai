@@ -24,10 +24,7 @@ serve(async (req) => {
       });
     }
 
-    // Create admin client for data fetching
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Create user client to verify auth
     const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -113,7 +110,6 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
-      // Return fallback data if no AI key
       console.log("No LOVABLE_API_KEY, returning fallback data");
       return new Response(JSON.stringify(generateFallbackBrief(
         messagesContext,
@@ -139,10 +135,7 @@ Return a JSON object with this exact structure:
       "sourceId": "original-id"
     }
   ],
-  "intelligence": {
-    "market": ["1-2 relevant market/world insights"],
-    "personal": "One personal/career relevance insight"
-  },
+  "insight": "One relevant insight about their day, work, or industry",
   "firstAction": {
     "title": "Single recommended first action",
     "estimatedMinutes": 15,
@@ -153,8 +146,8 @@ Return a JSON object with this exact structure:
 Rules:
 - Maximum 3 priorities, sorted by impact
 - Priorities should combine messages and tasks
-- Be concise and actionable
-- Intelligence should be relevant to a professional/executive`;
+- insight must be a single sentence (not an array)
+- Be concise and actionable`;
 
     const userPrompt = `User context:
 - Messages (last 24h, unread, high priority): ${JSON.stringify(messagesContext)}
@@ -199,7 +192,6 @@ Generate the morning brief JSON.`;
     // Parse AI response
     let aiParsed;
     try {
-      // Extract JSON from response (handle markdown code blocks)
       const jsonMatch = aiContent.match(/```json\s*([\s\S]*?)\s*```/) || 
                         aiContent.match(/```\s*([\s\S]*?)\s*```/) ||
                         [null, aiContent];
@@ -224,7 +216,7 @@ Generate the morning brief JSON.`;
     const briefData = {
       greeting,
       priorities: aiParsed.priorities || [],
-      intelligence: aiParsed.intelligence || { market: [], personal: "" },
+      insight: aiParsed.insight || "Focus on high-impact work during your peak energy hours.",
       energy: {
         level: energyLevel,
         focusWindowMinutes,
@@ -299,10 +291,7 @@ function generateFallbackBrief(
   return {
     greeting,
     priorities: priorities.slice(0, 3),
-    intelligence: {
-      market: ["Markets are active today - stay informed on key movements"],
-      personal: "Focus on high-impact work during your peak energy hours",
-    },
+    insight: "Focus on high-impact work during your peak energy hours.",
     energy: {
       level: energyLevel,
       focusWindowMinutes,

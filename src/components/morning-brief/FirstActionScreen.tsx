@@ -1,37 +1,35 @@
-import { Play, Clock, RefreshCw } from "lucide-react";
+import { Play, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FirstAction } from "@/hooks/useMorningBrief";
 
 interface FirstActionScreenProps {
   action: FirstAction;
   onBegin: () => void;
-  onChangeRecommendation: () => void;
 }
 
 export const FirstActionScreen = ({
   action,
   onBegin,
-  onChangeRecommendation,
 }: FirstActionScreenProps) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] animate-fade-in">
       {/* Header */}
       <div className="text-center mb-10">
-        <h2 className="text-3xl font-semibold text-white/95 mb-2">Start With This</h2>
-        <p className="text-white/50">Your AI-recommended first action</p>
+        <h2 className="text-3xl font-semibold text-white/95 mb-2">Start Here</h2>
+        <p className="text-white/50">Your first action</p>
       </div>
 
       {/* Action Card */}
       <div className="max-w-md w-full">
         <div className="rounded-3xl bg-black/40 backdrop-blur-xl border border-white/10 p-8 relative overflow-hidden">
           {/* Glow effect */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-[100px] bg-gradient-to-b from-purple-500/20 to-transparent blur-3xl" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-[100px] bg-gradient-to-b from-emerald-500/20 to-transparent blur-3xl" />
 
           <div className="relative">
             {/* Icon */}
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/20 flex items-center justify-center">
-                <Play className="w-8 h-8 text-purple-400" />
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/20 flex items-center justify-center">
+                <Play className="w-8 h-8 text-emerald-400" />
               </div>
             </div>
 
@@ -55,8 +53,8 @@ export const FirstActionScreen = ({
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex flex-col items-center gap-4 mt-8">
+        {/* Begin button */}
+        <div className="flex justify-center mt-8">
           <Button
             onClick={onBegin}
             className="
@@ -72,15 +70,6 @@ export const FirstActionScreen = ({
           >
             <Play className="w-5 h-5 mr-2" />
             Begin
-          </Button>
-
-          <Button
-            onClick={onChangeRecommendation}
-            variant="ghost"
-            className="text-white/40 hover:text-white/60 hover:bg-transparent"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Change recommendation
           </Button>
         </div>
       </div>

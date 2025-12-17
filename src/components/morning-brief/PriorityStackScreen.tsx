@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { PriorityItem } from "@/hooks/useMorningBrief";
 
 interface PriorityStackScreenProps {
-  priorities: PriorityItem[];
-  onAction: (id: string, action: "handle" | "schedule" | "delegate" | "dismiss") => void;
+  priority: PriorityItem | null;
+  currentIndex: number;
+  totalCount: number;
+  onHandle: () => void;
+  onSkip: () => void;
   onContinue: () => void;
 }
 
@@ -50,128 +53,110 @@ const getReasonColor = (reason: string) => {
 };
 
 export const PriorityStackScreen = ({
-  priorities,
-  onAction,
+  priority,
+  currentIndex,
+  totalCount,
+  onHandle,
+  onSkip,
   onContinue,
 }: PriorityStackScreenProps) => {
-  return (
-    <div className="flex flex-col min-h-[70vh] animate-fade-in">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-semibold text-white/95 mb-2">Top Priorities</h2>
-        <p className="text-white/50">The 3 things that matter most right now</p>
-      </div>
+  // No priorities - show empty state and continue
+  if (!priority) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] animate-fade-in">
+        <div className="text-center mb-8">
+          <CheckCircle2 className="w-16 h-16 text-emerald-400/50 mx-auto mb-6" />
+          <h2 className="text-3xl font-semibold text-white/95 mb-2">All Clear</h2>
+          <p className="text-white/50">No urgent priorities right now</p>
+        </div>
 
-      {/* Priority Cards */}
-      <div className="flex-1 space-y-4 max-w-lg mx-auto w-full">
-        {priorities.length === 0 ? (
-          <div className="text-center py-12">
-            <CheckCircle2 className="w-12 h-12 text-emerald-400/50 mx-auto mb-4" />
-            <p className="text-white/60">No urgent priorities right now</p>
-            <p className="text-white/40 text-sm mt-1">You're in great shape!</p>
-          </div>
-        ) : (
-          priorities.slice(0, 3).map((priority, index) => {
-            const SourceIcon = getSourceIcon(priority.sourceType);
-            const ReasonIcon = getReasonIcon(priority.reason);
-            const reasonColors = getReasonColor(priority.reason);
-
-            return (
-              <div
-                key={priority.id}
-                className="
-                  relative rounded-2xl
-                  bg-black/40 backdrop-blur-xl
-                  border border-white/10
-                  p-5
-                  hover:border-white/20
-                  transition-all duration-300
-                "
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                {/* Number badge */}
-                <div className="absolute -left-3 -top-3 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/80 to-indigo-500/80 flex items-center justify-center text-sm font-bold text-white shadow-lg">
-                  {index + 1}
-                </div>
-
-                <div className="flex items-start gap-4">
-                  {/* Source icon */}
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                    <SourceIcon className="w-5 h-5 text-white/60" />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    {/* Title */}
-                    <h3 className="text-white/90 font-medium text-base mb-2 line-clamp-2">
-                      {priority.title}
-                    </h3>
-
-                    {/* Reason badge */}
-                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${reasonColors}`}>
-                      <ReasonIcon className="w-3 h-3" />
-                      {priority.reason}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex gap-2 mt-4 flex-wrap">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onAction(priority.id, "handle")}
-                    className="text-xs bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-white/80"
-                  >
-                    Handle now
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onAction(priority.id, "schedule")}
-                    className="text-xs bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-white/80"
-                  >
-                    Schedule
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onAction(priority.id, "delegate")}
-                    className="text-xs bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-white/80"
-                  >
-                    Delegate
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onAction(priority.id, "dismiss")}
-                    className="text-xs text-white/40 hover:text-white/60 hover:bg-white/5"
-                  >
-                    Dismiss
-                  </Button>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Continue button */}
-      <div className="flex justify-center mt-8">
         <Button
           onClick={onContinue}
           className="
             px-8 py-5
-            bg-gradient-to-r from-purple-500/80 to-indigo-500/80
-            hover:from-purple-400/90 hover:to-indigo-400/90
+            bg-gradient-to-r from-emerald-500/80 to-teal-500/80
+            hover:from-emerald-400/90 hover:to-teal-400/90
             text-white border-0
             rounded-full
-            shadow-[0_0_20px_rgba(147,51,234,0.3)]
-            hover:shadow-[0_0_30px_rgba(147,51,234,0.5)]
+            shadow-[0_0_20px_rgba(16,185,129,0.3)]
+            hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]
             transition-all duration-300
           "
         >
           Continue
         </Button>
+      </div>
+    );
+  }
+
+  const SourceIcon = getSourceIcon(priority.sourceType);
+  const ReasonIcon = getReasonIcon(priority.reason);
+  const reasonColors = getReasonColor(priority.reason);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[70vh] animate-fade-in">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <p className="text-white/40 text-sm mb-2">
+          Priority {currentIndex + 1} of {totalCount}
+        </p>
+        <h2 className="text-3xl font-semibold text-white/95">Needs Your Attention</h2>
+      </div>
+
+      {/* Single Priority Card */}
+      <div className="max-w-md w-full">
+        <div className="rounded-3xl bg-black/40 backdrop-blur-xl border border-white/10 p-8 relative overflow-hidden">
+          {/* Glow effect */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-[100px] bg-gradient-to-b from-purple-500/20 to-transparent blur-3xl" />
+
+          <div className="relative">
+            {/* Source icon */}
+            <div className="flex justify-center mb-6">
+              <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                <SourceIcon className="w-7 h-7 text-white/60" />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-xl font-semibold text-white/95 text-center mb-4 line-clamp-2">
+              {priority.title}
+            </h3>
+
+            {/* Reason badge */}
+            <div className="flex justify-center">
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border ${reasonColors}`}>
+                <ReasonIcon className="w-4 h-4" />
+                {priority.reason}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-col items-center gap-4 mt-8">
+          <Button
+            onClick={onHandle}
+            className="
+              px-10 py-6 text-lg font-medium w-full
+              bg-gradient-to-r from-purple-500/80 to-indigo-500/80
+              hover:from-purple-400/90 hover:to-indigo-400/90
+              text-white border-0
+              rounded-full
+              shadow-[0_0_30px_rgba(147,51,234,0.3)]
+              hover:shadow-[0_0_40px_rgba(147,51,234,0.5)]
+              transition-all duration-300
+            "
+          >
+            Handle This
+          </Button>
+
+          <button
+            onClick={onSkip}
+            className="text-white/40 hover:text-white/60 text-sm transition-colors"
+          >
+            Skip
+          </button>
+        </div>
       </div>
     </div>
   );

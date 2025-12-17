@@ -17,9 +17,12 @@ const MorningBrief = () => {
     briefData,
     isLoading,
     greeting,
+    currentPriority,
+    currentPriorityIndex,
+    totalPriorities,
     nextScreen,
+    advancePriority,
     generateBrief,
-    handlePriorityAction,
     completeBrief,
     markBriefShown,
   } = useMorningBrief();
@@ -30,16 +33,17 @@ const MorningBrief = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handlePriorityActionWithNavigation = (
-    id: string,
-    action: "handle" | "schedule" | "delegate" | "dismiss"
-  ) => {
-    handlePriorityAction(id, action);
-    
-    if (action === "handle") {
-      // Navigate to relevant source (could be expanded based on sourceType)
-      navigate("/communication");
-    }
+  const handlePriorityHandle = () => {
+    // Navigate to relevant source
+    navigate("/communication");
+  };
+
+  const handlePrioritySkip = () => {
+    advancePriority();
+  };
+
+  const handlePriorityContinue = () => {
+    nextScreen();
   };
 
   const handleEnterFocus = () => {
@@ -49,13 +53,7 @@ const MorningBrief = () => {
 
   const handleBeginAction = () => {
     completeBrief();
-    // Navigate based on action type - for now go home
     navigate("/");
-  };
-
-  const handleChangeRecommendation = () => {
-    // Could regenerate or show alternatives
-    generateBrief();
   };
 
   const handleBack = () => {
@@ -79,7 +77,7 @@ const MorningBrief = () => {
   const data = briefData || {
     greeting,
     priorities: [],
-    intelligence: { market: [], personal: "" },
+    insight: "",
     energy: { level: "medium" as const, focusWindowMinutes: 60, recoveryNeeded: false },
     firstAction: { title: "Plan your day", estimatedMinutes: 10, reason: "Start with clarity" },
   };
@@ -128,15 +126,18 @@ const MorningBrief = () => {
 
         {currentScreen === 2 && (
           <PriorityStackScreen
-            priorities={data.priorities}
-            onAction={handlePriorityActionWithNavigation}
-            onContinue={nextScreen}
+            priority={currentPriority}
+            currentIndex={currentPriorityIndex}
+            totalCount={totalPriorities}
+            onHandle={handlePriorityHandle}
+            onSkip={handlePrioritySkip}
+            onContinue={handlePriorityContinue}
           />
         )}
 
         {currentScreen === 3 && (
           <IntelligenceScreen
-            intelligence={data.intelligence}
+            insight={data.insight}
             onContinue={nextScreen}
           />
         )}
@@ -153,7 +154,6 @@ const MorningBrief = () => {
           <FirstActionScreen
             action={data.firstAction}
             onBegin={handleBeginAction}
-            onChangeRecommendation={handleChangeRecommendation}
           />
         )}
       </div>
