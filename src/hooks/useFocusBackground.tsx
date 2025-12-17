@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUCTStake } from './useUCTStake';
+import { useAssistantProfile } from './useAssistantProfile';
 
 export interface AutoAction {
   type: 'archived' | 'snoozed' | 'labeled';
@@ -37,9 +38,13 @@ export const useFocusBackground = () => {
   const [state, setState] = useState<FocusBackgroundState>(initialState);
   const sessionStartTime = useRef<Date | null>(null);
   const { capabilities } = useUCTStake();
+  const { profile, canAutoHandle, isOperator } = useAssistantProfile();
   
-  // Check if user has autonomy capability from staking
-  const hasAutonomyCapability = capabilities?.includes('auto_close_emails') ?? false;
+  // Check if user has autonomy capability from staking OR assistant profile
+  const hasAutonomyCapability = 
+    capabilities?.includes('auto_close_emails') || 
+    canAutoHandle('auto_handle_low_risk') ||
+    (isOperator() && profile?.allowedActions.archive_items);
 
   const startTracking = useCallback((sessionId: string) => {
     sessionStartTime.current = new Date();

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAssistantProfile, DecisionStyle, InterruptionPreference, TonePreference } from "@/hooks/useAssistantProfile";
 import type { Json } from "@/integrations/supabase/types";
 import {
   InterviewArrival,
@@ -43,8 +44,43 @@ const SCREENS: Screen[] = [
   "close",
 ];
 
+// Map interview answers to assistant profile schema
+const mapDecisionStyle = (style: string): DecisionStyle => {
+  switch (style) {
+    case 'autonomous': return 'decide_for_me';
+    case 'present_options': return 'suggest';
+    case 'ask_first':
+    case 'observe':
+    default: return 'ask';
+  }
+};
+
+const mapInterruptionPreference = (preference: string): InterruptionPreference => {
+  switch (preference) {
+    case 'minimal':
+    case 'focus_first': return 'minimal';
+    case 'urgent_only':
+    case 'time_sensitive': return 'time_sensitive';
+    case 'balanced':
+    default: return 'balanced';
+  }
+};
+
+const mapTonePreference = (tone: string): TonePreference => {
+  switch (tone) {
+    case 'minimal':
+    case 'brief': return 'minimal';
+    case 'analytical':
+    case 'detailed': return 'analytical';
+    case 'calm':
+    case 'supportive':
+    default: return 'calm';
+  }
+};
+
 export const OnboardingInterview = ({ onComplete }: OnboardingInterviewProps) => {
   const { user } = useAuth();
+  const { createProfile } = useAssistantProfile();
   const [currentScreen, setCurrentScreen] = useState<Screen>("arrival");
   const [answers, setAnswers] = useState<InterviewAnswers>({
     priorities: [],
@@ -61,7 +97,7 @@ export const OnboardingInterview = ({ onComplete }: OnboardingInterviewProps) =>
     }
   };
 
-  // Save preferences to database
+  // Save preferences to database and create assistant profile
   const savePreferences = async () => {
     if (!user) return;
 
@@ -76,10 +112,31 @@ export const OnboardingInterview = ({ onComplete }: OnboardingInterviewProps) =>
     };
 
     try {
+      // Save to profiles preferences
       await supabase
         .from("profiles")
         .update({ preferences: preferencesData })
         .eq("id", user.id);
+
+      // Create formal assistant profile with mapped values
+      await createProfile({
+        role: 'analyst', // Always start as analyst
+        authority_level: 0,
+        decision_style: mapDecisionStyle(answers.decisionStyle),
+        interruption_preference: mapInterruptionPreference(answers.attentionPreference),
+        tone_preference: mapTonePreference(answers.voiceTone),
+        trust_boundaries: {
+          send_messages: answers.trustBoundaries.send_messages !== false,
+          schedule_meetings: answers.trustBoundaries.schedule_meetings !== false,
+          delete_content: answers.trustBoundaries.delete_content !== false,
+        },
+        allowed_actions: {
+          draft_replies: false,
+          schedule_items: false,
+          archive_items: false,
+          auto_handle_low_risk: false,
+        },
+      });
     } catch (error) {
       console.error("Error saving preferences:", error);
     }

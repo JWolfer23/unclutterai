@@ -178,6 +178,45 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_profiles: {
+        Row: {
+          allowed_actions: Json
+          authority_level: number
+          created_at: string
+          decision_style: string
+          interruption_preference: string
+          role: string
+          tone_preference: string
+          trust_boundaries: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allowed_actions?: Json
+          authority_level?: number
+          created_at?: string
+          decision_style?: string
+          interruption_preference?: string
+          role?: string
+          tone_preference?: string
+          trust_boundaries?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allowed_actions?: Json
+          authority_level?: number
+          created_at?: string
+          decision_style?: string
+          interruption_preference?: string
+          role?: string
+          tone_preference?: string
+          trust_boundaries?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       auto_send_logs: {
         Row: {
           created_at: string

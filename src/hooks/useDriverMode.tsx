@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useMessages } from './useMessages';
 import { useTasks } from './useTasks';
 import { useDecisionHeuristics, getActNowItems, getCriticalItems } from './useDecisionHeuristics';
+import { useAssistantProfile } from './useAssistantProfile';
 import type { ItemToScore, FinalClassification } from '@/lib/aiDecisionHeuristics';
 
 export interface ContextCard {
@@ -34,6 +35,7 @@ export const useDriverMode = (): UseDriverModeReturn => {
   const { messages } = useMessages();
   const { tasks } = useTasks();
   const { scoreBatch, isScoring } = useDecisionHeuristics();
+  const { profile, shouldInterrupt, canAutoHandle, isOperator } = useAssistantProfile();
 
   // Convert messages/tasks to scoreable items
   const getItemsToScore = useCallback((): ItemToScore[] => {
@@ -148,6 +150,21 @@ export const useDriverMode = (): UseDriverModeReturn => {
     }
 
     const card = getContextCard();
+    
+    // Gate card display by assistant profile interruption preference
+    if (card) {
+      const shouldShow = shouldInterrupt(
+        card.urgency === 'critical' ? 'critical' :
+        card.urgency === 'time-sensitive' ? 'time_sensitive' : 'informational'
+      );
+      
+      if (!shouldShow) {
+        // User's preference is to not be interrupted at this level
+        setContextCard(null);
+        return;
+      }
+    }
+    
     setContextCard(card);
 
     // Auto-dismiss informational cards after 5 seconds
@@ -157,7 +174,7 @@ export const useDriverMode = (): UseDriverModeReturn => {
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [isActive, getContextCard, scoredItems]);
+  }, [isActive, getContextCard, scoredItems, shouldInterrupt]);
 
   const dismissCard = useCallback(() => {
     if (contextCard) {

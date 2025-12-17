@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useAssistantProfile } from '@/hooks/useAssistantProfile';
 
 const PROMOTION_SHOWN_KEY = 'assistant_promotion_shown';
 
@@ -21,6 +22,7 @@ interface PromotionEligibility {
 
 export function useAssistantPromotion() {
   const { user } = useAuth();
+  const { profile, promoteToOperator, isOperator } = useAssistantProfile();
   const [eligibility, setEligibility] = useState<PromotionEligibility>({
     isEligible: false,
     criteria: {
@@ -44,15 +46,8 @@ export function useAssistantPromotion() {
       // Check if promotion was already shown
       const promotionShown = localStorage.getItem(`${PROMOTION_SHOWN_KEY}_${user.id}`) === 'true';
 
-      // Check current assistant mode from profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('preferences')
-        .eq('id', user.id)
-        .single();
-
-      const preferences = profile?.preferences as Record<string, unknown> | null;
-      const assistantMode = (preferences?.assistant_mode as 'analyst' | 'operator') || 'analyst';
+      // Get assistant mode from profile
+      const assistantMode = profile?.role || 'analyst';
 
       // Count unclutter cycles from focus_ledger
       const { count: unclutterCount } = await supabase
@@ -130,7 +125,7 @@ export function useAssistantPromotion() {
       console.error('Error checking promotion eligibility:', error);
       setEligibility(prev => ({ ...prev, isLoading: false }));
     }
-  }, [user?.id]);
+  }, [user?.id, profile?.role]);
 
   useEffect(() => {
     checkEligibility();
@@ -147,21 +142,8 @@ export function useAssistantPromotion() {
     if (!user?.id) return false;
 
     try {
-      // Update assistant mode to operator
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('preferences')
-        .eq('id', user.id)
-        .single();
-
-      const currentPrefs = (profile?.preferences as Record<string, unknown>) || {};
-      
-      await supabase
-        .from('profiles')
-        .update({
-          preferences: { ...currentPrefs, assistant_mode: 'operator' },
-        })
-        .eq('id', user.id);
+      // Use centralized profile promotion
+      await promoteToOperator();
 
       // Log promotion event
       await supabase.from('focus_ledger').insert({
@@ -177,7 +159,7 @@ export function useAssistantPromotion() {
       console.error('Error accepting promotion:', error);
       return false;
     }
-  }, [user?.id, markPromotionShown]);
+  }, [user?.id, markPromotionShown, promoteToOperator]);
 
   const declinePromotion = useCallback(async () => {
     if (!user?.id) return;

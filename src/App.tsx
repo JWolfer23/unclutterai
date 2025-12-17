@@ -29,6 +29,7 @@ import PerformanceReport from "./pages/PerformanceReport";
 import Pricing from "./pages/Pricing";
 import { useAuth } from "@/hooks/useAuth";
 import { SecurityProvider } from "@/components/SecurityProvider";
+import { AssistantProfileProvider } from "@/components/AssistantProfileProvider";
 
 const queryClient = new QueryClient();
 
@@ -42,47 +43,48 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <SecurityProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
-              <Route path="/reset" element={<PasswordReset />} />
-              <Route path="/" element={user ? <Index /> : <Navigate to="/auth" replace />} />
-              <Route path="/email-setup" element={user ? <EmailSetup /> : <Navigate to="/auth" replace />} />
-              <Route path="/crypto-integration" element={user ? <CryptoIntegration /> : <Navigate to="/auth" replace />} />
-              
-              {/* Executive Mode Routes */}
-              <Route path="/morning-brief" element={user ? <MorningBrief /> : <Navigate to="/auth" replace />} />
-              <Route path="/voice" element={user ? <VoiceCommand /> : <Navigate to="/auth" replace />} />
-              <Route path="/open-loops" element={user ? <ClearOpenLoops /> : <Navigate to="/auth" replace />} />
-              <Route path="/focus" element={user ? <FocusMode /> : <Navigate to="/auth" replace />} />
-              
-              {/* Life OS Routes */}
-              <Route path="/communication" element={user ? <CommunicationMode /> : <Navigate to="/auth" replace />} />
-              <Route path="/intelligence" element={user ? <IntelligenceFeed /> : <Navigate to="/auth" replace />} />
-              <Route path="/health" element={user ? <HealthMode /> : <Navigate to="/auth" replace />} />
-              <Route path="/strategy" element={user ? <StrategyWealth /> : <Navigate to="/auth" replace />} />
-              
-              {/* System Routes */}
-              <Route path="/uct-tokens" element={user ? <UCTTokens /> : <Navigate to="/auth" replace />} />
-              <Route path="/customize" element={user ? <CustomizeAI /> : <Navigate to="/auth" replace />} />
-              <Route path="/pricing" element={user ? <Pricing /> : <Navigate to="/auth" replace />} />
-              <Route path="/community" element={user ? <CommunityRanking /> : <Navigate to="/auth" replace />} />
-              <Route path="/performance" element={user ? <PerformanceReport /> : <Navigate to="/auth" replace />} />
-              <Route path="/performance" element={user ? <PerformanceReport /> : <Navigate to="/auth" replace />} />
-              
-              {/* Legacy routes for backward compatibility */}
-              <Route path="/news" element={user ? <NewsMode /> : <Navigate to="/auth" replace />} />
-              <Route path="/learning" element={user ? <LearningMode /> : <Navigate to="/auth" replace />} />
-              <Route path="/career" element={user ? <CareerMode /> : <Navigate to="/auth" replace />} />
-              <Route path="/wealth" element={user ? <WealthMode /> : <Navigate to="/auth" replace />} />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <AssistantProfileProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
+                <Route path="/reset" element={<PasswordReset />} />
+                <Route path="/" element={user ? <Index /> : <Navigate to="/auth" replace />} />
+                <Route path="/email-setup" element={user ? <EmailSetup /> : <Navigate to="/auth" replace />} />
+                <Route path="/crypto-integration" element={user ? <CryptoIntegration /> : <Navigate to="/auth" replace />} />
+                
+                {/* Executive Mode Routes */}
+                <Route path="/morning-brief" element={user ? <MorningBrief /> : <Navigate to="/auth" replace />} />
+                <Route path="/voice" element={user ? <VoiceCommand /> : <Navigate to="/auth" replace />} />
+                <Route path="/open-loops" element={user ? <ClearOpenLoops /> : <Navigate to="/auth" replace />} />
+                <Route path="/focus" element={user ? <FocusMode /> : <Navigate to="/auth" replace />} />
+                
+                {/* Life OS Routes */}
+                <Route path="/communication" element={user ? <CommunicationMode /> : <Navigate to="/auth" replace />} />
+                <Route path="/intelligence" element={user ? <IntelligenceFeed /> : <Navigate to="/auth" replace />} />
+                <Route path="/health" element={user ? <HealthMode /> : <Navigate to="/auth" replace />} />
+                <Route path="/strategy" element={user ? <StrategyWealth /> : <Navigate to="/auth" replace />} />
+                
+                {/* System Routes */}
+                <Route path="/uct-tokens" element={user ? <UCTTokens /> : <Navigate to="/auth" replace />} />
+                <Route path="/customize" element={user ? <CustomizeAI /> : <Navigate to="/auth" replace />} />
+                <Route path="/pricing" element={user ? <Pricing /> : <Navigate to="/auth" replace />} />
+                <Route path="/community" element={user ? <CommunityRanking /> : <Navigate to="/auth" replace />} />
+                <Route path="/performance" element={user ? <PerformanceReport /> : <Navigate to="/auth" replace />} />
+                
+                {/* Legacy routes for backward compatibility */}
+                <Route path="/news" element={user ? <NewsMode /> : <Navigate to="/auth" replace />} />
+                <Route path="/learning" element={user ? <LearningMode /> : <Navigate to="/auth" replace />} />
+                <Route path="/career" element={user ? <CareerMode /> : <Navigate to="/auth" replace />} />
+                <Route path="/wealth" element={user ? <WealthMode /> : <Navigate to="/auth" replace />} />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AssistantProfileProvider>
       </SecurityProvider>
     </QueryClientProvider>
   );

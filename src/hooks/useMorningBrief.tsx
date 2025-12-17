@@ -5,6 +5,7 @@ import { useMessages } from "@/hooks/useMessages";
 import { useTasks } from "@/hooks/useTasks";
 import { useFocusAnalytics } from "@/hooks/useFocusAnalytics";
 import { useFocusStreaks } from "@/hooks/useFocusStreaks";
+import { useAssistantProfile } from "@/hooks/useAssistantProfile";
 
 export type ScreenNumber = 1 | 2 | 3 | 4 | 5;
 
@@ -49,6 +50,7 @@ export const useMorningBrief = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenNumber>(1);
   const [briefData, setBriefData] = useState<MorningBriefData | null>(null);
   const queryClient = useQueryClient();
+  const { profile, shouldInterrupt } = useAssistantProfile();
 
   // Get current hour for greeting
   const currentHour = new Date().getHours();
@@ -125,10 +127,17 @@ export const useMorningBrief = () => {
     localStorage.setItem(MORNING_BRIEF_SHOWN_KEY, today);
   };
 
-  // Should auto-show (first open between 5 AM and 12 PM, not shown today)
+  // Should auto-show (first open between 5 AM and 12 PM, not shown today, and profile allows)
   const shouldAutoShow = () => {
     const currentHour = new Date().getHours();
-    return currentHour >= 5 && currentHour < 12 && !wasBriefShownToday();
+    const isWithinMorningWindow = currentHour >= 5 && currentHour < 12;
+    const notShownToday = !wasBriefShownToday();
+    
+    // Check assistant profile interruption preference
+    // Morning brief is considered "informational" level
+    const profileAllows = shouldInterrupt('informational');
+    
+    return isWithinMorningWindow && notShownToday && profileAllows;
   };
 
   // Handle priority item actions
