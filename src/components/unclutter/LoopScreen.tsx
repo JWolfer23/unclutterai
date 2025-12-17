@@ -1,9 +1,10 @@
-import { Mail, Reply, Calendar, Archive, X, SkipForward, Loader2 } from "lucide-react";
+import { Mail, Reply, Calendar, Archive, X, SkipForward, Loader2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Loop, LoopAction } from "@/hooks/useUnclutter";
 import { useAssistantProfile } from "@/hooks/useAssistantProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { BetaUCTData } from "@/hooks/useBetaUCT";
 
 interface LoopScreenProps {
   loop: Loop;
@@ -15,6 +16,7 @@ interface LoopScreenProps {
   onIgnore: () => void;
   onSkip: () => void;
   isGeneratingDraft: boolean;
+  uctData?: BetaUCTData | null;
 }
 
 const LoopScreen = ({
@@ -26,7 +28,8 @@ const LoopScreen = ({
   onArchive,
   onIgnore,
   onSkip,
-  isGeneratingDraft
+  isGeneratingDraft,
+  uctData
 }: LoopScreenProps) => {
   const { user } = useAuth();
   const { isOperator, requiresConfirmation } = useAssistantProfile();
@@ -62,11 +65,17 @@ const LoopScreen = ({
 
   return (
     <div className="max-w-lg mx-auto px-4">
-      {/* Progress indicator */}
-      <div className="text-center mb-6">
+      {/* Progress indicator with speed boost */}
+      <div className="text-center mb-6 space-y-2">
         <span className="text-white/40 text-sm">
           Loop {currentIndex + 1} of {totalLoops}
         </span>
+        {uctData && uctData.resolutionSpeedBoost > 1 && (
+          <div className="flex items-center justify-center gap-1.5 text-cyan-400">
+            <Zap className="h-3.5 w-3.5" />
+            <span className="text-xs font-medium">{uctData.resolutionSpeedBoost}x resolution speed</span>
+          </div>
+        )}
       </div>
 
       {/* Loop card */}

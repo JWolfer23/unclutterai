@@ -22,6 +22,7 @@ const UnclutterMode = () => {
     isLoading,
     aiDraft,
     isGeneratingDraft,
+    uctData,
     startScan,
     resolve,
     skip,
@@ -105,6 +106,7 @@ const UnclutterMode = () => {
             onIgnore={() => resolve('ignore')}
             onSkip={skip}
             isGeneratingDraft={isGeneratingDraft}
+            uctData={uctData}
           />
         )}
 

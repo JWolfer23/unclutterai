@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 import { useAssistantProfile } from './useAssistantProfile';
+import { useBetaUCT } from './useBetaUCT';
+import { UCT_REWARDS } from '@/lib/uctBetaRules';
 
 export interface Loop {
   id: string;
@@ -34,6 +36,7 @@ export const useUnclutter = () => {
 
   const { toast } = useToast();
   const { canAutoHandle, requiresConfirmation } = useAssistantProfile();
+  const { addUCT, data: uctData } = useBetaUCT();
 
   const currentLoop = loops[currentIndex] || null;
   const totalLoops = loops.length;
@@ -81,11 +84,13 @@ export const useUnclutter = () => {
     }
   }, [currentIndex, loops.length]);
 
-  // Resolve current loop with an action
+  // Resolve current loop with an action and award UCT
   const resolve = useCallback(async (action: LoopAction) => {
     if (!currentLoop) return;
 
     try {
+      let uctReward = UCT_REWARDS.loop_resolved; // Base reward
+
       // Handle action
       if (action === 'archive') {
         await supabase
@@ -93,17 +98,30 @@ export const useUnclutter = () => {
           .update({ is_read: true, is_archived: true })
           .eq('id', currentLoop.messageId);
         setLoopsResolved(prev => prev + 1);
+        uctReward += UCT_REWARDS.loop_archive;
       } else if (action === 'ignore') {
         await supabase
           .from('messages')
           .update({ is_read: true })
           .eq('id', currentLoop.messageId);
         setLoopsResolved(prev => prev + 1);
-      } else if (action === 'reply' || action === 'schedule') {
-        // These are handled separately with modals
+      } else if (action === 'reply') {
         setLoopsResolved(prev => prev + 1);
+        uctReward += UCT_REWARDS.loop_reply_sent;
+      } else if (action === 'schedule') {
+        setLoopsResolved(prev => prev + 1);
+        uctReward += UCT_REWARDS.loop_task_created;
       }
-      // 'skip' doesn't count as resolved
+      // 'skip' doesn't count as resolved and gets no reward
+
+      // Award UCT if action was taken (not skip)
+      if (action !== 'skip' && uctReward > 0) {
+        try {
+          await addUCT(uctReward, `unclutter_${action}`);
+        } catch (e) {
+          console.error('Failed to award UCT:', e);
+        }
+      }
 
       advance();
     } catch (error) {
@@ -114,7 +132,7 @@ export const useUnclutter = () => {
         variant: "destructive"
       });
     }
-  }, [currentLoop, advance, toast]);
+  }, [currentLoop, advance, toast, addUCT]);
 
   // Skip without action
   const skip = useCallback(() => {
@@ -185,8 +203,17 @@ export const useUnclutter = () => {
     }
   }, [currentLoop, toast]);
 
-  // Check if action requires confirmation
+  // Check if action requires confirmation - UCT level can reduce confirmations
   const needsConfirmation = useCallback((action: LoopAction): boolean => {
+    // UCT level overrides
+    if (action === 'reply' && uctData?.skipSendConfirm) {
+      return false;
+    }
+    if (action === 'schedule' && uctData?.skipScheduleConfirm) {
+      return false;
+    }
+    
+    // Fall back to profile settings
     if (action === 'reply') {
       return requiresConfirmation('send_messages');
     }
@@ -194,7 +221,7 @@ export const useUnclutter = () => {
       return requiresConfirmation('schedule_meetings');
     }
     return false;
-  }, [requiresConfirmation]);
+  }, [requiresConfirmation, uctData]);
 
   // Reset state
   const reset = useCallback(() => {
@@ -214,6 +241,7 @@ export const useUnclutter = () => {
     isLoading,
     aiDraft,
     isGeneratingDraft,
+    uctData, // Expose UCT data for speed boost display
     startScan,
     resolve,
     skip,
