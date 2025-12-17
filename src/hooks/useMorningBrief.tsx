@@ -1,10 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useMessages } from "@/hooks/useMessages";
-import { useTasks } from "@/hooks/useTasks";
-import { useFocusAnalytics } from "@/hooks/useFocusAnalytics";
-import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useAssistantProfile } from "@/hooks/useAssistantProfile";
 
 export type ScreenNumber = 1 | 2 | 3 | 4 | 5;
@@ -15,12 +11,6 @@ export interface PriorityItem {
   title: string;
   reason: "Time-sensitive" | "Revenue impact" | "Decision required" | "Strategic opportunity";
   sourceId?: string;
-}
-
-export interface IntelligenceData {
-  market: string[];
-  personal: string;
-  learning?: string;
 }
 
 export interface EnergyState {
@@ -39,7 +29,7 @@ export interface FirstAction {
 export interface MorningBriefData {
   greeting: string;
   priorities: PriorityItem[];
-  intelligence: IntelligenceData;
+  insight: string;
   energy: EnergyState;
   firstAction: FirstAction;
 }
@@ -48,9 +38,10 @@ const MORNING_BRIEF_SHOWN_KEY = "last_morning_brief_date";
 
 export const useMorningBrief = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenNumber>(1);
+  const [currentPriorityIndex, setCurrentPriorityIndex] = useState(0);
   const [briefData, setBriefData] = useState<MorningBriefData | null>(null);
   const queryClient = useQueryClient();
-  const { profile, shouldInterrupt } = useAssistantProfile();
+  const { shouldInterrupt } = useAssistantProfile();
 
   // Get current hour for greeting
   const currentHour = new Date().getHours();
@@ -74,8 +65,8 @@ export const useMorningBrief = () => {
       if (error) throw error;
       return data as MorningBriefData;
     },
-    enabled: false, // Don't auto-fetch, we'll trigger manually
-    staleTime: 1000 * 60 * 60 * 6, // Cache for 6 hours
+    enabled: false,
+    staleTime: 1000 * 60 * 60 * 6,
   });
 
   // Generate brief mutation
@@ -93,6 +84,7 @@ export const useMorningBrief = () => {
     },
     onSuccess: (data) => {
       setBriefData(data);
+      setCurrentPriorityIndex(0);
       queryClient.setQueryData(["morning-brief"], data);
     },
   });
@@ -114,6 +106,29 @@ export const useMorningBrief = () => {
     setCurrentScreen(screen);
   };
 
+  // Priority navigation (one at a time)
+  const getCurrentPriority = (): PriorityItem | null => {
+    const data = briefData || generatedBrief;
+    if (!data?.priorities || data.priorities.length === 0) return null;
+    if (currentPriorityIndex >= data.priorities.length) return null;
+    return data.priorities[currentPriorityIndex];
+  };
+
+  const getTotalPriorities = (): number => {
+    const data = briefData || generatedBrief;
+    return data?.priorities?.length || 0;
+  };
+
+  const advancePriority = () => {
+    const total = getTotalPriorities();
+    if (currentPriorityIndex < total - 1) {
+      setCurrentPriorityIndex((prev) => prev + 1);
+    } else {
+      // All priorities processed, go to next screen
+      nextScreen();
+    }
+  };
+
   // Check if brief was shown today
   const wasBriefShownToday = () => {
     const lastShown = localStorage.getItem(MORNING_BRIEF_SHOWN_KEY);
@@ -132,28 +147,8 @@ export const useMorningBrief = () => {
     const currentHour = new Date().getHours();
     const isWithinMorningWindow = currentHour >= 5 && currentHour < 12;
     const notShownToday = !wasBriefShownToday();
-    
-    // Check assistant profile interruption preference
-    // Morning brief is considered "informational" level
     const profileAllows = shouldInterrupt('informational');
-    
     return isWithinMorningWindow && notShownToday && profileAllows;
-  };
-
-  // Handle priority item actions
-  const handlePriorityAction = (
-    priorityId: string,
-    action: "handle" | "schedule" | "delegate" | "dismiss"
-  ) => {
-    if (!briefData) return;
-
-    if (action === "dismiss") {
-      setBriefData({
-        ...briefData,
-        priorities: briefData.priorities.filter((p) => p.id !== priorityId),
-      });
-    }
-    // Other actions can be handled by parent component
   };
 
   // Complete the brief
@@ -169,14 +164,19 @@ export const useMorningBrief = () => {
     error,
     greeting: getGreeting(),
 
+    // Priority state
+    currentPriorityIndex,
+    currentPriority: getCurrentPriority(),
+    totalPriorities: getTotalPriorities(),
+
     // Navigation
     nextScreen,
     prevScreen,
     goToScreen,
+    advancePriority,
 
     // Actions
     generateBrief: generateBrief.mutate,
-    handlePriorityAction,
     completeBrief,
 
     // Checks
