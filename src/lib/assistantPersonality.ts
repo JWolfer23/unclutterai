@@ -79,6 +79,43 @@ export const ASSISTANT_TOAST = {
   noItems: { title: "Empty.", description: "" },
 } as const;
 
+// Trust Moment Messages - key UX moments that build loyalty through restraint
+export const TRUST_MOMENTS = {
+  // Trust Moment #1 - First Silence (after onboarding)
+  firstSilence: {
+    primary: "You have nothing urgent.",
+    secondary: "I'll let you know if that changes.",
+  },
+  
+  // Trust Moment #2 - First Interruption
+  interruption: {
+    prefix: "Interrupting because",
+    tomorrow: "this affects tomorrow.",
+    deadline: "there's a deadline.",
+    breaks: "something will break.",
+    money: "this involves money.",
+    people: "someone is waiting.",
+  },
+  
+  // Trust Moment #3 - Loop Closure Relief
+  loopClosure: {
+    primary: "All open loops are resolved.",
+    // No stats. No celebration. Just relief.
+  },
+  
+  // Trust Moment #4 - Focus Protection
+  focusProtection: {
+    primary: "Nothing important was missed.",
+    // One of the most powerful moments in the product
+  },
+  
+  // Trust Moment #5 - Escalated Autonomy
+  autonomyEscalation: {
+    primary: "I've started handling similar decisions automatically.",
+    secondary: "You can change this anytime.",
+  },
+} as const;
+
 // Voice/TTS response patterns
 export const ASSISTANT_VOICE = {
   // Calm, short responses for TTS
