@@ -67,10 +67,19 @@ export function useSubscription() {
         .eq('id', user.id);
 
       if (error) throw error;
+
+      // Sync authority level to assistant_profiles
+      const authorityLevel = getAuthorityLevel(newTier);
+      await supabase
+        .from('assistant_profiles')
+        .update({ authority_level: authorityLevel })
+        .eq('user_id', user.id);
+
       return newTier;
     },
     onSuccess: (tier) => {
       queryClient.invalidateQueries({ queryKey: ['subscription', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['assistant-profile', user?.id] });
       toast.success(`Upgraded to ${PRICING_TIERS[tier].name}`);
     },
     onError: (error) => {
