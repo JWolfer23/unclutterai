@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Check, ChevronDown, ChevronUp, Mail, Archive, AlertCircle, Sparkles, Shield } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Mail, Archive, AlertCircle, Sparkles, Shield, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 import { FocusBackgroundState } from '@/hooks/useFocusBackground';
 import { AUTONOMOUS_REVEAL, TRUST_MOMENTS } from '@/lib/assistantPersonality';
 import { FocusSummary } from '@/hooks/useFocusProtection';
@@ -20,6 +21,7 @@ export const AutonomousReveal = ({
   onContinue,
   hasAutonomyCapability,
 }: AutonomousRevealProps) => {
+  const navigate = useNavigate();
   const [showLine1, setShowLine1] = useState(false);
   const [showLine2, setShowLine2] = useState(false);
   const [showLine3, setShowLine3] = useState(false);
@@ -184,6 +186,17 @@ export const AutonomousReveal = ({
                     {AUTONOMOUS_REVEAL.why_safe}
                   </p>
                 </div>
+              )}
+
+              {/* Link to What I Handled */}
+              {autoActions.length > 0 && (
+                <button
+                  onClick={() => navigate('/what-handled')}
+                  className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-sm text-slate-400 hover:text-white"
+                >
+                  <History className="w-4 h-4" />
+                  See all handled items
+                </button>
               )}
 
               {/* What remains */}

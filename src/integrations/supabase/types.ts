@@ -178,6 +178,51 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_action_log: {
+        Row: {
+          action_type: string
+          context: Json | null
+          created_at: string | null
+          id: string
+          is_undoable: boolean | null
+          source: string | null
+          target_id: string | null
+          target_type: string
+          undone_at: string | null
+          user_id: string
+          what: string
+          why: string | null
+        }
+        Insert: {
+          action_type: string
+          context?: Json | null
+          created_at?: string | null
+          id?: string
+          is_undoable?: boolean | null
+          source?: string | null
+          target_id?: string | null
+          target_type: string
+          undone_at?: string | null
+          user_id: string
+          what: string
+          why?: string | null
+        }
+        Update: {
+          action_type?: string
+          context?: Json | null
+          created_at?: string | null
+          id?: string
+          is_undoable?: boolean | null
+          source?: string | null
+          target_id?: string | null
+          target_type?: string
+          undone_at?: string | null
+          user_id?: string
+          what?: string
+          why?: string | null
+        }
+        Relationships: []
+      }
       assistant_profiles: {
         Row: {
           allowed_actions: Json

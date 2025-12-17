@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 import { useAssistantProfile } from './useAssistantProfile';
 import { useBetaUCT } from './useBetaUCT';
+import { useActionLog } from './useActionLog';
 import { UCT_REWARDS } from '@/lib/uctBetaRules';
 
 export interface Loop {
@@ -37,6 +38,7 @@ export const useUnclutter = () => {
   const { toast } = useToast();
   const { canAutoHandle, requiresConfirmation } = useAssistantProfile();
   const { addUCT, data: uctData } = useBetaUCT();
+  const { logAction } = useActionLog();
 
   const currentLoop = loops[currentIndex] || null;
   const totalLoops = loops.length;
@@ -90,6 +92,7 @@ export const useUnclutter = () => {
 
     try {
       let uctReward = UCT_REWARDS.loop_resolved; // Base reward
+      let taskId: string | null = null;
 
       // Handle action
       if (action === 'archive') {
@@ -99,18 +102,54 @@ export const useUnclutter = () => {
           .eq('id', currentLoop.messageId);
         setLoopsResolved(prev => prev + 1);
         uctReward += UCT_REWARDS.loop_archive;
+
+        // Log archive action
+        await logAction({
+          actionType: 'archive',
+          targetType: 'message',
+          targetId: currentLoop.messageId,
+          what: `Archived "${currentLoop.subject}" from ${currentLoop.sender}`,
+          why: 'User-directed action during Unclutter',
+          context: { originalState: { is_archived: false } },
+          isUndoable: true,
+          source: 'unclutter',
+        });
       } else if (action === 'ignore') {
         await supabase
           .from('messages')
           .update({ is_read: true })
           .eq('id', currentLoop.messageId);
         setLoopsResolved(prev => prev + 1);
+
+        // Log ignore action
+        await logAction({
+          actionType: 'ignore',
+          targetType: 'message',
+          targetId: currentLoop.messageId,
+          what: `Marked "${currentLoop.subject}" as ignored`,
+          why: 'User decided no action needed',
+          isUndoable: false,
+          source: 'unclutter',
+        });
       } else if (action === 'reply') {
         setLoopsResolved(prev => prev + 1);
         uctReward += UCT_REWARDS.loop_reply_sent;
+
+        // Log reply action (draft created)
+        await logAction({
+          actionType: 'draft_created',
+          targetType: 'message',
+          targetId: currentLoop.messageId,
+          what: `Created reply draft for "${currentLoop.subject}"`,
+          why: 'Response needed',
+          context: { draftContent: aiDraft },
+          isUndoable: true,
+          source: 'unclutter',
+        });
       } else if (action === 'schedule') {
         setLoopsResolved(prev => prev + 1);
         uctReward += UCT_REWARDS.loop_task_created;
+        // Note: task logging happens in createTaskFromLoop
       }
       // 'skip' doesn't count as resolved and gets no reward
 
@@ -132,7 +171,7 @@ export const useUnclutter = () => {
         variant: "destructive"
       });
     }
-  }, [currentLoop, advance, toast, addUCT]);
+  }, [currentLoop, advance, toast, addUCT, logAction, aiDraft]);
 
   // Skip without action
   const skip = useCallback(() => {
@@ -181,13 +220,27 @@ export const useUnclutter = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      await supabase.from('tasks').insert({
+      const { data: taskData, error: taskError } = await supabase.from('tasks').insert({
         user_id: user.id,
         title: currentLoop.subject,
         description: currentLoop.summary,
         due_date: dueDate?.toISOString() || null,
         priority: 'medium',
         status: 'pending'
+      }).select('id').single();
+
+      if (taskError) throw taskError;
+
+      // Log task creation
+      await logAction({
+        actionType: 'task_created',
+        targetType: 'task',
+        targetId: taskData?.id || null,
+        what: `Created task "${currentLoop.subject}"`,
+        why: 'Scheduled for later action',
+        context: { dueDate: dueDate?.toISOString() },
+        isUndoable: true,
+        source: 'unclutter',
       });
 
       toast({
@@ -201,7 +254,7 @@ export const useUnclutter = () => {
         variant: "destructive"
       });
     }
-  }, [currentLoop, toast]);
+  }, [currentLoop, toast, logAction]);
 
   // Check if action requires confirmation - UCT level can reduce confirmations
   const needsConfirmation = useCallback((action: LoopAction): boolean => {
