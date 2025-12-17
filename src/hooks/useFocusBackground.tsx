@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUCTStake } from './useUCTStake';
 import { useAssistantProfile } from './useAssistantProfile';
+import { useActionLog } from './useActionLog';
 
 export interface AutoAction {
   type: 'archived' | 'snoozed' | 'labeled';
@@ -39,6 +40,7 @@ export const useFocusBackground = () => {
   const sessionStartTime = useRef<Date | null>(null);
   const { capabilities } = useUCTStake();
   const { profile, canAutoHandle, isOperator } = useAssistantProfile();
+  const { logAction } = useActionLog();
   
   // Check if user has autonomy capability from staking OR assistant profile
   const hasAutonomyCapability = 
@@ -117,6 +119,22 @@ export const useFocusBackground = () => {
             .from('messages')
             .update({ is_archived: true, auto_archived_at: new Date().toISOString() })
             .eq('id', msg.id);
+
+          // Log the action
+          try {
+            await logAction({
+              actionType: 'archive',
+              targetType: 'message',
+              targetId: msg.id,
+              what: `Archived "${msg.subject || 'No subject'}" from ${msg.sender_name || msg.sender_email || 'Unknown'}`,
+              why: reason,
+              context: { originalState: { is_archived: false } },
+              isUndoable: true,
+              source: 'focus_session',
+            });
+          } catch (err) {
+            console.error('Failed to log action:', err);
+          }
         } else if (!isSpam) {
           // Queue for review (skip spam)
           needsReview.push({

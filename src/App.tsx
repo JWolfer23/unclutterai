@@ -27,6 +27,7 @@ import IntelligenceFeed from "./pages/IntelligenceFeed";
 import StrategyWealth from "./pages/StrategyWealth";
 import PerformanceReport from "./pages/PerformanceReport";
 import Pricing from "./pages/Pricing";
+import WhatIHandled from "./pages/WhatIHandled";
 import { useAuth } from "@/hooks/useAuth";
 import { SecurityProvider } from "@/components/SecurityProvider";
 import { AssistantProfileProvider } from "@/components/AssistantProfileProvider";
@@ -75,6 +76,7 @@ const App = () => {
                 <Route path="/pricing" element={user ? <Pricing /> : <Navigate to="/auth" replace />} />
                 <Route path="/community" element={user ? <CommunityRanking /> : <Navigate to="/auth" replace />} />
                 <Route path="/performance" element={user ? <PerformanceReport /> : <Navigate to="/auth" replace />} />
+                <Route path="/what-handled" element={user ? <WhatIHandled /> : <Navigate to="/auth" replace />} />
                 
                 {/* Legacy routes for backward compatibility */}
                 <Route path="/news" element={user ? <NewsMode /> : <Navigate to="/auth" replace />} />
