@@ -1,12 +1,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, SlidersHorizontal, Sparkles, Bell, Calendar, MessageSquare } from "lucide-react";
+import { ArrowLeft, SlidersHorizontal, Sparkles, Bell, Calendar, MessageSquare, Shield, UserCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { useAssistantProfile } from "@/hooks/useAssistantProfile";
+import { useAssistantPromotion } from "@/hooks/useAssistantPromotion";
+import { AssistantPromotionFlow } from "@/components/promotion/AssistantPromotionFlow";
 
 const CustomizeAI = () => {
   const navigate = useNavigate();
+  const { profile, isLoading: profileLoading } = useAssistantProfile();
+  const { 
+    isEligible, 
+    assistantMode, 
+    acceptPromotion, 
+    declinePromotion,
+    isLoading: promotionLoading 
+  } = useAssistantPromotion();
+  
+  const [showPromotion, setShowPromotion] = useState(false);
   const [settings, setSettings] = useState({
     smartNotifications: true,
     autoSummarize: true,
@@ -16,6 +30,10 @@ const CustomizeAI = () => {
 
   const toggleSetting = (key: keyof typeof settings) => {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handlePromotionComplete = () => {
+    setShowPromotion(false);
   };
 
   const customizationOptions = [
@@ -45,8 +63,19 @@ const CustomizeAI = () => {
     },
   ];
 
+  const isOperator = profile?.role === 'operator';
+
   return (
     <div className="min-h-screen bg-transparent text-white">
+      {/* Promotion Flow Modal */}
+      {showPromotion && (
+        <AssistantPromotionFlow
+          onAccept={acceptPromotion}
+          onDecline={declinePromotion}
+          onComplete={handlePromotionComplete}
+        />
+      )}
+
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4">
         <button
@@ -68,6 +97,57 @@ const CustomizeAI = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Assistant Role Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+        <Card className="glass-card mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                {isOperator ? (
+                  <UserCheck className="h-6 w-6 text-white" />
+                ) : (
+                  <Shield className="h-6 w-6 text-white" />
+                )}
+              </div>
+              <div>
+                <Label className="text-base font-semibold">
+                  Assistant Role
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Current: {isOperator ? 'Operator' : 'Analyst'} 
+                  {isOperator && ' — Auto-handling enabled'}
+                </p>
+              </div>
+            </div>
+            {!isOperator && !profileLoading && (
+              <Button 
+                onClick={() => setShowPromotion(true)}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500"
+              >
+                Promote to Operator
+              </Button>
+            )}
+            {isOperator && (
+              <span className="text-sm text-emerald-400 font-medium px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                Active
+              </span>
+            )}
+          </div>
+          
+          {isOperator && (
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <p className="text-sm text-white/60 mb-2">Operator capabilities:</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs px-2 py-1 rounded-full bg-white/10 text-white/70">AI-drafted replies auto-applied</span>
+                <span className="text-xs px-2 py-1 rounded-full bg-white/10 text-white/70">Auto-scheduling</span>
+                <span className="text-xs px-2 py-1 rounded-full bg-white/10 text-white/70">Auto-archiving</span>
+                <span className="text-xs px-2 py-1 rounded-full bg-white/10 text-white/70">Reduced confirmations</span>
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
 
       {/* Settings */}
