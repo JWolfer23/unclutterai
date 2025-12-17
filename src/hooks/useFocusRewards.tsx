@@ -93,37 +93,37 @@ export const useFocusRewards = () => {
       // Handle "too_short" status
       if (data.status === 'too_short') {
         toast({
-          title: "Session too short",
-          description: "Sessions must be at least 5 minutes to earn UCT rewards.",
+          title: "Session incomplete.",
+          description: "Minimum 5 minutes required.",
         });
         return;
       }
 
-      // Success toast with reward info
+      // Success toast with reward info (calm, no emojis)
       const tierMessage = data.tier !== 'none' 
-        ? ` (${data.tier} tier)` 
+        ? ` ${data.tier} tier.` 
         : '';
 
       toast({
-        title: `🎉 +${data.uct_earned?.toFixed(2) || '0.00'} UCT Earned!`,
-        description: `Focus score: ${data.focus_score || 0}%${tierMessage}. Streak: ${data.streak?.current_streak || 1} days.`,
+        title: `+${data.uct_earned?.toFixed(2) || '0.00'} UCT`,
+        description: `Focus: ${data.focus_score || 0}%.${tierMessage} Streak: ${data.streak?.current_streak || 1} days.`,
       });
 
       // Show streak bonus toast if milestone achieved
       if (data.streak_bonus) {
         setTimeout(() => {
           toast({
-            title: `🔥 ${data.streak_bonus.milestone_days}-Day Streak Bonus!`,
-            description: `+${data.streak_bonus.bonus_uct} UCT bonus for your consistency!`,
+            title: `${data.streak_bonus.milestone_days}-day streak bonus`,
+            description: `+${data.streak_bonus.bonus_uct} UCT`,
           });
-        }, 1500); // Slight delay so it appears after main toast
+        }, 1500);
       }
     },
     onError: (error) => {
       console.error('Failed to complete session:', error);
       toast({
-        title: "Error completing session",
-        description: "Your session was recorded but rewards may not have been calculated.",
+        title: "Session error.",
+        description: "Recorded. Rewards pending.",
         variant: "destructive",
       });
     },

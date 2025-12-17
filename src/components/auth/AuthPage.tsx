@@ -44,8 +44,8 @@ const AuthPage = () => {
 
     if (!validateEmail(email)) {
       toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
+        title: "Invalid email.",
+        description: "",
         variant: "destructive",
       });
       setLoading(false);
@@ -57,8 +57,8 @@ const AuthPage = () => {
       const { score } = getPasswordStrength(password);
       if (score < 75) {
         toast({
-          title: "Password Too Weak",
-          description: "Please choose a stronger password (12+ characters with mixed case, numbers, and symbols).",
+          title: "Password too weak.",
+          description: "Minimum 12 characters with mixed case, numbers, symbols.",
           variant: "destructive",
         });
         setLoading(false);
@@ -67,8 +67,8 @@ const AuthPage = () => {
     } else {
       if (password.length < 12) {
         toast({
-          title: "Password Too Short",
-          description: "Password must be at least 12 characters long.",
+          title: "Password too short.",
+          description: "Minimum 12 characters.",
           variant: "destructive",
         });
         setLoading(false);
@@ -81,24 +81,24 @@ const AuthPage = () => {
 
       if (result.error) {
         toast({
-          title: "Authentication Error",
+          title: "Authentication failed.",
           description: result.error.message,
           variant: "destructive",
         });
       } else if (isSignUp) {
         toast({
-          title: "Check your email",
-          description: "We just sent you a confirmation link.",
+          title: "Confirmation sent.",
+          description: "Check your email.",
         });
       } else {
         toast({
-          title: "Welcome back!",
-          description: "You're now signed in.",
+          title: "Signed in.",
+          description: "",
         });
       }
     } catch (error) {
       toast({
-        title: "Unexpected Error",
+        title: "Error occurred.",
         description: "Please try again.",
         variant: "destructive",
       });
@@ -114,20 +114,20 @@ const AuthPage = () => {
       const { success, error } = await signInWithBiometric();
       if (error) {
         toast({
-          title: "Face ID Failed",
+          title: "Biometric failed.",
           description: error.message,
           variant: "destructive",
         });
       } else if (success) {
         toast({
-          title: "Success",
-          description: "Signed in with Face ID",
+          title: "Signed in.",
+          description: "",
         });
       }
     } catch {
       toast({
-        title: "Error",
-        description: "Face ID could not be completed.",
+        title: "Error.",
+        description: "Biometric could not be completed.",
         variant: "destructive",
       });
     }
@@ -141,8 +141,8 @@ const AuthPage = () => {
 
     if (!validateEmail(resetEmail)) {
       toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
+        title: "Invalid email.",
+        description: "",
         variant: "destructive",
       });
       setResetLoading(false);
@@ -156,14 +156,14 @@ const AuthPage = () => {
 
       if (error) {
         toast({
-          title: "Error",
+          title: "Error.",
           description: error.message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Email Sent",
-          description: "Check your inbox for the reset link.",
+          title: "Email sent.",
+          description: "Check your inbox.",
         });
         setResetDialogOpen(false);
         setResetEmail("");
