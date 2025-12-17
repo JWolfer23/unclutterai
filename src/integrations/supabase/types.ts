@@ -1217,19 +1217,52 @@ export type Database = {
         Row: {
           balance: number | null
           pending: number | null
+          staked: number | null
+          total_burned: number | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           balance?: number | null
           pending?: number | null
+          staked?: number | null
+          total_burned?: number | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           balance?: number | null
           pending?: number | null
+          staked?: number | null
+          total_burned?: number | null
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      uct_burn_log: {
+        Row: {
+          action_context: Json | null
+          amount: number
+          burn_type: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action_context?: Json | null
+          amount: number
+          burn_type: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action_context?: Json | null
+          amount?: number
+          burn_type?: string
+          created_at?: string | null
+          id?: string
           user_id?: string
         }
         Relationships: []
@@ -1336,6 +1369,45 @@ export type Database = {
           price_multiplier?: number
           total_active_users?: number | null
           total_uct_spent_24h?: number | null
+        }
+        Relationships: []
+      }
+      uct_stakes: {
+        Row: {
+          amount: number
+          capability: string
+          created_at: string | null
+          id: string
+          revoked_at: string | null
+          revoked_reason: string | null
+          stake_tier: string
+          status: string
+          unlocks_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          capability: string
+          created_at?: string | null
+          id?: string
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          stake_tier: string
+          status?: string
+          unlocks_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          capability?: string
+          created_at?: string | null
+          id?: string
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          stake_tier?: string
+          status?: string
+          unlocks_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
