@@ -246,15 +246,15 @@ const Index = () => {
     connectPlatform(platform);
     setShowContextualPrompt(null);
     toast({
-      title: "🎉 Connected!",
-      description: `${platform} is now connected and ready to use.`,
+      title: "Connected.",
+      description: platform,
     });
   };
 
   const handleCommand = (command: string) => {
     toast({
-      title: "✨ Command Executed",
-      description: `Processing: ${command}`,
+      title: "Executing.",
+      description: command,
     });
   };
 

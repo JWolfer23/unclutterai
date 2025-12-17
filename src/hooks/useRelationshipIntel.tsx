@@ -120,8 +120,8 @@ export function useRelationshipIntel() {
     onError: (error) => {
       console.error('Error analyzing relationship:', error);
       toast({
-        title: 'Analysis failed',
-        description: error instanceof Error ? error.message : 'Could not analyze relationship',
+        title: 'Analysis failed.',
+        description: error instanceof Error ? error.message : '',
         variant: 'destructive',
       });
     },
@@ -162,8 +162,8 @@ export function useRelationshipIntel() {
       }
 
       toast({
-        title: 'Analysis complete',
-        description: `Analyzed ${sendersToAnalyze.length} sender relationships`,
+        title: 'Analysis complete.',
+        description: `${sendersToAnalyze.length} relationships processed.`,
       });
     } catch (error) {
       console.error('Error analyzing all senders:', error);
@@ -199,8 +199,8 @@ export function useRelationshipIntel() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sender-relationships'] });
       toast({
-        title: 'Relationship updated',
-        description: 'Sender relationship has been updated',
+        title: 'Updated.',
+        description: '',
       });
     },
   });

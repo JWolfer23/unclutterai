@@ -146,8 +146,7 @@ export function SmartStreamView({
       {/* Empty State */}
       {!isLoading && items.length === 0 && (
         <div className="text-center py-8">
-          <div className="text-4xl mb-2">🎉</div>
-          <p className="text-muted-foreground">All caught up! No items in this view.</p>
+          <p className="text-muted-foreground">Clear. Nothing requires attention.</p>
         </div>
       )}
 

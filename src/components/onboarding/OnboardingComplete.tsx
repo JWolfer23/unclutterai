@@ -22,10 +22,10 @@ const OnboardingComplete = ({
           </div>
         </div>
         <h2 className="text-2xl font-semibold text-slate-50">
-          🎉 You're all set.
+          Ready.
         </h2>
         <p className="text-sm text-slate-300">
-          Sit back while we connect and sync your world in the background.
+          Syncing in background.
         </p>
       </div>
 
@@ -64,13 +64,13 @@ const OnboardingComplete = ({
         "
       >
         <p className="text-sm font-semibold text-purple-100 mb-2">
-          ✨ What happens next
+          What happens next
         </p>
         <ul className="list-disc list-inside text-sm text-purple-50/90 space-y-1">
-          <li>We securely sync your connected platforms in the background.</li>
-          <li>UnclutterAI starts summarising and prioritising your messages.</li>
-          <li>Your focus feed will surface what actually matters first.</li>
-          <li>You'll earn UCT tokens automatically as you stay in focus mode.</li>
+          <li>Platforms sync securely in background.</li>
+          <li>Messages prioritized and summarized.</li>
+          <li>Important items surface first.</li>
+          <li>UCT earned during focus sessions.</li>
         </ul>
       </div>
 
@@ -81,7 +81,7 @@ const OnboardingComplete = ({
           onClick={onFinish}
           className="btn-primary w-full h-12 flex items-center justify-center text-sm"
         >
-          Start using UnclutterAI →
+          Begin
         </Button>
         <p className="mt-3 text-xs text-slate-400">
           You can adjust your connections and settings anytime from the

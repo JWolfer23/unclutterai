@@ -26,8 +26,8 @@ const OnboardingFlow = ({ onComplete, onConnect }: OnboardingFlowProps) => {
       if (!isConnected) {
         onConnect(platformId);
         toast({
-          title: "🎉 Connected!",
-          description: `Successfully connected ${platformId}`,
+          title: "Connected.",
+          description: platformId,
         });
       }
 
@@ -46,8 +46,8 @@ const OnboardingFlow = ({ onComplete, onConnect }: OnboardingFlowProps) => {
   const handleCompleteSetup = () => {
     setIsComplete(true);
     toast({
-      title: "🚀 Setup complete",
-      description: "Your digital life is now unified in one place.",
+      title: "Ready.",
+      description: "",
     });
   };
 

@@ -114,14 +114,14 @@ export const ScheduleDrawer = ({ open, onOpenChange }: ScheduleDrawerProps) => {
       }
 
       toast({
-        title: "Schedule saved",
-        description: `News summaries will be delivered ${frequency} at ${deliveryTime}`,
+        title: "Scheduled.",
+        description: `${frequency} at ${deliveryTime}`,
       });
       
       onOpenChange(false);
     } catch (error: any) {
       toast({
-        title: "Error saving schedule",
+        title: "Error.",
         description: error.message,
         variant: "destructive",
       });
