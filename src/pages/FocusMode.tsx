@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
+import { useFocusBackground, FocusBackgroundState } from "@/hooks/useFocusBackground";
 import { toast } from "@/hooks/use-toast";
-import { FocusStreakStrip, SessionCompletionCard, FocusLevelIndicator } from "@/components/focus";
+import { FocusStreakStrip, SessionCompletionCard, FocusLevelIndicator, AutonomousReveal } from "@/components/focus";
 
 const FocusMode = () => {
   const navigate = useNavigate();
@@ -19,6 +20,14 @@ const FocusMode = () => {
     activeSession 
   } = useFocusSessions();
 
+  const {
+    state: backgroundState,
+    startTracking,
+    processSessionMessages,
+    reset: resetBackground,
+    hasAutonomyCapability,
+  } = useFocusBackground();
+
   const [taskInput, setTaskInput] = useState("");
   const [selectedTask, setSelectedTask] = useState<string>("");
   const [duration, setDuration] = useState(25);
@@ -26,6 +35,8 @@ const FocusMode = () => {
   const [isActive, setIsActive] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [sessionComplete, setSessionComplete] = useState(false);
+  const [showAutonomousReveal, setShowAutonomousReveal] = useState(false);
+  const [processedBackgroundState, setProcessedBackgroundState] = useState<FocusBackgroundState | null>(null);
   const [tokensEarned, setTokensEarned] = useState(0);
   const [interruptions, setInterruptions] = useState(0);
   const [sessionNote, setSessionNote] = useState("");
@@ -69,6 +80,9 @@ const FocusMode = () => {
       return;
     }
 
+    // Start background tracking for autonomous actions (uses timestamp-based tracking)
+    startTracking(`session-${Date.now()}`);
+
     // Start session with mode and goal
     startSession({
       plannedMinutes: duration,
@@ -79,14 +93,16 @@ const FocusMode = () => {
     setIsActive(true);
     setTimeRemaining(duration * 60);
     setSessionComplete(false);
+    setShowAutonomousReveal(false);
+    setProcessedBackgroundState(null);
     setInterruptions(0);
     setNoteSaved(false);
     setCompletedSessionId(null);
     actualMinutesRef.current = 0;
     
     toast({
-      title: "🎯 Focus Mode Activated",
-      description: "Stay focused to earn UCT tokens!",
+      title: "Focus Mode Activated",
+      description: "Stay focused to earn UCT tokens.",
     });
   };
 
@@ -111,13 +127,23 @@ const FocusMode = () => {
     }
     
     setTokensEarned(uctReward);
-    setSessionComplete(true);
     setIsActive(false);
     setIsPaused(false);
 
+    // Process background messages and show autonomous reveal
+    const bgState = await processSessionMessages();
+    setProcessedBackgroundState(bgState);
+    
+    // Show autonomous reveal if there were any messages during session
+    if (bgState.messagesArrived > 0 || bgState.messagesAutoHandled > 0) {
+      setShowAutonomousReveal(true);
+    } else {
+      setSessionComplete(true);
+    }
+
     toast({
-      title: "✅ Task Completed!",
-      description: `You earned ${uctReward} UCT tokens! Add your notes below.`,
+      title: "Task Completed",
+      description: `You earned ${uctReward} UCT tokens.`,
     });
   };
 
@@ -156,7 +182,6 @@ const FocusMode = () => {
     const uctReward = Math.round(duration * 0.1 * 100) / 100;
     
     setTokensEarned(uctReward);
-    setSessionComplete(true);
     setIsActive(false);
 
     if (activeSession) {
@@ -172,10 +197,32 @@ const FocusMode = () => {
       }
     }
 
+    // Process background messages and show autonomous reveal
+    const bgState = await processSessionMessages();
+    setProcessedBackgroundState(bgState);
+    
+    // Show autonomous reveal if there were any messages during session
+    if (bgState.messagesArrived > 0 || bgState.messagesAutoHandled > 0) {
+      setShowAutonomousReveal(true);
+    } else {
+      setSessionComplete(true);
+    }
+
     toast({
-      title: "🎉 Focus Session Complete!",
-      description: `You earned ${uctReward} UCT tokens!`,
+      title: "Focus Session Complete",
+      description: `You earned ${uctReward} UCT tokens.`,
     });
+  };
+
+  // Handlers for autonomous reveal
+  const handleReviewMessages = () => {
+    // Navigate to communication mode to review queued messages
+    navigate('/communication');
+  };
+
+  const handleContinueToRewards = () => {
+    setShowAutonomousReveal(false);
+    setSessionComplete(true);
   };
 
   const handleSaveNote = async () => {
@@ -253,8 +300,18 @@ const FocusMode = () => {
         </div>
       </div>
 
+      {/* Autonomous Reveal - THE HOOK */}
+      {showAutonomousReveal && processedBackgroundState && (
+        <AutonomousReveal
+          backgroundState={processedBackgroundState}
+          onReview={handleReviewMessages}
+          onContinue={handleContinueToRewards}
+          hasAutonomyCapability={hasAutonomyCapability}
+        />
+      )}
+
       {/* Session Complete Card - Enhanced */}
-      {sessionComplete && (
+      {sessionComplete && !showAutonomousReveal && (
         <SessionCompletionCard
           tokensEarned={tokensEarned}
           actualMinutes={actualMinutesDisplay || duration}
@@ -267,7 +324,7 @@ const FocusMode = () => {
       )}
 
       {/* Main Focus Card */}
-      {!sessionComplete && (
+      {!sessionComplete && !showAutonomousReveal && (
         <div className="max-w-2xl mx-auto glass-card">
           {/* Do Not Disturb Badge */}
           {isActive && (
