@@ -1,11 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import type { ContextCard as ContextCardType } from '@/hooks/useDriverMode';
 import { CLASSIFICATION_LABELS, CLASSIFICATION_COLORS } from '@/lib/aiDecisionHeuristics';
+import { TRUST_MOMENTS } from '@/lib/assistantPersonality';
 
 interface ContextualCardProps {
   card: ContextCardType | null;
   onDismiss: () => void;
 }
+
+// Trust Moment #2: First Interruption
+// Explain WHY we're interrupting - builds trust through transparency
+const getInterruptionReason = (card: ContextCardType): string | null => {
+  if (card.urgency !== 'critical' && !card.breaksSomething) return null;
+  
+  const prefix = TRUST_MOMENTS.interruption.prefix;
+  
+  if (card.breaksSomething) {
+    return `${prefix} ${TRUST_MOMENTS.interruption.breaks}`;
+  }
+  if (card.text.toLowerCase().includes('deadline') || card.text.toLowerCase().includes('due')) {
+    return `${prefix} ${TRUST_MOMENTS.interruption.deadline}`;
+  }
+  if (card.text.toLowerCase().includes('money') || card.text.toLowerCase().includes('payment')) {
+    return `${prefix} ${TRUST_MOMENTS.interruption.money}`;
+  }
+  if (card.text.toLowerCase().includes('waiting') || card.text.toLowerCase().includes('reply')) {
+    return `${prefix} ${TRUST_MOMENTS.interruption.people}`;
+  }
+  return `${prefix} ${TRUST_MOMENTS.interruption.tomorrow}`;
+};
 
 export const ContextualCard: React.FC<ContextualCardProps> = ({ card, onDismiss }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -36,6 +59,9 @@ export const ContextualCard: React.FC<ContextualCardProps> = ({ card, onDismiss 
     ? CLASSIFICATION_COLORS[card.classification] 
     : 'text-white/60';
 
+  // Trust Moment #2: Get interruption reason for critical items
+  const interruptionReason = getInterruptionReason(card);
+
   return (
     <div 
       className={`
@@ -48,8 +74,15 @@ export const ContextualCard: React.FC<ContextualCardProps> = ({ card, onDismiss 
       `}
       onClick={onDismiss}
     >
+      {/* Trust Moment #2: Interruption reason - explains WHY */}
+      {interruptionReason && (
+        <p className="text-xs text-white/50 text-center mb-3 font-light">
+          {interruptionReason}
+        </p>
+      )}
+
       {/* Classification badge */}
-      {classificationLabel && (
+      {classificationLabel && !interruptionReason && (
         <div className="flex justify-center mb-3">
           <span className={`text-xs font-medium uppercase tracking-wider ${classificationColor}`}>
             {classificationLabel}

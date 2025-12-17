@@ -1,4 +1,4 @@
-import { Award, Coins, Sparkles, Star } from "lucide-react";
+import { Award, Coins, Sparkles, Star, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useFocusAnalytics } from "@/hooks/useFocusAnalytics";
@@ -12,6 +12,7 @@ import {
   getLevelEncouragement, 
   getStreakEncouragement 
 } from "@/lib/focusMicroCopy";
+import { TRUST_MOMENTS } from "@/lib/assistantPersonality";
 
 interface XPData {
   xp_earned: number;
@@ -86,6 +87,14 @@ export const SessionCompletionCard = ({
     <div className="max-w-2xl mx-auto space-y-6 relative">
       {/* Level Up Animation */}
       <LevelUpAnimation show={leveledUp} newLevel={level} />
+
+      {/* Trust Moment #4: Focus Protection - most powerful moment */}
+      <div className="flex items-center justify-center gap-3 py-4">
+        <Shield className="w-5 h-5 text-emerald-400/70" />
+        <p className="text-lg text-white/80 font-light">
+          {TRUST_MOMENTS.focusProtection.primary}
+        </p>
+      </div>
 
       {/* Reward Summary Card */}
       <div className="glass-card glass-card--primary text-center">
