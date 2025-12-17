@@ -12,6 +12,7 @@ import { validateEmail, getPasswordStrength } from "@/lib/security";
 import { supabase } from "@/integrations/supabase/client";
 import logoTransparent from "@/assets/logo-transparent.png";
 import { fadeInUp, primaryGradientButton, whiteSurfaceButton } from "@/ui/styles";
+import { setToastsSuppressed } from "@/lib/toastSafety";
 
 const AuthPage = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -27,6 +28,11 @@ const AuthPage = () => {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const { signIn, signUp, signInWithBiometric, isBiometricSupported } = useAuth();
+
+  // TEMP: suppress all toasts during auth flow to confirm React #310 is toast-related
+  useEffect(() => {
+    setToastsSuppressed(true);
+  }, []);
 
   /** Check Face ID availability */
   useEffect(() => {

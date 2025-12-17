@@ -1,17 +1,16 @@
 import * as React from "react"
 
-import type {
-  ToastActionElement,
-  ToastProps,
-} from "@/components/ui/toast"
+import { areToastsSuppressed, coerceToastText } from "@/lib/toastSafety"
+
+import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
 type ToasterToast = ToastProps & {
   id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
+  title?: string
+  description?: string
   action?: ToastActionElement
 }
 
@@ -142,17 +141,35 @@ type Toast = Omit<ToasterToast, "id">
 function toast({ ...props }: Toast) {
   const id = genId()
 
-  const update = (props: ToasterToast) =>
+  const sanitize = (input: Partial<ToasterToast>) => {
+    const title = coerceToastText((input as any).title)
+    const description = coerceToastText((input as any).description)
+    return {
+      ...input,
+      ...(title !== undefined ? { title } : {}),
+      ...(description !== undefined ? { description } : {}),
+    }
+  }
+
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+  const update = (next: ToasterToast) =>
     dispatch({
       type: "UPDATE_TOAST",
-      toast: { ...props, id },
+      toast: sanitize({ ...next, id }),
     })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  if (areToastsSuppressed()) {
+    return {
+      id,
+      dismiss: () => {},
+      update: () => {},
+    }
+  }
 
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...props,
+      ...(sanitize(props) as Omit<ToasterToast, "id">),
       id,
       open: true,
       onOpenChange: (open) => {
@@ -162,29 +179,9 @@ function toast({ ...props }: Toast) {
   })
 
   return {
-    id: id,
+    id,
     dismiss,
     update,
-  }
-}
-
-function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
-
-  React.useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
-      }
-    }
-  }, [state])
-
-  return {
-    ...state,
-    toast,
-    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
 

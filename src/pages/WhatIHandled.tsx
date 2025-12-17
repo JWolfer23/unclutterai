@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useActionLog } from '@/hooks/useActionLog';
 import { ActionLogGroup } from '@/components/action-log/ActionLogGroup';
-import { toast } from 'sonner';
+import { toast } from "@/components/ui/sonner";
 import { isToday, isYesterday, isThisWeek, format } from 'date-fns';
 
 const WhatIHandled = () => {

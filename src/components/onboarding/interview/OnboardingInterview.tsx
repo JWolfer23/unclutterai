@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssistantProfile, DecisionStyle, InterruptionPreference, TonePreference } from "@/hooks/useAssistantProfile";
 import type { Json } from "@/integrations/supabase/types";
+import { setToastsSuppressed } from "@/lib/toastSafety";
 import {
   InterviewArrival,
   InterviewWhatMatters,
@@ -80,6 +81,12 @@ export const OnboardingInterview = ({ onComplete }: OnboardingInterviewProps) =>
     voiceTone: "",
     trustBoundaries: {},
   });
+
+  // TEMP: suppress all toasts during onboarding to confirm React #310 is toast-related
+  useEffect(() => {
+    setToastsSuppressed(true);
+    return () => setToastsSuppressed(false);
+  }, []);
 
   const goToNext = () => {
     const currentIndex = SCREENS.indexOf(currentScreen);

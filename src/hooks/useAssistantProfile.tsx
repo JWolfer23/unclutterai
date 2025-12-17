@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
-import { toast } from 'sonner';
+import { toast } from "@/components/ui/sonner";
 
 // Type definitions
 export type AssistantRole = 'analyst' | 'operator';
