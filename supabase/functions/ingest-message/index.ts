@@ -2,10 +2,31 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-signature',
-};
+// Allowed origins for CORS
+const allowedOrigins = [
+  'https://c60e33de-49ec-4dd9-ac69-f86f4e5a2b40.lovableproject.com',
+  'https://lovable.dev',
+  /^https:\/\/.*\.lovable\.app$/,
+  /^https:\/\/.*\.lovableproject\.com$/,
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  return allowedOrigins.some(allowed => 
+    typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+  );
+}
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = isAllowedOrigin(origin) ? origin! : '';
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-signature',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
 
 // Supported source types
 type MessageSource = 'gmail' | 'outlook' | 'whatsapp' | 'facebook' | 'instagram' | 'sms' | 'zapier';
@@ -245,6 +266,9 @@ ${metadata ? `Metadata: ${JSON.stringify(metadata)}` : ''}`
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
