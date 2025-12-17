@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
+import { OnboardingInterview } from "@/components/onboarding/interview";
 import ContextualSetupPrompt from "@/components/onboarding/ContextualSetupPrompt";
 import CommandPalette from "@/components/onboarding/CommandPalette";
 import HeaderSection from "@/components/HeaderSection";
@@ -310,11 +310,9 @@ const Index = () => {
     }
   }, [user, onboardingState.showOnboarding, navigate]);
 
-  // Always show onboarding when user first logs in
+  // Always show onboarding interview when user first logs in
   if (onboardingState.showOnboarding) {
-    return (
-      <OnboardingFlow onComplete={completeOnboarding} onConnect={handleConnect} />
-    );
+    return <OnboardingInterview onComplete={completeOnboarding} />;
   }
 
   // Handle sign out
