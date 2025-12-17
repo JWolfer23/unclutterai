@@ -79,6 +79,18 @@ export const ASSISTANT_TOAST = {
   noItems: { title: "Empty.", description: "" },
 } as const;
 
+// Trust Moment #6 - First Autonomous Action (THE HOOK)
+// This is the conversion moment. User didn't ask. Nothing went wrong. Something was already done.
+export const AUTONOMOUS_REVEAL = {
+  handled_one: "I handled one routine message while you were focused.",
+  handled_multiple: (count: number) => `I handled ${count} routine messages while you were focused.`,
+  nothing_handled: "No messages arrived while you were focused.",
+  needs_one: "One item needs your input.",
+  needs_multiple: (count: number) => `${count} items need your input.`,
+  nothing_missed: "Nothing important was missed.",
+  why_safe: "No deadlines. No decisions. No one waiting.",
+} as const;
+
 // Trust Moment Messages - key UX moments that build loyalty through restraint
 export const TRUST_MOMENTS = {
   // Trust Moment #1 - First Silence (after onboarding)
