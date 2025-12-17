@@ -98,3 +98,6 @@ verify_jwt = true
 
 [functions.uct-burn]
 verify_jwt = true
+
+[functions.unclutter-scan]
+verify_jwt = true
