@@ -83,6 +83,25 @@ export function useAssistantPromotion() {
         predictability = 50;
       }
 
+      // Check for repeated approvals of same action types (≥5 triggers eligibility)
+      const { data: approvalPatterns } = await supabase
+        .from('ai_feedback')
+        .select('ai_block_type')
+        .eq('user_id', user.id)
+        .eq('thumbs_up', true)
+        .in('ai_block_type', [
+          'action_approved_archive',
+          'action_approved_schedule',
+          'action_approved_reply'
+        ]);
+
+      // Count approvals by type
+      const approvalCounts: Record<string, number> = {};
+      approvalPatterns?.forEach(p => {
+        approvalCounts[p.ai_block_type] = (approvalCounts[p.ai_block_type] || 0) + 1;
+      });
+      const hasRepeatedApprovals = Object.values(approvalCounts).some(count => count >= 5);
+
       const criteria: PromotionCriteria = {
         unclutterCycles: {
           current: unclutterCount || 0,
@@ -106,11 +125,15 @@ export function useAssistantPromotion() {
         },
       };
 
-      const isEligible = 
+      // Eligible if all criteria met OR has repeated approvals pattern
+      const allCriteriaMet = 
         criteria.unclutterCycles.met &&
         criteria.morningBriefUses.met &&
         criteria.decisionPredictability.met &&
-        criteria.trustThreshold.met &&
+        criteria.trustThreshold.met;
+
+      const isEligible = 
+        (allCriteriaMet || hasRepeatedApprovals) &&
         !promotionShown &&
         assistantMode === 'analyst';
 

@@ -1,6 +1,9 @@
 import { Mail, Reply, Calendar, Archive, X, SkipForward, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Loop, LoopAction } from "@/hooks/useUnclutter";
+import { useAssistantProfile } from "@/hooks/useAssistantProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LoopScreenProps {
   loop: Loop;
@@ -25,6 +28,38 @@ const LoopScreen = ({
   onSkip,
   isGeneratingDraft
 }: LoopScreenProps) => {
+  const { user } = useAuth();
+  const { isOperator, requiresConfirmation } = useAssistantProfile();
+
+  // Log action approval to track patterns for promotion eligibility
+  const logActionApproval = async (actionType: 'reply' | 'schedule' | 'archive') => {
+    if (!user?.id) return;
+    try {
+      await supabase.from('ai_feedback').insert({
+        user_id: user.id,
+        ai_block_type: `action_approved_${actionType}`,
+        thumbs_up: true,
+      });
+    } catch (error) {
+      console.error('Failed to log action approval:', error);
+    }
+  };
+
+  const handleReply = async () => {
+    await logActionApproval('reply');
+    onReply();
+  };
+
+  const handleSchedule = async () => {
+    await logActionApproval('schedule');
+    onSchedule();
+  };
+
+  const handleArchive = async () => {
+    await logActionApproval('archive');
+    onArchive();
+  };
+
   return (
     <div className="max-w-lg mx-auto px-4">
       {/* Progress indicator */}
@@ -59,7 +94,7 @@ const LoopScreen = ({
         {/* Five action buttons */}
         <div className="grid grid-cols-5 gap-2">
           <Button
-            onClick={onReply}
+            onClick={handleReply}
             disabled={isGeneratingDraft}
             className="flex flex-col items-center gap-1.5 h-auto py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white"
           >
@@ -72,7 +107,7 @@ const LoopScreen = ({
           </Button>
 
           <Button
-            onClick={onSchedule}
+            onClick={handleSchedule}
             variant="ghost"
             className="flex flex-col items-center gap-1.5 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-0"
           >
@@ -81,7 +116,7 @@ const LoopScreen = ({
           </Button>
 
           <Button
-            onClick={onArchive}
+            onClick={handleArchive}
             variant="ghost"
             className="flex flex-col items-center gap-1.5 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-0"
           >

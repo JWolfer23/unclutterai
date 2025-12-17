@@ -237,19 +237,27 @@ export function useAssistantProfile(): UseAssistantProfileReturn {
     return profile.role === 'operator';
   };
 
-  // Promote to operator
+  // Promote to operator with reduced confirmations
   const promoteToOperator = async (): Promise<void> => {
     await updateMutation.mutateAsync({
       role: 'operator',
       authority_level: Math.max(profile?.authorityLevel || 0, 2),
+      // Enable all auto-handling
       allowed_actions: {
         draft_replies: true,
         schedule_items: true,
         archive_items: true,
         auto_handle_low_risk: true,
       },
+      // Reduce confirmations - auto-send/schedule without confirmation
+      trust_boundaries: {
+        send_messages: false,      // Auto-send drafts without confirmation
+        schedule_meetings: false,  // Auto-schedule without confirmation
+        delete_content: true,      // Still require confirmation for deletion
+      },
+      // Update decision style
+      decision_style: 'decide_for_me',
     });
-    toast.success('Assistant promoted to Operator');
   };
 
   // Reset to defaults
