@@ -12,7 +12,7 @@ import { GoalsSection } from "@/components/learning/GoalsSection";
 import { LearningFocusMode } from "@/components/learning/LearningFocusMode";
 import { NotesVault } from "@/components/learning/NotesVault";
 import { LearningScheduleDrawer } from "@/components/learning/LearningScheduleDrawer";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 const LearningMode = () => {
   const navigate = useNavigate();

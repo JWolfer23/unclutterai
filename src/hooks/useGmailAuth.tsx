@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { toast } from 'sonner';
+import { toast } from "@/components/ui/sonner";
 import { useQueryClient } from '@tanstack/react-query';
 
 interface EmailCredential {

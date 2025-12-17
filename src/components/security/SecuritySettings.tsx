@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { authRateLimiter, biometricRateLimiter } from "@/lib/security";
 import { Shield, Smartphone, Clock, AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 export const SecuritySettings = () => {
   const { user, registerBiometricAuth, isBiometricSupported } = useAuth();

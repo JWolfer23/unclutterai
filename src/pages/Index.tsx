@@ -14,6 +14,7 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAssistantPromotion } from "@/hooks/useAssistantPromotion";
 import { AssistantPromotionFlow } from "@/components/promotion";
 import { toast } from "@/hooks/use-toast";
+import { setToastsSuppressed } from "@/lib/toastSafety";
 import logoNew from "@/assets/logo-transparent.png";
 
 const MORNING_BRIEF_SHOWN_KEY = "last_morning_brief_date";
@@ -139,6 +140,12 @@ const Index = () => {
       setShowPromotion(true);
     }
   }, [isPromotionEligible, promotionLoading, onboardingState.showOnboarding]);
+
+  // TEMP: suppress toasts while onboarding is active; re-enable after onboarding completes
+  useEffect(() => {
+    if (!user) return;
+    setToastsSuppressed(onboardingState.showOnboarding);
+  }, [user, onboardingState.showOnboarding]);
 
   // Billionaire Assistant Mode Configuration
   const modes: Mode[] = [
