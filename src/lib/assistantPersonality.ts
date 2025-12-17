@@ -116,6 +116,33 @@ export const TRUST_MOMENTS = {
   },
 } as const;
 
+// Promotion Moment Messages - the assistant earns trust, not money
+export const PROMOTION_MOMENTS = {
+  patternRecognized: {
+    line1: "I've noticed a pattern.",
+    line2: "You routinely approve the same actions.",
+  },
+  offer: {
+    headline: "I can start handling these for you.",
+    capabilities: [
+      "Drafting replies.",
+      "Scheduling follow-ups.",
+      "Closing low-risk loops.",
+    ],
+  },
+  accepted: {
+    primary: "Understood.",
+    secondary: "I'll act when it's obvious — and ask when it's not.",
+  },
+  confirmation: {
+    primary: "You've promoted your assistant.",
+  },
+  declined: {
+    primary: "Understood.",
+    secondary: "I'll continue to ask.",
+  },
+} as const;
+
 // Voice/TTS response patterns
 export const ASSISTANT_VOICE = {
   // Calm, short responses for TTS
