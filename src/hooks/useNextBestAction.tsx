@@ -16,7 +16,7 @@ const NBA_CONFIG: Record<NextBestAction['type'], Omit<NextBestAction, 'type'>> =
     title: 'Clear open loops',
     description: "Close what's unfinished so your mind is quiet.",
     ctaLabel: 'Close loops',
-    href: '/clear-open-loops',
+    href: '/open-loops',
   },
   URGENT_REPLIES: {
     title: 'Handle urgent messages',
