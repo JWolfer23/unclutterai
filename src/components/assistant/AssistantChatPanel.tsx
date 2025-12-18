@@ -394,17 +394,41 @@ export const AssistantChatPanel = () => {
               </div>
               <div className="max-w-[85%] rounded-lg px-3 py-2 text-xs bg-muted/50 text-foreground/90">
                 <p className="whitespace-pre-wrap">
-                  {`Based on your current state:
+                  {(() => {
+                    const sessionsToday = getContextualData.recentSessionsCount;
+                    const focusStreakActive = getContextualData.currentStreak > 0;
+                    const urgentItems = getContextualData.tasksGenerated;
 
-• Focus streak: ${getContextualData.currentStreak > 0 ? `active (${getContextualData.currentStreak} days)` : 'inactive'}
-• Sessions today: ${getContextualData.recentSessionsCount}
-• Urgent items: ${getContextualData.tasksGenerated > 0 ? `${getContextualData.tasksGenerated} pending` : 'none detected'}
+                    // Build suggestions array (max 2)
+                    const suggestions: string[] = [];
+
+                    // Primary suggestion based on session state
+                    if (sessionsToday === 0) {
+                      suggestions.push('Start a focus session to begin today');
+                    } else if (focusStreakActive) {
+                      suggestions.push('Continue your streak with another session');
+                    } else {
+                      suggestions.push('Start a session to build a new streak');
+                    }
+
+                    // Secondary suggestion based on tasks
+                    if (urgentItems > 0) {
+                      suggestions.push(`Review ${urgentItems} pending task${urgentItems > 1 ? 's' : ''}`);
+                    } else {
+                      suggestions.push('No urgent items detected');
+                    }
+
+                    return `Based on your current state:
+
+• Focus streak: ${focusStreakActive ? `active (${getContextualData.currentStreak} days)` : 'inactive'}
+• Sessions today: ${sessionsToday}
+• Urgent items: ${urgentItems > 0 ? urgentItems : 'none detected'}
 
 Suggested next steps:
-1. ${getContextualData.currentStreak === 0 ? 'Start a focus session to begin your streak' : 'Continue your streak with another session'}
-2. ${getContextualData.tasksGenerated > 0 ? 'Review pending tasks for priorities' : 'Check your stats for insights'}
+1. ${suggestions[0]}${suggestions[1] ? `\n2. ${suggestions[1]}` : ''}
 
-I can help with either.`}
+I can help with either.`;
+                  })()}
                 </p>
               </div>
             </div>
