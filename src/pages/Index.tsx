@@ -1,5 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import AuthPage from "@/components/auth/AuthPage";
+import { useEffect } from "react";
 
 // =============================================================================
 // TEMPORARY DEBUG MODE: All post-auth hooks disabled to isolate crash
@@ -13,6 +15,13 @@ import AuthPage from "@/components/auth/AuthPage";
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
+  const onboarding = useOnboarding();
+
+  useEffect(() => {
+    if (user) {
+      console.log("onboarding", onboarding);
+    }
+  }, [user, onboarding]);
 
   // Show loading spinner while checking auth
   if (authLoading) {
