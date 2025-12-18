@@ -37,6 +37,58 @@ const MorningBriefCard = () => {
     };
   }, [stopAudio]);
 
+  // Stop playback on app backgrounding (mobile)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && audioRef.current) {
+        stopAudio();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [stopAudio]);
+
+  // Stop playback on scroll (mobile-friendly: only cancel if significant scroll)
+  useEffect(() => {
+    let scrollStartY = 0;
+    let isTracking = false;
+
+    const handleScrollStart = () => {
+      if (audioRef.current && !isTracking) {
+        scrollStartY = window.scrollY;
+        isTracking = true;
+      }
+    };
+
+    const handleScroll = () => {
+      if (audioRef.current && isTracking) {
+        const scrollDelta = Math.abs(window.scrollY - scrollStartY);
+        // Cancel audio after 100px of scroll (intentional scroll, not micro-adjustments)
+        if (scrollDelta > 100) {
+          stopAudio();
+          isTracking = false;
+        }
+      }
+    };
+
+    const handleScrollEnd = () => {
+      isTracking = false;
+    };
+
+    window.addEventListener('touchstart', handleScrollStart, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('touchend', handleScrollEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleScrollStart);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('touchend', handleScrollEnd);
+    };
+  }, [stopAudio]);
+
   // Get time-appropriate greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
