@@ -35,6 +35,30 @@ const Index = () => {
     );
   }
 
+  // Show loading spinner while onboarding state initializes
+  if (onboarding.state.status === "loading") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-gray-300">Initializing...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle onboarding error state gracefully
+  if (onboarding.state.status === "error") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-yellow-400 mb-2">Unable to load preferences</p>
+          <p className="text-gray-400 text-sm">Continuing with defaults...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Show auth page if not authenticated
   if (!user) {
     return <AuthPage />;
