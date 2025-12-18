@@ -12,6 +12,7 @@ import { AssistantReadOnlyProvider } from "@/contexts/AssistantReadOnlyContext";
 import OSView from "@/components/OSView";
 import { type NextBestAction } from "@/hooks/useNextBestAction";
 import { NextBestActionCard } from "@/components/dashboard";
+import { OSHomeGrid } from "@/components/os/OSHomeGrid";
 
 interface DashboardProps {
   assistantName: string;
@@ -53,6 +54,10 @@ const Dashboard = ({ assistantName, subscriptionTier, nextBestAction }: Dashboar
           {/* Next Best Action - prominent position */}
           <NextBestActionCard action={nextBestAction} />
 
+          {/* OS Home Grid - navigation tiles */}
+          <OSHomeGrid />
+
+          {/* Secondary content: stats, history, panels */}
           <MorningBriefCard />
           <UserStatsOverview />
           <FocusRewardsSection />
