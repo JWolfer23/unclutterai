@@ -40,8 +40,12 @@ export const NextBestActionCard = ({ action }: NextBestActionCardProps) => {
         </p>
 
         {/* Actions row */}
-        <div className="flex items-center gap-4">
-          <Button asChild size="sm" className="bg-white text-slate-900 hover:bg-slate-100 font-medium shadow-lg shadow-white/10">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+          <Button 
+            asChild 
+            size="lg" 
+            className="w-full sm:w-auto bg-white text-slate-900 hover:bg-slate-100 font-medium shadow-lg shadow-white/10 min-h-[48px] touch-manipulation"
+          >
             <Link to={action.href}>
               {action.ctaLabel}
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -50,7 +54,7 @@ export const NextBestActionCard = ({ action }: NextBestActionCardProps) => {
 
           <button
             onClick={() => setShowWhy(!showWhy)}
-            className="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1"
+            className="text-xs text-slate-500 hover:text-slate-300 active:text-slate-200 transition-colors flex items-center justify-center sm:justify-start gap-1 py-2 touch-manipulation"
           >
             Why this?
             {showWhy ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
