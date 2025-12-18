@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,13 +7,23 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAssistantIntelligence } from '@/hooks/useAssistantIntelligence';
 import { useReadOnlyExecution } from '@/hooks/useReadOnlyExecution';
 import { useAssistantReadOnly } from '@/contexts/AssistantReadOnlyContext';
-import { ASSISTANT_VOICE } from '@/lib/assistantPersonality';
+
+// Safe mode configuration
+const ASSISTANT_CONFIG = {
+  mode: 'analyst' as const,
+  streaming: false,
+  requestMode: 'manual' as const,
+  responseTimeoutMs: 3000,
+};
+
+const FALLBACK_MESSAGE = "I'm unable to process that request right now. Try asking about your priorities or stats.";
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  isError?: boolean;
 }
 
 // Patterns that indicate execution requests
@@ -53,74 +63,106 @@ export const AssistantChatPanel = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
 
-  const { analyzeStats, suggestPriorities, explainFocusState, getContextualData, isLoading } = useAssistantIntelligence();
-  const { attemptExecution, getExplanation, isReadOnly } = useReadOnlyExecution();
-  const { showTooltip } = useAssistantReadOnly();
+  // Safe access to hooks - never block on loading
+  const intelligence = useAssistantIntelligence();
+  const readOnlyExecution = useReadOnlyExecution();
+  const readOnlyContext = useAssistantReadOnly();
+
+  // Safe getters with fallbacks - hooks may still be loading
+  const getContextualData = intelligence?.getContextualData ?? {
+    focusMinutesToday: 0,
+    focusMinutesWeek: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    weeklyTier: 'bronze',
+    pendingTasks: 0,
+    totalSessions: 0,
+  };
 
   const generateResponse = useCallback((userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-    const data = getContextualData;
+    try {
+      const lowerMessage = userMessage.toLowerCase();
 
-    // Check for execution requests first
-    for (const { pattern, action } of EXECUTION_PATTERNS) {
-      if (pattern.test(lowerMessage)) {
-        const result = attemptExecution(action, sendButtonRef.current);
-        
-        if (result.blocked) {
-          result.showTooltip();
-          
-          // Provide explanation of what would happen
-          const explanation = getExplanation(action);
-          return `${explanation}\n\nExecution requires Operator authority. I can analyze and advise, but cannot modify state at Analyst tier.`;
-        }
-      }
-    }
-
-    // Check for analysis requests
-    for (const { pattern, type } of ANALYSIS_PATTERNS) {
-      if (pattern.test(lowerMessage)) {
-        switch (type) {
-          case 'priorities': {
-            const priorities = suggestPriorities();
-            let response = 'Based on your current state:\n\n';
-            priorities.forEach((p, i) => {
-              const urgencyIcon = p.urgency === 'high' ? '●' : p.urgency === 'medium' ? '○' : '·';
-              response += `${urgencyIcon} ${p.title}\n  ${p.reason}\n\n`;
-            });
+      // Check for execution requests first (analyst mode blocks execution)
+      for (const { pattern, action } of EXECUTION_PATTERNS) {
+        if (pattern.test(lowerMessage)) {
+          if (readOnlyExecution?.attemptExecution) {
+            const result = readOnlyExecution.attemptExecution(action, sendButtonRef.current);
             
-            if (data.currentStreak > 0) {
-              response += `\nYour ${data.currentStreak}-day streak is active. Maintaining focus today extends it.`;
+            if (result.blocked) {
+              result.showTooltip();
+              const explanation = readOnlyExecution.getExplanation?.(action) ?? 'This action requires elevated permissions.';
+              return `${explanation}\n\nExecution requires Operator authority. I can analyze and advise, but cannot modify state at Analyst tier.`;
             }
-            return response.trim();
-          }
-          
-          case 'stats': {
-            const analysis = analyzeStats();
-            return `${analysis.focusSummary}\n\n${analysis.streakStatus}\n\n${analysis.recommendations.length > 0 ? `Recommendation: ${analysis.nextAction}` : 'All metrics healthy.'}`;
-          }
-          
-          case 'plan': {
-            const analysis = analyzeStats();
-            const priorities = suggestPriorities();
-            
-            let response = 'Recommended approach:\n\n';
-            priorities.slice(0, 3).forEach((p, i) => {
-              response += `${i + 1}. ${p.title}\n`;
-            });
-            
-            if (analysis.recommendations.length > 0) {
-              response += `\nNote: ${analysis.recommendations[0]}`;
-            }
-            return response;
+          } else {
+            // Fallback if hook not ready
+            return `This action requires Operator authority. Currently operating in Analyst mode.`;
           }
         }
       }
-    }
 
-    // Default contextual response
-    const state = explainFocusState();
-    return `${state}\n\nAsk me to analyze priorities, explain your stats, or suggest a plan.`;
-  }, [analyzeStats, suggestPriorities, explainFocusState, getContextualData, attemptExecution, getExplanation]);
+      // Check for analysis requests
+      for (const { pattern, type } of ANALYSIS_PATTERNS) {
+        if (pattern.test(lowerMessage)) {
+          switch (type) {
+            case 'priorities': {
+              if (!intelligence?.suggestPriorities) {
+                return 'Priority analysis is loading. Try again in a moment.';
+              }
+              const priorities = intelligence.suggestPriorities();
+              let response = 'Based on your current state:\n\n';
+              priorities.forEach((p) => {
+                const urgencyIcon = p.urgency === 'high' ? '●' : p.urgency === 'medium' ? '○' : '·';
+                response += `${urgencyIcon} ${p.title}\n  ${p.reason}\n\n`;
+              });
+              
+              if (getContextualData.currentStreak > 0) {
+                response += `\nYour ${getContextualData.currentStreak}-day streak is active. Maintaining focus today extends it.`;
+              }
+              return response.trim();
+            }
+            
+            case 'stats': {
+              if (!intelligence?.analyzeStats) {
+                return 'Stats analysis is loading. Try again in a moment.';
+              }
+              const analysis = intelligence.analyzeStats();
+              return `${analysis.focusSummary}\n\n${analysis.streakStatus}\n\n${analysis.recommendations.length > 0 ? `Recommendation: ${analysis.nextAction}` : 'All metrics healthy.'}`;
+            }
+            
+            case 'plan': {
+              if (!intelligence?.analyzeStats || !intelligence?.suggestPriorities) {
+                return 'Plan generation is loading. Try again in a moment.';
+              }
+              const analysis = intelligence.analyzeStats();
+              const priorities = intelligence.suggestPriorities();
+              
+              let response = 'Recommended approach:\n\n';
+              priorities.slice(0, 3).forEach((p, i) => {
+                response += `${i + 1}. ${p.title}\n`;
+              });
+              
+              if (analysis.recommendations.length > 0) {
+                response += `\nNote: ${analysis.recommendations[0]}`;
+              }
+              return response;
+            }
+          }
+        }
+      }
+
+      // Default contextual response
+      if (intelligence?.explainFocusState) {
+        const state = intelligence.explainFocusState();
+        return `${state}\n\nAsk me to analyze priorities, explain your stats, or suggest a plan.`;
+      }
+
+      return 'Ask me about priorities, stats, or next steps.';
+    } catch (error) {
+      console.error('Assistant response error:', error);
+      return FALLBACK_MESSAGE;
+    }
+  }, [intelligence, readOnlyExecution, getContextualData]);
 
   const handleSend = useCallback(() => {
     if (!input.trim() || isProcessing) return;
@@ -136,18 +178,44 @@ export const AssistantChatPanel = () => {
     setInput('');
     setIsProcessing(true);
 
-    // Simulate brief processing delay for natural feel
-    setTimeout(() => {
-      const response = generateResponse(userMessage.content);
-      
-      const assistantMessage: Message = {
+    // Simulate brief processing delay with timeout protection
+    const timeoutId = setTimeout(() => {
+      setIsProcessing(false);
+      setMessages(prev => [...prev, {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: response,
+        content: FALLBACK_MESSAGE,
         timestamp: new Date(),
-      };
+        isError: true,
+      }]);
+    }, ASSISTANT_CONFIG.responseTimeoutMs);
 
-      setMessages(prev => [...prev, assistantMessage]);
+    // Process response (manual mode - triggered on send only)
+    setTimeout(() => {
+      clearTimeout(timeoutId);
+      
+      try {
+        const response = generateResponse(userMessage.content);
+        
+        const assistantMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: response,
+          timestamp: new Date(),
+        };
+
+        setMessages(prev => [...prev, assistantMessage]);
+      } catch (error) {
+        console.error('Assistant error:', error);
+        setMessages(prev => [...prev, {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: FALLBACK_MESSAGE,
+          timestamp: new Date(),
+          isError: true,
+        }]);
+      }
+      
       setIsProcessing(false);
     }, 400);
   }, [input, isProcessing, generateResponse]);
@@ -159,13 +227,16 @@ export const AssistantChatPanel = () => {
     }
   };
 
+  // Always render - never block on hook loading state
+  const isAnalystMode = ASSISTANT_CONFIG.mode === 'analyst' || readOnlyContext?.isReadOnly;
+
   return (
     <Card className="bg-card/50 border-border/30 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium text-foreground/90 flex items-center gap-2">
           <Bot className="w-4 h-4 text-primary/70" />
           Assistant
-          {isReadOnly && (
+          {isAnalystMode && (
             <span className="text-xs text-muted-foreground font-normal ml-auto">
               Analyst Mode
             </span>
@@ -189,14 +260,22 @@ export const AssistantChatPanel = () => {
                   className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'assistant' && (
-                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-3 h-3 text-primary" />
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      msg.isError ? 'bg-destructive/10' : 'bg-primary/10'
+                    }`}>
+                      {msg.isError ? (
+                        <AlertCircle className="w-3 h-3 text-destructive" />
+                      ) : (
+                        <Bot className="w-3 h-3 text-primary" />
+                      )}
                     </div>
                   )}
                   <div
                     className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
                       msg.role === 'user'
                         ? 'bg-primary/20 text-foreground'
+                        : msg.isError
+                        ? 'bg-destructive/10 text-foreground/90'
                         : 'bg-muted/50 text-foreground/90'
                     }`}
                   >
@@ -223,7 +302,7 @@ export const AssistantChatPanel = () => {
           )}
         </ScrollArea>
 
-        {/* Input Area */}
+        {/* Input Area - never disabled by hook loading */}
         <div className="flex gap-2">
           <Input
             ref={inputRef}
@@ -232,13 +311,13 @@ export const AssistantChatPanel = () => {
             onKeyDown={handleKeyDown}
             placeholder="What should I focus on today?"
             className="flex-1 h-9 text-sm bg-background/50 border-border/30"
-            disabled={isProcessing || isLoading}
+            disabled={isProcessing}
           />
           <Button
             ref={sendButtonRef}
             size="sm"
             onClick={handleSend}
-            disabled={!input.trim() || isProcessing || isLoading}
+            disabled={!input.trim() || isProcessing}
             className="h-9 w-9 p-0"
           >
             <Send className="w-4 h-4" />
