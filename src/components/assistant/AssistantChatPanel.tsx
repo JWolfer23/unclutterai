@@ -10,9 +10,11 @@ import { useAssistantReadOnly } from '@/contexts/AssistantReadOnlyContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ENABLE_ASSISTANT_STREAMING } from '@/config/flags';
 
-// Safe mode configuration
+// Safe mode configuration - Analyst is default and locked
 const ASSISTANT_CONFIG = {
-  mode: 'analyst' as const,
+  mode: 'analyst' as const,  // Default: Analyst mode (read-only)
+  modeLocked: true,          // Cannot toggle mode
+  canSelfEscalate: false,    // Cannot promote itself
   streaming: false,
   requestMode: 'manual' as const,
   hardTimeoutMs: 8000, // Hard timeout - abort after 8 seconds
@@ -368,8 +370,8 @@ export const AssistantChatPanel = () => {
     }
   };
 
-  // Always render - never block on hook loading state
-  const isAnalystMode = ASSISTANT_CONFIG.mode === 'analyst' || readOnlyContext?.isReadOnly;
+  // Analyst Mode is always active and locked - no conditional check needed
+  // This ensures read-only behavior without toggling capability
 
   return (
     <Card className="bg-card/50 border-border/30 backdrop-blur-sm">
@@ -377,17 +379,15 @@ export const AssistantChatPanel = () => {
         <CardTitle className="text-sm font-medium text-foreground/90 flex items-center gap-2">
           <Bot className="w-4 h-4 text-primary/70" />
           Assistant
-          {isAnalystMode && (
-            <span className="text-xs text-muted-foreground font-normal ml-auto">
-              Analyst Mode
-            </span>
-          )}
+          <span className="text-xs text-muted-foreground font-normal ml-auto px-2 py-0.5 bg-muted/30 rounded">
+            Analyst · Read Only
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Messages Area */}
         <ScrollArea className="h-48 rounded-lg bg-background/30 border border-border/20 p-3">
-          {messages.length === 0 ? (
+        {messages.length === 0 ? (
             <div className="flex gap-2 justify-start">
               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Bot className="w-3 h-3 text-primary" />
@@ -395,11 +395,28 @@ export const AssistantChatPanel = () => {
               <div className="max-w-[85%] rounded-lg px-3 py-2 text-xs bg-muted/50 text-foreground/90">
                 <p className="whitespace-pre-wrap">
                   {(() => {
+                    // Check if data is actually loaded (not just defaults)
+                    const dataLoaded = intelligence?.isLoading === false;
                     const sessionsToday = getContextualData.recentSessionsCount;
                     const focusStreakActive = getContextualData.currentStreak > 0;
                     const urgentItems = getContextualData.tasksGenerated;
+                    const hasAnyData = sessionsToday > 0 || getContextualData.currentStreak > 0 || 
+                                       getContextualData.todayMinutes > 0 || urgentItems > 0;
 
-                    // Build suggestions array (max 2)
+                    // Calm empty state when no data is available
+                    if (!dataLoaded || !hasAnyData) {
+                      return `Analyst Mode — Read Only
+
+No activity data yet.
+
+• No sessions logged today
+• No streak active
+• No urgent items detected
+
+Start a focus session to begin tracking.`;
+                    }
+
+                    // Data is available - show deterministic suggestions (never open-ended questions)
                     const suggestions: string[] = [];
 
                     // Primary suggestion based on session state
@@ -418,16 +435,16 @@ export const AssistantChatPanel = () => {
                       suggestions.push('No urgent items detected');
                     }
 
-                    return `Based on your current state:
+                    // Analyst Mode: Never ask open-ended questions. Only state facts and suggest actions.
+                    return `Analyst Mode — Read Only
 
-• Focus streak: ${focusStreakActive ? `active (${getContextualData.currentStreak} days)` : 'inactive'}
+Current state:
+• Focus streak: ${focusStreakActive ? `${getContextualData.currentStreak} day${getContextualData.currentStreak > 1 ? 's' : ''} active` : 'inactive'}
 • Sessions today: ${sessionsToday}
-• Urgent items: ${urgentItems > 0 ? urgentItems : 'none detected'}
+• Urgent items: ${urgentItems > 0 ? urgentItems : 'none'}
 
-Suggested next steps:
-1. ${suggestions[0]}${suggestions[1] ? `\n2. ${suggestions[1]}` : ''}
-
-I can help with either.`;
+Suggested actions:
+1. ${suggestions[0]}${suggestions[1] ? `\n2. ${suggestions[1]}` : ''}`;
                   })()}
                 </p>
               </div>

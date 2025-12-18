@@ -7,6 +7,10 @@ import { useState, useEffect } from 'react';
 
 // Safety timeout - never block Assistant UI
 const PROFILE_TIMEOUT_MS = 2000;
+
+// Analyst mode is locked - cannot self-escalate
+const ANALYST_MODE_LOCKED = true;
+
 // Type definitions
 export type AssistantRole = 'analyst' | 'operator';
 export type DecisionStyle = 'decide_for_me' | 'suggest' | 'ask';
@@ -254,7 +258,15 @@ export function useAssistantProfile(): UseAssistantProfileReturn {
   };
 
   // Promote to operator with reduced confirmations
+  // BLOCKED: Analyst mode cannot self-escalate
   const promoteToOperator = async (): Promise<void> => {
+    // Analyst mode is locked - cannot self-promote
+    if (ANALYST_MODE_LOCKED) {
+      console.log('[Assistant] Analyst mode cannot self-escalate to Operator');
+      toast.error('Analyst mode cannot escalate itself. Promotion requires external action.');
+      return;
+    }
+    
     await updateMutation.mutateAsync({
       role: 'operator',
       authority_level: Math.max(profile?.authorityLevel || 0, 2),
