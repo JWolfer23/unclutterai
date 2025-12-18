@@ -13,9 +13,10 @@ import { fadeInUp } from "@/ui/styles";
 
 interface HeaderSectionProps {
   onShowCommandPalette: () => void;
+  onShowOSView?: () => void;
 }
 
-const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
+const HeaderSection = ({ onShowCommandPalette, onShowOSView }: HeaderSectionProps) => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -37,6 +38,21 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
       <span className="text-sm text-slate-300 border-b border-white/10 pb-2">
         Welcome, <span className="font-semibold">{user?.email?.split("@")[0]}</span>
       </span>
+
+      {onShowOSView && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            onShowOSView();
+            setIsMenuOpen(false);
+          }}
+          className="justify-start text-slate-100 hover:bg-white/5"
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          OS View
+        </Button>
+      )}
 
       <BetaTestButton />
 
@@ -92,14 +108,18 @@ const HeaderSection = ({ onShowCommandPalette }: HeaderSectionProps) => {
   return (
     <header className="sticky top-4 z-50 px-4 sm:px-6 lg:px-8">
       <div className={`max-w-7xl mx-auto unclutter-header ${fadeInUp}`}>
-        {/* Logo */}
-        <div className="w-16 h-16 flex-shrink-0 flex items-center justify-center border border-white/20 rounded-3xl">
+        {/* Logo - clickable to open OS View */}
+        <button 
+          onClick={onShowOSView}
+          className="w-16 h-16 flex-shrink-0 flex items-center justify-center border border-white/20 rounded-3xl hover:border-purple-400/50 hover:bg-purple-500/10 transition-all cursor-pointer"
+          title="Open OS View"
+        >
           <img
             src={logoTransparent}
             alt="UnclutterAI Logo"
             className="w-[3.5rem] h-[3.5rem] object-contain"
           />
-        </div>
+        </button>
 
         {/* Title + subtitle */}
         <div className="flex-1 min-w-0">
