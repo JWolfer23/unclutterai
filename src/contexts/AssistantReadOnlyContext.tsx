@@ -20,7 +20,15 @@ const AssistantReadOnlyContext = createContext<AssistantReadOnlyContextType | un
 
 export const AssistantReadOnlyProvider = ({ children }: { children: ReactNode }) => {
   const { isOperator } = useAssistantProfile();
-  const isReadOnly = !isOperator();
+  
+  // TEMPORARY: Disable tier restrictions - log but don't block
+  // Everyone treated as analyst with basic responses allowed
+  const actualTierCheck = !isOperator();
+  const isReadOnly = false; // Bypassed - never block
+  
+  if (actualTierCheck) {
+    console.log('[Assistant] Tier check: user would be read-only, but restrictions are temporarily disabled');
+  }
 
   const [tooltipState, setTooltipState] = useState<TooltipState>({
     visible: false,
@@ -51,11 +59,12 @@ export const AssistantReadOnlyProvider = ({ children }: { children: ReactNode })
   }, []);
 
   const interceptExecution = useCallback((actionName: string): boolean => {
-    if (isReadOnly) {
-      return true; // Blocked
+    // TEMPORARY: Log tier check but never block
+    if (actualTierCheck) {
+      console.log(`[Assistant] Execution intercepted (logged only): ${actionName}`);
     }
-    return false; // Allowed
-  }, [isReadOnly]);
+    return false; // Never block - restrictions temporarily disabled
+  }, [actualTierCheck]);
 
   return (
     <AssistantReadOnlyContext.Provider
