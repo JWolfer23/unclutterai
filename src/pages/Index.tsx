@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import AuthPage from "@/components/auth/AuthPage";
+import { OnboardingInterview } from "@/components/onboarding/interview/OnboardingInterview";
 import { useEffect } from "react";
 
 // =============================================================================
@@ -79,14 +80,26 @@ const Index = () => {
     );
   }
 
-  // Onboarding not complete - show login success placeholder
+  // Onboarding not complete - show OnboardingInterview with defensive guard
+  // Only render if onboarding state is fully ready (status === "ready")
+  if (onboarding.state.status === "ready") {
+    return (
+      <OnboardingInterview 
+        onComplete={() => {
+          onboarding.completeOnboarding();
+        }} 
+      />
+    );
+  }
+
+  // Fallback placeholder if somehow we get here (should not happen)
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold text-green-400">✓ Login Successful</h1>
         <p className="text-gray-300">Logged in as: <span className="text-white font-mono">{user.email}</span></p>
         <p className="text-gray-500 text-sm mt-8">
-          Onboarding not complete. Ready to re-enable onboarding flow.
+          Preparing onboarding...
         </p>
       </div>
     </div>
