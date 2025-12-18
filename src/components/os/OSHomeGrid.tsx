@@ -125,12 +125,26 @@ const tiles: OSTile[] = [
   },
 ];
 
+// Sort tiles to show highlighted tile first on mobile
+const getSortedTiles = (tiles: OSTile[], highlightedTile: HighlightedTile): OSTile[] => {
+  if (!highlightedTile) return tiles;
+  
+  return [...tiles].sort((a, b) => {
+    const aHighlighted = a.highlightKey === highlightedTile;
+    const bHighlighted = b.highlightKey === highlightedTile;
+    if (aHighlighted && !bHighlighted) return -1;
+    if (!aHighlighted && bHighlighted) return 1;
+    return 0;
+  });
+};
+
 export const OSHomeGrid = ({ highlightedTile = null, focusLockMode = null }: OSHomeGridProps) => {
   const navigate = useNavigate();
+  const sortedTiles = getSortedTiles(tiles, highlightedTile);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-      {tiles.map((tile) => {
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+      {sortedTiles.map((tile) => {
         const Icon = tile.icon;
         const isHighlighted = highlightedTile && tile.highlightKey === highlightedTile;
         const isDisabled = focusLockMode && !FOCUS_LOCK_ENABLED_TILES.includes(tile.id);
@@ -139,17 +153,20 @@ export const OSHomeGrid = ({ highlightedTile = null, focusLockMode = null }: OSH
           <button
             key={tile.id}
             onClick={() => !isDisabled && navigate(tile.href)}
-            className={`group relative flex flex-col items-start p-4 sm:p-5 rounded-xl 
-                       backdrop-blur-md border
-                       active:scale-[0.98] transition-all duration-200 ease-out
-                       text-left focus:outline-none focus:ring-2 focus:ring-primary/30
+            className={`group relative flex flex-col items-start 
+                       p-4 sm:p-5 
+                       min-h-[120px] sm:min-h-[140px]
+                       rounded-xl backdrop-blur-md border
+                       active:scale-[0.97] transition-all duration-200 ease-out
+                       text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50
+                       touch-manipulation
                        ${isDisabled 
                          ? 'opacity-40 cursor-default' 
-                         : 'hover:scale-[1.02]'
+                         : 'sm:hover:scale-[1.02]'
                        }
                        ${isHighlighted 
                          ? 'bg-primary/15 border-primary/40 shadow-[0_0_20px_rgba(147,51,234,0.2)]' 
-                         : 'bg-card/40 border-border/30 hover:bg-card/60 hover:border-border/50'
+                         : 'bg-card/40 border-border/30 sm:hover:bg-card/60 sm:hover:border-border/50'
                        }`}
           >
             {isHighlighted && (
@@ -164,14 +181,14 @@ export const OSHomeGrid = ({ highlightedTile = null, focusLockMode = null }: OSH
                             rounded-lg mb-3 transition-colors
                             ${isHighlighted 
                               ? 'bg-primary/20 text-primary' 
-                              : 'bg-primary/10 text-primary group-hover:bg-primary/15'
+                              : 'bg-primary/10 text-primary'
                             }`}>
               <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <h3 className="text-sm sm:text-base font-medium text-foreground mb-1">
               {tile.title}
             </h3>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-snug">
+            <p className="text-xs sm:text-sm text-muted-foreground leading-snug line-clamp-2">
               {tile.description}
             </p>
           </button>
