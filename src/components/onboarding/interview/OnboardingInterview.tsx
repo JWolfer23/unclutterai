@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAssistantProfile, DecisionStyle, InterruptionPreference, TonePreference } from "@/hooks/useAssistantProfile";
@@ -72,7 +71,6 @@ const mapTonePreference = (tone: string): TonePreference => {
 export const OnboardingInterview = ({ onComplete }: OnboardingInterviewProps) => {
   const { user } = useAuth();
   const { createProfile } = useAssistantProfile();
-  const navigate = useNavigate();
   const [currentScreen, setCurrentScreen] = useState<Screen>("arrival");
   const [answers, setAnswers] = useState<InterviewAnswers>({
     priorities: [],
@@ -143,7 +141,7 @@ export const OnboardingInterview = ({ onComplete }: OnboardingInterviewProps) =>
   const handleComplete = async () => {
     await savePreferences();
     onComplete();
-    navigate('/morning-brief');
+    // Navigation handled by parent (Index.tsx) via state change
   };
 
   // Progress indicator
