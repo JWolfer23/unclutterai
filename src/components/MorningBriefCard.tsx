@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Volume2 } from "lucide-react";
 import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
@@ -11,8 +11,31 @@ const MorningBriefCard = () => {
   const { tasks, isLoading: tasksLoading } = useTasks();
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
 
   const isLoading = streakLoading || sessionsLoading || tasksLoading;
+
+  // Cleanup audio on unmount or navigation
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current = null;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+    setIsPlaying(false);
+  }, []);
+
+  // Stop playback when component unmounts (navigation away)
+  useEffect(() => {
+    return () => {
+      stopAudio();
+    };
+  }, [stopAudio]);
 
   // Get time-appropriate greeting
   const getGreeting = () => {
@@ -82,7 +105,8 @@ const MorningBriefCard = () => {
 
   // Play the brief using TTS
   const handlePlayBrief = async () => {
-    if (isPlaying) return;
+    // Stop any existing playback first (allows restart)
+    stopAudio();
 
     setIsPlaying(true);
 
@@ -116,19 +140,17 @@ const MorningBriefCard = () => {
       }
 
       const audioUrl = URL.createObjectURL(audioBlob);
+      audioUrlRef.current = audioUrl;
+      
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 
       audio.onended = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(audioUrl);
-        audioRef.current = null;
+        stopAudio();
       };
 
       audio.onerror = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(audioUrl);
-        audioRef.current = null;
+        stopAudio();
       };
 
       await audio.play();
@@ -159,8 +181,7 @@ const MorningBriefCard = () => {
           variant="ghost"
           size="sm"
           onClick={handlePlayBrief}
-          disabled={isPlaying}
-          className="text-muted-foreground/60 hover:text-foreground/80 gap-1.5 h-8 px-2.5 disabled:opacity-50"
+          className="text-muted-foreground/60 hover:text-foreground/80 gap-1.5 h-8 px-2.5"
         >
           <Volume2 className={`h-3.5 w-3.5 ${isPlaying ? 'animate-pulse' : ''}`} />
           <span className="text-xs">{isPlaying ? 'Playing…' : 'Play brief'}</span>
