@@ -9,9 +9,9 @@ import { useReadOnlyExecution } from '@/hooks/useReadOnlyExecution';
 import { useAssistantReadOnly } from '@/contexts/AssistantReadOnlyContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ENABLE_ASSISTANT_STREAMING } from '@/config/flags';
-import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { useWhisperTranscription } from '@/hooks/useWhisperTranscription';
 import { cn } from '@/lib/utils';
-
+import { useToast } from '@/hooks/use-toast';
 // Safe mode configuration - Analyst is default and locked
 const ASSISTANT_CONFIG = {
   mode: 'analyst' as const,  // Default: Analyst mode (read-only)
@@ -167,9 +167,11 @@ export const AssistantChatPanel = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [cancelStreaming, setCancelStreaming] = useState(false); // Signal to cancel active streams
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
+  const [pendingTranscript, setPendingTranscript] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
   const activeStreamIdRef = useRef<string | null>(null); // Track active stream on mobile
+  const { toast } = useToast();
 
   // Detect mobile for single-stream restriction
   const isMobile = useIsMobile();
@@ -179,50 +181,62 @@ export const AssistantChatPanel = () => {
   const readOnlyExecution = useReadOnlyExecution();
   const readOnlyContext = useAssistantReadOnly();
   
-  // Voice input hook
+  // Whisper transcription hook (OpenAI Speech-to-Text)
   const { 
-    isListening, 
+    isRecording,
+    isTranscribing,
     isSupported: voiceSupported, 
     transcript: voiceTranscript,
-    startListening: startVoice,
-    stopListening: stopVoice,
+    error: voiceError,
+    startRecording,
+    stopRecording,
     resetTranscript 
-  } = useVoiceInput({
-    onTranscript: (text) => {
-      // When voice stops, set the transcript as input
-      setInput(prev => prev ? `${prev} ${text}` : text);
-      setVoiceStatus('idle');
-    },
-    onError: () => {
-      setVoiceStatus('idle');
-    }
-  });
+  } = useWhisperTranscription();
 
-  // Sync voice status with listening state
+  // Sync voice status with recording/transcribing state
   useEffect(() => {
-    if (isListening) {
+    if (isRecording) {
       setVoiceStatus('listening');
+    } else if (isTranscribing) {
+      setVoiceStatus('processing');
+    } else {
+      setVoiceStatus('idle');
     }
-  }, [isListening]);
+  }, [isRecording, isTranscribing]);
+
+  // Handle transcription errors
+  useEffect(() => {
+    if (voiceError && voiceStatus === 'idle') {
+      toast({
+        description: voiceError,
+        variant: "default",
+        duration: 2000,
+      });
+    }
+  }, [voiceError, voiceStatus, toast]);
+
+  // Update pending transcript while recording
+  useEffect(() => {
+    if (voiceTranscript) {
+      setPendingTranscript(voiceTranscript);
+      // Set the transcript to input for user to review before sending
+      setInput(voiceTranscript);
+    }
+  }, [voiceTranscript]);
 
   // Handle push-to-talk press
-  const handleVoicePress = useCallback(() => {
-    if (!voiceSupported || isProcessing) return;
+  const handleVoicePress = useCallback(async () => {
+    if (!voiceSupported || isProcessing || voiceStatus !== 'idle') return;
     resetTranscript();
-    setVoiceStatus('listening');
-    startVoice();
-  }, [voiceSupported, isProcessing, startVoice, resetTranscript]);
+    setPendingTranscript('');
+    await startRecording();
+  }, [voiceSupported, isProcessing, voiceStatus, startRecording, resetTranscript]);
 
   // Handle push-to-talk release
-  const handleVoiceRelease = useCallback(() => {
-    if (!isListening) return;
-    setVoiceStatus('processing');
-    stopVoice();
-    // Processing state will be cleared when onTranscript fires
-    setTimeout(() => {
-      setVoiceStatus('idle');
-    }, 500);
-  }, [isListening, stopVoice]);
+  const handleVoiceRelease = useCallback(async () => {
+    if (!isRecording) return;
+    await stopRecording();
+  }, [isRecording, stopRecording]);
 
   // 2-second timeout for data loading - never show indefinite loading
   const [dataTimedOut, setDataTimedOut] = useState(false);
@@ -571,13 +585,18 @@ Suggested actions:
         <div className="flex gap-2">
           <Input
             ref={inputRef}
-            value={voiceStatus === 'listening' ? voiceTranscript || input : input}
+            value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={voiceStatus === 'listening' ? 'Listening...' : 'Ask about priorities or stats'}
+            placeholder={
+              voiceStatus === 'listening' ? 'Listening...' : 
+              voiceStatus === 'processing' ? 'Transcribing...' : 
+              'Ask about priorities or stats'
+            }
             className={cn(
               "flex-1 h-9 text-sm bg-background/50 border-border/30 transition-colors",
-              voiceStatus === 'listening' && "border-primary/50 bg-primary/5"
+              voiceStatus === 'listening' && "border-primary/50 bg-primary/5",
+              voiceStatus === 'processing' && "border-muted-foreground/30 bg-muted/10"
             )}
             disabled={isProcessing || voiceStatus !== 'idle'}
             autoFocus={false}
