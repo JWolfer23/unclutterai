@@ -13,9 +13,10 @@ const ASSISTANT_CONFIG = {
   mode: 'analyst' as const,
   streaming: false,
   requestMode: 'manual' as const,
-  responseTimeoutMs: 3000,
+  hardTimeoutMs: 8000, // Hard timeout - abort after 8 seconds
 };
 
+const TIMEOUT_FALLBACK_MESSAGE = "I'm ready, but couldn't reach my reasoning engine just now. Try again.";
 const FALLBACK_MESSAGE = "I'm unable to process that request right now. Try asking about your priorities or stats.";
 
 interface Message {
@@ -178,21 +179,31 @@ export const AssistantChatPanel = () => {
     setInput('');
     setIsProcessing(true);
 
-    // Simulate brief processing delay with timeout protection
-    const timeoutId = setTimeout(() => {
+    // AbortController for hard timeout - ensures we never hang
+    const abortController = new AbortController();
+    let isAborted = false;
+
+    // Hard 8-second timeout - abort and show fallback
+    const hardTimeoutId = setTimeout(() => {
+      isAborted = true;
+      abortController.abort();
       setIsProcessing(false);
       setMessages(prev => [...prev, {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: FALLBACK_MESSAGE,
+        content: TIMEOUT_FALLBACK_MESSAGE,
         timestamp: new Date(),
         isError: true,
       }]);
-    }, ASSISTANT_CONFIG.responseTimeoutMs);
+    }, ASSISTANT_CONFIG.hardTimeoutMs);
 
     // Process response (manual mode - triggered on send only)
+    // Small delay for UX, then generate response
     setTimeout(() => {
-      clearTimeout(timeoutId);
+      // Skip if already aborted by hard timeout
+      if (isAborted) return;
+      
+      clearTimeout(hardTimeoutId);
       
       try {
         const response = generateResponse(userMessage.content);
