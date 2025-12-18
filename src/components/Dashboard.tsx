@@ -50,7 +50,7 @@ const Dashboard = ({ assistantName, subscriptionTier }: DashboardProps) => {
           ) : (
             <Card className="bg-card/50 border-border/30">
               <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground">No recovery data yet</p>
+                <p className="text-muted-foreground text-sm">No recovery data yet. Complete a focus session to see what you missed.</p>
               </CardContent>
             </Card>
           )}

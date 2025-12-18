@@ -15,13 +15,14 @@ const MODE_LABELS: Record<string, string> = {
 export const RecentSessionsList = () => {
   const { recentSessions, isLoading } = useFocusAnalytics();
 
+  // Show explicit empty state instead of "Loading..."
   if (isLoading) {
     return (
       <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Recent Focus Sessions</h3>
-          <div className="h-48 flex items-center justify-center text-slate-500">
-            Loading...
+          <div className="h-48 flex items-center justify-center">
+            <p className="text-slate-500 text-sm">No sessions logged today</p>
           </div>
         </CardContent>
       </Card>
@@ -33,8 +34,8 @@ export const RecentSessionsList = () => {
       <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Recent Focus Sessions</h3>
-          <div className="h-48 flex items-center justify-center text-slate-500">
-            No sessions yet. Start focusing to see your history!
+          <div className="h-48 flex items-center justify-center">
+            <p className="text-slate-500 text-sm">No sessions logged yet. Start a focus session to build your history.</p>
           </div>
         </CardContent>
       </Card>

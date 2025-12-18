@@ -32,11 +32,21 @@ const getTitle = (level: number): string => {
 export const FocusLevelIndicator = () => {
   const { focusLevel, isLoading } = useFocusAnalytics();
 
+  // Show explicit state even while loading - never block with "Loading..."
+
+  // If still loading but timed out, show default state with indicator
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 text-slate-500 text-sm animate-pulse">
-        <Star className="w-4 h-4" />
-        <span>Loading...</span>
+      <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+        <Star className="w-4 h-4 text-slate-500" />
+        <div className="text-sm">
+          <span className="text-slate-400 font-medium">Level 1</span>
+          <span className="text-slate-500 mx-2">—</span>
+          <span className="text-slate-500">Getting Started</span>
+        </div>
+        <div className="text-xs text-slate-600">
+          0/100 XP
+        </div>
       </div>
     );
   }

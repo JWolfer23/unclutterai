@@ -212,7 +212,7 @@ export const AssistantChatPanel = () => {
           switch (type) {
             case 'priorities': {
               if (!intelligence?.suggestPriorities) {
-                return 'Priority analysis is loading. Try again in a moment.';
+                return 'No priority data available yet. Complete a focus session or sync messages to build context.';
               }
               const priorities = intelligence.suggestPriorities();
               let response = 'Based on your current state:\n\n';
@@ -229,7 +229,7 @@ export const AssistantChatPanel = () => {
             
             case 'stats': {
               if (!intelligence?.analyzeStats) {
-                return 'Stats analysis is loading. Try again in a moment.';
+                return 'No stats available yet. Start a focus session to generate activity data.';
               }
               const analysis = intelligence.analyzeStats();
               return `${analysis.focusSummary}\n\n${analysis.streakStatus}\n\n${analysis.recommendations.length > 0 ? `Recommendation: ${analysis.nextAction}` : 'All metrics healthy.'}`;
@@ -237,7 +237,7 @@ export const AssistantChatPanel = () => {
             
             case 'plan': {
               if (!intelligence?.analyzeStats || !intelligence?.suggestPriorities) {
-                return 'Plan generation is loading. Try again in a moment.';
+                return 'No data available to generate a plan yet. Complete a focus session to build context.';
               }
               const analysis = intelligence.analyzeStats();
               const priorities = intelligence.suggestPriorities();
