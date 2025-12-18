@@ -5,6 +5,8 @@ import { FocusRewardsSection } from "@/components/focus/FocusRewardsSection";
 import FocusRecoveryDashboard from "@/components/FocusRecoveryDashboard";
 import { useFocusRecovery } from "@/hooks/useFocusRecovery";
 import { Card, CardContent } from "@/components/ui/card";
+import { AssistantChatPanel, ExecutionLockedTooltip } from "@/components/assistant";
+import { AssistantReadOnlyProvider } from "@/contexts/AssistantReadOnlyContext";
 
 interface DashboardProps {
   assistantName: string;
@@ -29,30 +31,38 @@ const Dashboard = ({ assistantName, subscriptionTier }: DashboardProps) => {
   const recoveryData = hasRecoveryData ? generateRecoveryData(missedMessages, defaultFocusScore) : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      <HeaderSection onShowCommandPalette={handleShowCommandPalette} />
-      <main className="container mx-auto px-4 py-6 space-y-6">
-        <UserStatsOverview />
-        <FocusRewardsSection />
-        <RecentSessionsList />
+    <AssistantReadOnlyProvider>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <HeaderSection onShowCommandPalette={handleShowCommandPalette} />
+        <main className="container mx-auto px-4 py-6 space-y-6">
+          <UserStatsOverview />
+          <FocusRewardsSection />
+          <RecentSessionsList />
+          
+          {/* Focus Recovery Dashboard - conditional render */}
+          {hasRecoveryData && recoveryData ? (
+            <FocusRecoveryDashboard
+              data={recoveryData}
+              focusDuration={focusDuration}
+              onStartCatchUp={() => console.log("Start catch up")}
+              onReviewLater={() => console.log("Review later")}
+            />
+          ) : (
+            <Card className="bg-card/50 border-border/30">
+              <CardContent className="py-8 text-center">
+                <p className="text-muted-foreground">No recovery data yet</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Assistant Chat Panel - Read-only mode */}
+          <AssistantChatPanel />
+        </main>
         
-        {/* Focus Recovery Dashboard - conditional render */}
-        {hasRecoveryData && recoveryData ? (
-          <FocusRecoveryDashboard
-            data={recoveryData}
-            focusDuration={focusDuration}
-            onStartCatchUp={() => console.log("Start catch up")}
-            onReviewLater={() => console.log("Review later")}
-          />
-        ) : (
-          <Card className="bg-card/50 border-border/30">
-            <CardContent className="py-8 text-center">
-              <p className="text-muted-foreground">No recovery data yet</p>
-            </CardContent>
-          </Card>
-        )}
-      </main>
-    </div>
+        {/* Global tooltip for execution locks */}
+        <ExecutionLockedTooltip />
+      </div>
+    </AssistantReadOnlyProvider>
   );
 };
 
