@@ -1,3 +1,4 @@
+import { useState } from "react";
 import HeaderSection from "@/components/HeaderSection";
 import { UserStatsOverview } from "@/components/UserStatsOverview";
 import { RecentSessionsList } from "@/components/focus/RecentSessionsList";
@@ -7,6 +8,7 @@ import { useFocusRecovery } from "@/hooks/useFocusRecovery";
 import { Card, CardContent } from "@/components/ui/card";
 import { AssistantChatPanel, ExecutionLockedTooltip } from "@/components/assistant";
 import { AssistantReadOnlyProvider } from "@/contexts/AssistantReadOnlyContext";
+import OSView from "@/components/OSView";
 
 interface DashboardProps {
   assistantName: string;
@@ -15,6 +17,7 @@ interface DashboardProps {
 
 const Dashboard = ({ assistantName, subscriptionTier }: DashboardProps) => {
   const { focusSessions, missedMessages, generateRecoveryData } = useFocusRecovery();
+  const [showOSView, setShowOSView] = useState(false);
   
   // Safe no-op handler for command palette
   const handleShowCommandPalette = () => {
@@ -30,10 +33,18 @@ const Dashboard = ({ assistantName, subscriptionTier }: DashboardProps) => {
   const defaultFocusScore = lastSession?.score ?? 85;
   const recoveryData = hasRecoveryData ? generateRecoveryData(missedMessages, defaultFocusScore) : null;
 
+  // Show OS View as separate view (not overlay)
+  if (showOSView) {
+    return <OSView onClose={() => setShowOSView(false)} />;
+  }
+
   return (
     <AssistantReadOnlyProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-        <HeaderSection onShowCommandPalette={handleShowCommandPalette} />
+        <HeaderSection 
+          onShowCommandPalette={handleShowCommandPalette} 
+          onShowOSView={() => setShowOSView(true)}
+        />
         <main className="container mx-auto px-4 py-6 space-y-6">
           <UserStatsOverview />
           <FocusRewardsSection />
