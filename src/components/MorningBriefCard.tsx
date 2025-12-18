@@ -1,6 +1,8 @@
+import { Volume2 } from "lucide-react";
 import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
 import { useTasks } from "@/hooks/useTasks";
+import { Button } from "@/components/ui/button";
 
 const MorningBriefCard = () => {
   const { currentStreak, isLoading: streakLoading } = useFocusStreaks();
@@ -68,11 +70,19 @@ const MorningBriefCard = () => {
 
   return (
     <div className="bg-gradient-to-br from-card/40 to-card/20 border border-border/20 rounded-xl p-6 space-y-5">
-      {/* Greeting */}
-      <div>
+      {/* Header with greeting and play button */}
+      <div className="flex items-start justify-between gap-4">
         <h2 className="text-lg font-medium text-foreground">
           {getGreeting()}. Here's your brief.
         </h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground/60 hover:text-foreground/80 gap-1.5 h-8 px-2.5"
+        >
+          <Volume2 className="h-3.5 w-3.5" />
+          <span className="text-xs">Play brief</span>
+        </Button>
       </div>
 
       {/* State Snapshot */}
