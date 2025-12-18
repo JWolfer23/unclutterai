@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { TierId, PRICING_TIERS, getAuthorityLevel } from '@/lib/pricingTiers';
 import { toast } from "@/components/ui/sonner";
+import { useState, useEffect } from 'react';
 
 export interface SubscriptionState {
   tier: TierId;
@@ -12,9 +13,21 @@ export interface SubscriptionState {
   subscriptionStartedAt: string | null;
 }
 
+const SUBSCRIPTION_TIMEOUT_MS = 1000;
+
 export function useSubscription() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Timeout fallback - if data hasn't loaded in 1 second, stop blocking
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimedOut(true);
+    }, SUBSCRIPTION_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const { data: subscriptionData, isLoading } = useQuery({
     queryKey: ['subscription', user?.id],
@@ -88,12 +101,15 @@ export function useSubscription() {
     },
   });
 
+  // After timeout, treat as resolved with defaults
+  const effectivelyLoading = isLoading && !timedOut;
+  
   const tier = subscriptionData?.tier || 'analyst';
   const tierConfig = PRICING_TIERS[tier];
 
   return {
     tier,
-    isLoading,
+    isLoading: effectivelyLoading,
     capabilities: tierConfig.capabilities,
     authorityLevel: getAuthorityLevel(tier),
     subscriptionStartedAt: subscriptionData?.subscriptionStartedAt || null,
