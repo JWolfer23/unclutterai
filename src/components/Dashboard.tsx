@@ -12,7 +12,7 @@ import { AssistantReadOnlyProvider } from "@/contexts/AssistantReadOnlyContext";
 import OSView from "@/components/OSView";
 import { type NextBestAction } from "@/hooks/useNextBestAction";
 import { NextBestActionCard } from "@/components/dashboard";
-import { OSHomeGrid, type HighlightedTile } from "@/components/os/OSHomeGrid";
+import { OSHomeGrid, type HighlightedTile, type FocusLockMode } from "@/components/os/OSHomeGrid";
 
 // Map NextBestAction type to OSHomeGrid highlight key
 const getHighlightedTile = (actionType: NextBestAction['type']): HighlightedTile => {
@@ -22,6 +22,13 @@ const getHighlightedTile = (actionType: NextBestAction['type']): HighlightedTile
     case 'START_FOCUS': return 'FOCUS';
     default: return null;
   }
+};
+
+// Determine focus lock mode (soft-disables tiles when action is urgent)
+const getFocusLockMode = (actionType: NextBestAction['type']): FocusLockMode => {
+  if (actionType === 'CLOSE_LOOPS') return 'CLOSE_LOOPS';
+  if (actionType === 'URGENT_REPLIES') return 'URGENT_REPLIES';
+  return null;
 };
 
 interface DashboardProps {
@@ -65,7 +72,10 @@ const Dashboard = ({ assistantName, subscriptionTier, nextBestAction }: Dashboar
           <NextBestActionCard action={nextBestAction} />
 
           {/* OS Home Grid - navigation tiles */}
-          <OSHomeGrid highlightedTile={getHighlightedTile(nextBestAction.type)} />
+          <OSHomeGrid 
+            highlightedTile={getHighlightedTile(nextBestAction.type)} 
+            focusLockMode={getFocusLockMode(nextBestAction.type)}
+          />
 
           {/* Secondary content: stats, history, panels */}
           <MorningBriefCard />
