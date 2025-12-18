@@ -155,60 +155,70 @@ const MorningBriefCard = () => {
     return `${greeting}. Here's your brief. ${streakText} ${sessionsText} ${urgentText} ${prioritiesText} ${closeText}`;
   }, [currentStreak, sessionsToday, urgentTasks.length, priorities]);
 
-  // Play the brief using TTS
-  const handlePlayBrief = async () => {
+  // Play the brief using TTS - mobile Safari compatible
+  const handlePlayBrief = () => {
     // Stop any existing playback first (allows restart)
     stopAudio();
 
+    // Create audio element IMMEDIATELY in click handler (required for mobile Safari)
+    const audio = new Audio();
+    audioRef.current = audio;
     setIsPlaying(true);
 
-    try {
-      const text = buildBriefText();
-      
-      const response = await fetch(
-        `https://aihlehujbzkkugzmcobn.supabase.co/functions/v1/text-to-speech`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpaGxlaHVqYnpra3Vnem1jb2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2Mjc5MzMsImV4cCI6MjA2NzIwMzkzM30.ynMPVsQsz9W-SuyZmP84spoRsxp5GBWRbGvOpNFx7KI',
-          },
-          body: JSON.stringify({ text }),
+    const text = buildBriefText();
+    console.log('TTS request sent');
+
+    fetch(
+      `https://aihlehujbzkkugzmcobn.supabase.co/functions/v1/text-to-speech`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpaGxlaHVqYnpra3Vnem1jb2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2Mjc5MzMsImV4cCI6MjA2NzIwMzkzM30.ynMPVsQsz9W-SuyZmP84spoRsxp5GBWRbGvOpNFx7KI',
+        },
+        body: JSON.stringify({ text }),
+      }
+    )
+      .then((response) => {
+        // Handle 204 or non-ok responses silently
+        if (response.status === 204 || !response.ok) {
+          stopAudio();
+          return null;
         }
-      );
+        return response.blob();
+      })
+      .then((audioBlob) => {
+        if (!audioBlob || audioBlob.size === 0) {
+          stopAudio();
+          return;
+        }
 
-      // Handle 204 or non-ok responses silently
-      if (response.status === 204 || !response.ok) {
-        setIsPlaying(false);
-        return;
-      }
+        console.log('Audio received');
 
-      const audioBlob = await response.blob();
-      
-      // Check if we actually got audio content
-      if (audioBlob.size === 0) {
-        setIsPlaying(false);
-        return;
-      }
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audioUrlRef.current = audioUrl;
 
-      const audioUrl = URL.createObjectURL(audioBlob);
-      audioUrlRef.current = audioUrl;
-      
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
+        // Set src on the already-created audio element
+        audio.src = audioUrl;
 
-      audio.onended = () => {
+        audio.onended = () => {
+          stopAudio();
+        };
+
+        audio.onerror = () => {
+          stopAudio();
+        };
+
+        console.log('Audio play attempted');
+        audio.play().catch(() => {
+          // Silently fail - keep text visible
+          stopAudio();
+        });
+      })
+      .catch(() => {
+        // Silently fail - keep text visible
         stopAudio();
-      };
-
-      audio.onerror = () => {
-        stopAudio();
-      };
-
-      await audio.play();
-    } catch {
-      setIsPlaying(false);
-    }
+      });
   };
 
   if (isLoading) {
