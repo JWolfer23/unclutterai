@@ -101,3 +101,6 @@ verify_jwt = true
 
 [functions.unclutter-scan]
 verify_jwt = true
+
+[functions.text-to-speech]
+verify_jwt = true
