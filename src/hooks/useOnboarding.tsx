@@ -1,7 +1,8 @@
-
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+
+type OnboardingStatus = "loading" | "ready" | "error";
 
 interface OnboardingState {
   isFirstTime: boolean;
@@ -11,11 +12,34 @@ interface OnboardingState {
   skipCount: number;
   lastSkipTime: number;
   onboardingCompleted: boolean;
+  status: OnboardingStatus;
 }
 
 const ONBOARDING_KEY = "unclutter-onboarding";
 const ONBOARDING_SHOWN_KEY = "onboarding-shown-this-session";
 const RE_PROMPT_DELAY = 24 * 60 * 60 * 1000; // 24 hours
+
+const DEFAULT_STATE: OnboardingState = {
+  isFirstTime: true,
+  completedSteps: [],
+  connectedPlatforms: [],
+  showOnboarding: true,
+  skipCount: 0,
+  lastSkipTime: 0,
+  onboardingCompleted: false,
+  status: "ready"
+};
+
+// Safe JSON parse helper - never throws
+const safeParseJSON = <T,>(json: string | null, fallback: T): T => {
+  if (!json) return fallback;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    console.warn("Failed to parse onboarding state from localStorage:", error);
+    return fallback;
+  }
+};
 
 export const useOnboarding = () => {
   const { user } = useAuth();
@@ -23,77 +47,94 @@ export const useOnboarding = () => {
   const wasUserLoadedRef = useRef(false);
   
   const [state, setState] = useState<OnboardingState>(() => {
-    const saved = localStorage.getItem(ONBOARDING_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
+    try {
+      const saved = localStorage.getItem(ONBOARDING_KEY);
+      const parsed = safeParseJSON<Partial<OnboardingState>>(saved, {});
+      
+      // Merge with defaults to ensure all fields exist
+      const result: OnboardingState = { ...DEFAULT_STATE, ...parsed, status: "ready" };
+      
       // If onboarding was completed, ensure showOnboarding is false
-      if (parsed.onboardingCompleted) {
-        return { ...parsed, showOnboarding: false };
+      if (result.onboardingCompleted) {
+        return { ...result, showOnboarding: false };
       }
-      return parsed;
+      return result;
+    } catch (error) {
+      console.warn("Error initializing onboarding state:", error);
+      // Clear corrupted localStorage and return defaults
+      try {
+        localStorage.removeItem(ONBOARDING_KEY);
+      } catch {}
+      return DEFAULT_STATE;
     }
-    return {
-      isFirstTime: true,
-      completedSteps: [],
-      connectedPlatforms: [],
-      showOnboarding: true,
-      skipCount: 0,
-      lastSkipTime: 0,
-      onboardingCompleted: false
-    };
   });
 
   // Sync with database when user changes
   useEffect(() => {
     const syncWithDatabase = async () => {
-      if (!user) {
-        // Check saved onboarding state to avoid resetting on brief null user during navigation
-        const savedState = localStorage.getItem(ONBOARDING_KEY);
-        const parsedState = savedState ? JSON.parse(savedState) : null;
+      try {
+        if (!user) {
+          // Check saved onboarding state to avoid resetting on brief null user during navigation
+          const parsedState = safeParseJSON<Partial<OnboardingState>>(
+            localStorage.getItem(ONBOARDING_KEY),
+            {}
+          );
 
-        // Only treat this as a real logout if we've previously had a user loaded
-        // and onboarding hasn't already been completed
-        if (wasUserLoadedRef.current && !parsedState?.onboardingCompleted) {
-          hasProcessedRef.current = false;
-          sessionStorage.removeItem(ONBOARDING_SHOWN_KEY);
+          // Only treat this as a real logout if we've previously had a user loaded
+          // and onboarding hasn't already been completed
+          if (wasUserLoadedRef.current && !parsedState?.onboardingCompleted) {
+            hasProcessedRef.current = false;
+            try {
+              sessionStorage.removeItem(ONBOARDING_SHOWN_KEY);
+            } catch {}
+            setState(prev => ({
+              ...prev,
+              isFirstTime: true,
+              showOnboarding: false,
+              onboardingCompleted: false,
+              connectedPlatforms: []
+            }));
+          }
+          return;
+        }
+
+        // Mark that we've seen a valid user in this session
+        wasUserLoadedRef.current = true;
+        // Only process once per user session
+        if (hasProcessedRef.current) return;
+        hasProcessedRef.current = true;
+
+        // Check both session flag and localStorage state
+        let hasShownOnboarding = false;
+        try {
+          hasShownOnboarding = !!sessionStorage.getItem(ONBOARDING_SHOWN_KEY);
+        } catch {}
+        
+        const parsedState = safeParseJSON<Partial<OnboardingState>>(
+          localStorage.getItem(ONBOARDING_KEY),
+          {}
+        );
+
+        // Only show onboarding if:
+        // 1. Session flag is missing AND
+        // 2. Onboarding was never completed (according to localStorage)
+        if (!hasShownOnboarding && !parsedState?.onboardingCompleted) {
           setState(prev => ({
             ...prev,
-            isFirstTime: true,
-            showOnboarding: false,
             onboardingCompleted: false,
-            connectedPlatforms: []
+            showOnboarding: true,
+            isFirstTime: true
+          }));
+        } else if (hasShownOnboarding || parsedState?.onboardingCompleted) {
+          // Ensure showOnboarding is false if onboarding was completed
+          setState(prev => ({
+            ...prev,
+            showOnboarding: false
           }));
         }
-        return;
-      }
-
-      // Mark that we've seen a valid user in this session
-      wasUserLoadedRef.current = true;
-      // Only process once per user session
-      if (hasProcessedRef.current) return;
-      hasProcessedRef.current = true;
-
-      // Check both session flag and localStorage state
-      const hasShownOnboarding = sessionStorage.getItem(ONBOARDING_SHOWN_KEY);
-      const savedState = localStorage.getItem(ONBOARDING_KEY);
-      const parsedState = savedState ? JSON.parse(savedState) : null;
-
-      // Only show onboarding if:
-      // 1. Session flag is missing AND
-      // 2. Onboarding was never completed (according to localStorage)
-      if (!hasShownOnboarding && !parsedState?.onboardingCompleted) {
-        setState(prev => ({
-          ...prev,
-          onboardingCompleted: false,
-          showOnboarding: true,
-          isFirstTime: true
-        }));
-      } else if (hasShownOnboarding || parsedState?.onboardingCompleted) {
-        // Ensure showOnboarding is false if onboarding was completed
-        setState(prev => ({
-          ...prev,
-          showOnboarding: false
-        }));
+      } catch (error) {
+        console.warn("Error syncing onboarding with database:", error);
+        // Don't crash - just keep current state
       }
     };
 
@@ -101,7 +142,13 @@ export const useOnboarding = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    localStorage.setItem(ONBOARDING_KEY, JSON.stringify(state));
+    try {
+      // Don't save status to localStorage
+      const { status, ...stateWithoutStatus } = state;
+      localStorage.setItem(ONBOARDING_KEY, JSON.stringify(stateWithoutStatus));
+    } catch (error) {
+      console.warn("Error saving onboarding state to localStorage:", error);
+    }
   }, [state]);
 
   const completeOnboarding = async () => {
@@ -113,10 +160,10 @@ export const useOnboarding = () => {
     }));
 
     // Mark onboarding as shown for this session
-    sessionStorage.setItem(ONBOARDING_SHOWN_KEY, 'true');
-    
-    // Clear the session storage flag
-    sessionStorage.removeItem('hasSeenModes');
+    try {
+      sessionStorage.setItem(ONBOARDING_SHOWN_KEY, 'true');
+      sessionStorage.removeItem('hasSeenModes');
+    } catch {}
 
     // Update database
     if (user) {
