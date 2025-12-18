@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Send, Bot, User, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAssistantIntelligence } from '@/hooks/useAssistantIntelligence';
 import { useReadOnlyExecution } from '@/hooks/useReadOnlyExecution';
 import { useAssistantReadOnly } from '@/contexts/AssistantReadOnlyContext';
+import { ENABLE_ASSISTANT_STREAMING } from '@/config/flags';
 
 // Safe mode configuration
 const ASSISTANT_CONFIG = {
@@ -25,7 +26,54 @@ interface Message {
   content: string;
   timestamp: Date;
   isError?: boolean;
+  isStreaming?: boolean; // Track if message is currently streaming
 }
+
+// Streaming message renderer component
+const StreamingMessage = ({ 
+  content, 
+  onComplete 
+}: { 
+  content: string; 
+  onComplete: () => void;
+}) => {
+  const [displayedContent, setDisplayedContent] = useState('');
+  const [streamFailed, setStreamFailed] = useState(false);
+
+  useEffect(() => {
+    if (!ENABLE_ASSISTANT_STREAMING || streamFailed) {
+      // Fallback: show full content immediately
+      setDisplayedContent(content);
+      onComplete();
+      return;
+    }
+
+    let index = 0;
+    const streamInterval = setInterval(() => {
+      try {
+        if (index < content.length) {
+          // Stream ~3 characters at a time for smoother effect
+          const chunkSize = Math.min(3, content.length - index);
+          setDisplayedContent(content.slice(0, index + chunkSize));
+          index += chunkSize;
+        } else {
+          clearInterval(streamInterval);
+          onComplete();
+        }
+      } catch (error) {
+        console.error('Streaming render failed, falling back:', error);
+        setStreamFailed(true);
+        setDisplayedContent(content);
+        clearInterval(streamInterval);
+        onComplete();
+      }
+    }, 20); // ~50 updates/sec for smooth streaming
+
+    return () => clearInterval(streamInterval);
+  }, [content, onComplete, streamFailed]);
+
+  return <p className="whitespace-pre-wrap">{displayedContent}</p>;
+};
 
 // Patterns that indicate execution requests
 const EXECUTION_PATTERNS = [
@@ -194,6 +242,7 @@ export const AssistantChatPanel = () => {
         content: TIMEOUT_FALLBACK_MESSAGE,
         timestamp: new Date(),
         isError: true,
+        isStreaming: false, // Timeout errors render immediately
       }]);
     }, ASSISTANT_CONFIG.hardTimeoutMs);
 
@@ -213,6 +262,7 @@ export const AssistantChatPanel = () => {
           role: 'assistant',
           content: response,
           timestamp: new Date(),
+          isStreaming: ENABLE_ASSISTANT_STREAMING, // Enable streaming render if flag is on
         };
 
         setMessages(prev => [...prev, assistantMessage]);
@@ -224,6 +274,7 @@ export const AssistantChatPanel = () => {
           content: FALLBACK_MESSAGE,
           timestamp: new Date(),
           isError: true,
+          isStreaming: false, // Errors never stream
         }]);
       }
       
@@ -265,7 +316,7 @@ export const AssistantChatPanel = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {messages.map((msg) => (
+                {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -290,7 +341,19 @@ export const AssistantChatPanel = () => {
                         : 'bg-muted/50 text-foreground/90'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    {/* Conditional streaming: if enabled and this is a streaming assistant message */}
+                    {msg.role === 'assistant' && msg.isStreaming && ENABLE_ASSISTANT_STREAMING ? (
+                      <StreamingMessage 
+                        content={msg.content} 
+                        onComplete={() => {
+                          setMessages(prev => prev.map(m => 
+                            m.id === msg.id ? { ...m, isStreaming: false } : m
+                          ));
+                        }}
+                      />
+                    ) : (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    )}
                   </div>
                   {msg.role === 'user' && (
                     <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
