@@ -100,11 +100,10 @@ export function SmartStreamView({
         </div>
       )}
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex items-center justify-center p-8">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span className="ml-2 text-muted-foreground">Loading stream...</span>
+      {/* Empty State - shown while loading or when truly empty */}
+      {isLoading && items.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground text-sm">No items require attention right now.</p>
         </div>
       )}
 
@@ -146,7 +145,7 @@ export function SmartStreamView({
       {/* Empty State */}
       {!isLoading && items.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-muted-foreground">Clear. Nothing requires attention.</p>
+          <p className="text-muted-foreground text-sm">Clear. Nothing requires attention.</p>
         </div>
       )}
 
