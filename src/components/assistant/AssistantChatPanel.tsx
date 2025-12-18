@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAssistantIntelligence } from '@/hooks/useAssistantIntelligence';
 import { useReadOnlyExecution } from '@/hooks/useReadOnlyExecution';
 import { useAssistantReadOnly } from '@/contexts/AssistantReadOnlyContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ENABLE_ASSISTANT_STREAMING } from '@/config/flags';
 
 // Safe mode configuration
@@ -161,6 +162,10 @@ export const AssistantChatPanel = () => {
   const [cancelStreaming, setCancelStreaming] = useState(false); // Signal to cancel active streams
   const inputRef = useRef<HTMLInputElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
+  const activeStreamIdRef = useRef<string | null>(null); // Track active stream on mobile
+
+  // Detect mobile for single-stream restriction
+  const isMobile = useIsMobile();
 
   // Safe access to hooks - never block on loading
   const intelligence = useAssistantIntelligence();
@@ -266,6 +271,12 @@ export const AssistantChatPanel = () => {
   const handleSend = useCallback(() => {
     if (!input.trim() || isProcessing) return;
 
+    // On mobile: enforce single stream - cancel any active stream first
+    if (isMobile && activeStreamIdRef.current) {
+      console.log('[Assistant] Mobile: cancelling previous stream:', activeStreamIdRef.current);
+      activeStreamIdRef.current = null;
+    }
+
     // Cancel any active streaming messages before sending new message
     setCancelStreaming(true);
     // Mark all streaming messages as complete
@@ -293,6 +304,8 @@ export const AssistantChatPanel = () => {
       isAborted = true;
       abortController.abort();
       setIsProcessing(false);
+      // Clear active stream on timeout
+      if (isMobile) activeStreamIdRef.current = null;
       setMessages(prev => [...prev, {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -313,9 +326,15 @@ export const AssistantChatPanel = () => {
       
       try {
         const response = generateResponse(userMessage.content);
+        const messageId = `assistant-${Date.now()}`;
+        
+        // On mobile: track active stream ID (only one allowed)
+        if (isMobile && ENABLE_ASSISTANT_STREAMING) {
+          activeStreamIdRef.current = messageId;
+        }
         
         const assistantMessage: Message = {
-          id: `assistant-${Date.now()}`,
+          id: messageId,
           role: 'assistant',
           content: response,
           timestamp: new Date(),
@@ -325,6 +344,8 @@ export const AssistantChatPanel = () => {
         setMessages(prev => [...prev, assistantMessage]);
       } catch (error) {
         console.error('Assistant error:', error);
+        // Clear active stream on error
+        if (isMobile) activeStreamIdRef.current = null;
         setMessages(prev => [...prev, {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
@@ -337,7 +358,7 @@ export const AssistantChatPanel = () => {
       
       setIsProcessing(false);
     }, 400);
-  }, [input, isProcessing, generateResponse]);
+  }, [input, isProcessing, generateResponse, isMobile]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -404,6 +425,10 @@ export const AssistantChatPanel = () => {
                         content={msg.content}
                         cancelSignal={cancelStreaming}
                         onComplete={() => {
+                          // Clear active stream on mobile when complete
+                          if (isMobile && activeStreamIdRef.current === msg.id) {
+                            activeStreamIdRef.current = null;
+                          }
                           setMessages(prev => prev.map(m => 
                             m.id === msg.id ? { ...m, isStreaming: false } : m
                           ));
