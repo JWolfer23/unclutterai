@@ -1,3 +1,4 @@
+import { useState, useRef, useCallback } from "react";
 import { Volume2 } from "lucide-react";
 import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
@@ -8,6 +9,8 @@ const MorningBriefCard = () => {
   const { currentStreak, isLoading: streakLoading } = useFocusStreaks();
   const { sessions, isLoading: sessionsLoading } = useFocusSessions();
   const { tasks, isLoading: tasksLoading } = useTasks();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const isLoading = streakLoading || sessionsLoading || tasksLoading;
 
@@ -57,6 +60,83 @@ const MorningBriefCard = () => {
 
   const priorities = generatePriorities();
 
+  // Build the brief text for TTS
+  const buildBriefText = useCallback(() => {
+    const greeting = getGreeting();
+    const streakText = currentStreak > 0 
+      ? `Focus streak: ${currentStreak} day${currentStreak !== 1 ? 's' : ''}.`
+      : "No active focus streak.";
+    const sessionsText = sessionsToday > 0 
+      ? `Sessions today: ${sessionsToday}.`
+      : "No sessions completed today.";
+    const urgentText = urgentTasks.length > 0 
+      ? `Urgent items: ${urgentTasks.length}.`
+      : "No urgent items.";
+    const prioritiesText = priorities.length > 0 
+      ? `Priorities: ${priorities.join(' ')}` 
+      : '';
+    const closeText = "You're in control. Take it at your pace.";
+
+    return `${greeting}. Here's your brief. ${streakText} ${sessionsText} ${urgentText} ${prioritiesText} ${closeText}`;
+  }, [currentStreak, sessionsToday, urgentTasks.length, priorities]);
+
+  // Play the brief using TTS
+  const handlePlayBrief = async () => {
+    if (isPlaying) return;
+
+    setIsPlaying(true);
+
+    try {
+      const text = buildBriefText();
+      
+      const response = await fetch(
+        `https://aihlehujbzkkugzmcobn.supabase.co/functions/v1/text-to-speech`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpaGxlaHVqYnpra3Vnem1jb2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2Mjc5MzMsImV4cCI6MjA2NzIwMzkzM30.ynMPVsQsz9W-SuyZmP84spoRsxp5GBWRbGvOpNFx7KI',
+          },
+          body: JSON.stringify({ text }),
+        }
+      );
+
+      // Handle 204 or non-ok responses silently
+      if (response.status === 204 || !response.ok) {
+        setIsPlaying(false);
+        return;
+      }
+
+      const audioBlob = await response.blob();
+      
+      // Check if we actually got audio content
+      if (audioBlob.size === 0) {
+        setIsPlaying(false);
+        return;
+      }
+
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setIsPlaying(false);
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        setIsPlaying(false);
+        URL.revokeObjectURL(audioUrl);
+        audioRef.current = null;
+      };
+
+      await audio.play();
+    } catch {
+      setIsPlaying(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="bg-card/30 border border-border/20 rounded-xl p-6">
@@ -78,10 +158,12 @@ const MorningBriefCard = () => {
         <Button
           variant="ghost"
           size="sm"
-          className="text-muted-foreground/60 hover:text-foreground/80 gap-1.5 h-8 px-2.5"
+          onClick={handlePlayBrief}
+          disabled={isPlaying}
+          className="text-muted-foreground/60 hover:text-foreground/80 gap-1.5 h-8 px-2.5 disabled:opacity-50"
         >
-          <Volume2 className="h-3.5 w-3.5" />
-          <span className="text-xs">Play brief</span>
+          <Volume2 className={`h-3.5 w-3.5 ${isPlaying ? 'animate-pulse' : ''}`} />
+          <span className="text-xs">{isPlaying ? 'Playing…' : 'Play brief'}</span>
         </Button>
       </div>
 
