@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAssistantProfile } from "@/hooks/useAssistantProfile";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useNextBestAction, type NextBestAction } from "@/hooks/useNextBestAction";
 import AuthPage from "@/components/auth/AuthPage";
 import { OnboardingInterview } from "@/components/onboarding/interview/OnboardingInterview";
 import Dashboard from "@/components/Dashboard";
@@ -11,6 +12,7 @@ const Index = () => {
   const onboarding = useOnboarding();
   const { profile: assistantProfile, isLoading: profileLoading } = useAssistantProfile();
   const { tier, isLoading: subscriptionLoading } = useSubscription();
+  const { nextBestAction } = useNextBestAction();
 
   // Subscription is non-blocking - default to analyst tier if unavailable
   const subscriptionTier = (!subscriptionLoading && tier) ? tier : "analyst";
@@ -80,7 +82,8 @@ const Index = () => {
     return (
       <Dashboard 
         assistantName={assistantName} 
-        subscriptionTier={subscriptionTier} 
+        subscriptionTier={subscriptionTier}
+        nextBestAction={nextBestAction}
       />
     );
   }

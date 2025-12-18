@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import HeaderSection from "@/components/HeaderSection";
 import MorningBriefCard from "@/components/MorningBriefCard";
 import { UserStatsOverview } from "@/components/UserStatsOverview";
@@ -7,16 +8,20 @@ import { FocusRewardsSection } from "@/components/focus/FocusRewardsSection";
 import FocusRecoveryDashboard from "@/components/FocusRecoveryDashboard";
 import { useFocusRecovery } from "@/hooks/useFocusRecovery";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { AssistantChatPanel, ExecutionLockedTooltip } from "@/components/assistant";
 import { AssistantReadOnlyProvider } from "@/contexts/AssistantReadOnlyContext";
 import OSView from "@/components/OSView";
+import { type NextBestAction } from "@/hooks/useNextBestAction";
+import { ArrowRight } from "lucide-react";
 
 interface DashboardProps {
   assistantName: string;
   subscriptionTier: string;
+  nextBestAction: NextBestAction;
 }
 
-const Dashboard = ({ assistantName, subscriptionTier }: DashboardProps) => {
+const Dashboard = ({ assistantName, subscriptionTier, nextBestAction }: DashboardProps) => {
   const { focusSessions, missedMessages, generateRecoveryData } = useFocusRecovery();
   const [showOSView, setShowOSView] = useState(false);
   
@@ -47,6 +52,24 @@ const Dashboard = ({ assistantName, subscriptionTier }: DashboardProps) => {
           onShowOSView={() => setShowOSView(true)}
         />
         <main className="container mx-auto px-4 py-6 space-y-6">
+          {/* Next Best Action Card */}
+          <Card className="bg-card/60 border-border/40 backdrop-blur-sm">
+            <CardContent className="py-5 px-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="text-base font-medium text-foreground">{nextBestAction.title}</h3>
+                  <p className="text-sm text-muted-foreground">{nextBestAction.description}</p>
+                </div>
+                <Button asChild variant="default" size="sm" className="shrink-0">
+                  <Link to={nextBestAction.href}>
+                    {nextBestAction.ctaLabel}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <MorningBriefCard />
           <UserStatsOverview />
           <FocusRewardsSection />
