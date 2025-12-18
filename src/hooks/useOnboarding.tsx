@@ -27,7 +27,7 @@ const DEFAULT_STATE: OnboardingState = {
   skipCount: 0,
   lastSkipTime: 0,
   onboardingCompleted: false,
-  status: "ready"
+  status: "loading"  // Start as loading until sync completes
 };
 
 // Safe JSON parse helper - never throws
@@ -51,8 +51,8 @@ export const useOnboarding = () => {
       const saved = localStorage.getItem(ONBOARDING_KEY);
       const parsed = safeParseJSON<Partial<OnboardingState>>(saved, {});
       
-      // Merge with defaults to ensure all fields exist
-      const result: OnboardingState = { ...DEFAULT_STATE, ...parsed, status: "ready" };
+      // Merge with defaults, keep status as loading until sync completes
+      const result: OnboardingState = { ...DEFAULT_STATE, ...parsed, status: "loading" };
       
       // If onboarding was completed, ensure showOnboarding is false
       if (result.onboardingCompleted) {
@@ -92,8 +92,12 @@ export const useOnboarding = () => {
               isFirstTime: true,
               showOnboarding: false,
               onboardingCompleted: false,
-              connectedPlatforms: []
+              connectedPlatforms: [],
+              status: "ready"
             }));
+          } else {
+            // Mark as ready even without user (logged out state or completed onboarding)
+            setState(prev => ({ ...prev, status: "ready" }));
           }
           return;
         }
@@ -101,7 +105,11 @@ export const useOnboarding = () => {
         // Mark that we've seen a valid user in this session
         wasUserLoadedRef.current = true;
         // Only process once per user session
-        if (hasProcessedRef.current) return;
+        if (hasProcessedRef.current) {
+          // Already processed, just mark as ready
+          setState(prev => ({ ...prev, status: "ready" }));
+          return;
+        }
         hasProcessedRef.current = true;
 
         // Check both session flag and localStorage state
@@ -123,18 +131,24 @@ export const useOnboarding = () => {
             ...prev,
             onboardingCompleted: false,
             showOnboarding: true,
-            isFirstTime: true
+            isFirstTime: true,
+            status: "ready"
           }));
         } else if (hasShownOnboarding || parsedState?.onboardingCompleted) {
           // Ensure showOnboarding is false if onboarding was completed
           setState(prev => ({
             ...prev,
-            showOnboarding: false
+            showOnboarding: false,
+            status: "ready"
           }));
+        } else {
+          // Fallback - just mark as ready
+          setState(prev => ({ ...prev, status: "ready" }));
         }
       } catch (error) {
         console.warn("Error syncing onboarding with database:", error);
-        // Don't crash - just keep current state
+        // On error, mark as ready with safe defaults so UI can proceed
+        setState(prev => ({ ...prev, status: "ready" }));
       }
     };
 
