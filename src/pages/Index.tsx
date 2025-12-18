@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAssistantProfile } from "@/hooks/useAssistantProfile";
+import { useSubscription } from "@/hooks/useSubscription";
 import AuthPage from "@/components/auth/AuthPage";
 import { OnboardingInterview } from "@/components/onboarding/interview/OnboardingInterview";
 
@@ -8,6 +9,10 @@ const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const onboarding = useOnboarding();
   const { profile: assistantProfile, isLoading: profileLoading } = useAssistantProfile();
+  const { tier, isLoading: subscriptionLoading } = useSubscription();
+
+  // Safe primitives for display - never throws
+  const subscriptionTier = tier ?? "free";
 
   // Safe primitive for display - never throws
   const assistantName = assistantProfile?.role ?? "Assistant";
@@ -64,6 +69,7 @@ const Index = () => {
         <div className="text-center space-y-4">
           <p className="text-gray-300">Dashboard placeholder</p>
           <p className="text-gray-500 text-sm">Assistant: {assistantName}</p>
+          <p className="text-gray-500 text-sm">Tier: {subscriptionTier}</p>
         </div>
       </div>
     );
