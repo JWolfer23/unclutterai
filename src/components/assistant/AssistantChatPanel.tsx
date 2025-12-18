@@ -387,7 +387,7 @@ export const AssistantChatPanel = () => {
   // This ensures read-only behavior without toggling capability
 
   return (
-    <Card className="bg-card/50 border-border/30 backdrop-blur-sm">
+    <Card className="bg-card/50 border-border/30 backdrop-blur-sm flex-shrink-0">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium text-foreground/90 flex items-center gap-2">
           <Bot className="w-4 h-4 text-primary/70" />
@@ -398,8 +398,8 @@ export const AssistantChatPanel = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Messages Area */}
-        <ScrollArea className="h-48 rounded-lg bg-background/30 border border-border/20 p-3">
+        {/* Messages Area - Fixed height, no auto-scroll */}
+        <ScrollArea className="h-48 rounded-lg bg-background/30 border border-border/20 p-3" style={{ overflow: 'hidden' }}>
         {messages.length === 0 ? (
             <div className="flex gap-2 justify-start">
               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -519,16 +519,18 @@ Suggested actions:
           )}
         </ScrollArea>
 
-        {/* Input Area - never disabled by hook loading */}
+        {/* Input Area - No autoFocus to prevent focus stealing */}
         <div className="flex gap-2">
           <Input
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="What should I focus on today?"
+            placeholder="Ask about priorities or stats"
             className="flex-1 h-9 text-sm bg-background/50 border-border/30"
             disabled={isProcessing}
+            autoFocus={false}
+            tabIndex={0}
           />
           <Button
             ref={sendButtonRef}

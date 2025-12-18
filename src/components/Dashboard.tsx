@@ -54,10 +54,12 @@ const Dashboard = ({ assistantName, subscriptionTier }: DashboardProps) => {
               </CardContent>
             </Card>
           )}
-
-          {/* Assistant Chat Panel - Read-only mode */}
-          <AssistantChatPanel />
         </main>
+        
+        {/* Assistant Panel - Fixed at bottom, never obscures primary content */}
+        <footer className="container mx-auto px-4 pb-6 pt-2">
+          <AssistantChatPanel />
+        </footer>
         
         {/* Global tooltip for execution locks */}
         <ExecutionLockedTooltip />
