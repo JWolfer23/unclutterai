@@ -18,10 +18,12 @@ const ASSISTANT_CONFIG = {
   streaming: false,
   requestMode: 'manual' as const,
   hardTimeoutMs: 8000, // Hard timeout - abort after 8 seconds
+  dataTimeoutMs: 2000, // Max 2 seconds for data loading
 };
 
-const TIMEOUT_FALLBACK_MESSAGE = "I'm ready, but couldn't reach my reasoning engine just now. Try again.";
-const FALLBACK_MESSAGE = "I'm unable to process that request right now. Try asking about your priorities or stats.";
+const DATA_UNAVAILABLE_MESSAGE = 'No actionable insights available yet.';
+const TIMEOUT_FALLBACK_MESSAGE = 'No actionable insights available yet.';
+const FALLBACK_MESSAGE = 'No actionable insights available yet.';
 
 interface Message {
   id: string;
@@ -174,6 +176,15 @@ export const AssistantChatPanel = () => {
   const readOnlyExecution = useReadOnlyExecution();
   const readOnlyContext = useAssistantReadOnly();
 
+  // 2-second timeout for data loading - never show indefinite loading
+  const [dataTimedOut, setDataTimedOut] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDataTimedOut(true);
+    }, ASSISTANT_CONFIG.dataTimeoutMs);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Safe getters with fallbacks - hooks may still be loading
   const getContextualData = intelligence?.getContextualData ?? {
     todayMinutes: 0,
@@ -185,6 +196,9 @@ export const AssistantChatPanel = () => {
     tasksGenerated: 0,
     tokensEarned: 0,
   };
+
+  // Data is considered loaded if: hook reports not loading, OR timeout has passed
+  const dataReady = intelligence?.isLoading === false || dataTimedOut;
 
   const generateResponse = useCallback((userMessage: string): string => {
     try {
@@ -214,7 +228,7 @@ export const AssistantChatPanel = () => {
           switch (type) {
             case 'priorities': {
               if (!intelligence?.suggestPriorities) {
-                return 'No priority data available yet. Complete a focus session or sync messages to build context.';
+                return DATA_UNAVAILABLE_MESSAGE;
               }
               const priorities = intelligence.suggestPriorities();
               let response = 'Based on your current state:\n\n';
@@ -231,7 +245,7 @@ export const AssistantChatPanel = () => {
             
             case 'stats': {
               if (!intelligence?.analyzeStats) {
-                return 'No stats available yet. Start a focus session to generate activity data.';
+                return DATA_UNAVAILABLE_MESSAGE;
               }
               const analysis = intelligence.analyzeStats();
               return `${analysis.focusSummary}\n\n${analysis.streakStatus}\n\n${analysis.recommendations.length > 0 ? `Recommendation: ${analysis.nextAction}` : 'All metrics healthy.'}`;
@@ -239,7 +253,7 @@ export const AssistantChatPanel = () => {
             
             case 'plan': {
               if (!intelligence?.analyzeStats || !intelligence?.suggestPriorities) {
-                return 'No data available to generate a plan yet. Complete a focus session to build context.';
+                return DATA_UNAVAILABLE_MESSAGE;
               }
               const analysis = intelligence.analyzeStats();
               const priorities = intelligence.suggestPriorities();
@@ -260,11 +274,10 @@ export const AssistantChatPanel = () => {
 
       // Default contextual response
       if (intelligence?.explainFocusState) {
-        const state = intelligence.explainFocusState();
-        return `${state}\n\nAsk me to analyze priorities, explain your stats, or suggest a plan.`;
+        return intelligence.explainFocusState();
       }
 
-      return 'Ask me about priorities, stats, or next steps.';
+      return DATA_UNAVAILABLE_MESSAGE;
     } catch (error) {
       console.error('Assistant response error:', error);
       return FALLBACK_MESSAGE;
@@ -395,25 +408,15 @@ export const AssistantChatPanel = () => {
               <div className="max-w-[85%] rounded-lg px-3 py-2 text-xs bg-muted/50 text-foreground/90">
                 <p className="whitespace-pre-wrap">
                   {(() => {
-                    // Check if data is actually loaded (not just defaults)
-                    const dataLoaded = intelligence?.isLoading === false;
                     const sessionsToday = getContextualData.recentSessionsCount;
                     const focusStreakActive = getContextualData.currentStreak > 0;
                     const urgentItems = getContextualData.tasksGenerated;
                     const hasAnyData = sessionsToday > 0 || getContextualData.currentStreak > 0 || 
                                        getContextualData.todayMinutes > 0 || urgentItems > 0;
 
-                    // Calm empty state when no data is available
-                    if (!dataLoaded || !hasAnyData) {
-                      return `Analyst Mode — Read Only
-
-No activity data yet.
-
-• No sessions logged today
-• No streak active
-• No urgent items detected
-
-Start a focus session to begin tracking.`;
+                    // Calm empty state: data not ready or no data available
+                    if (!dataReady || !hasAnyData) {
+                      return DATA_UNAVAILABLE_MESSAGE;
                     }
 
                     // Data is available - show deterministic suggestions (never open-ended questions)
