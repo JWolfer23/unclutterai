@@ -3,7 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from "@/components/ui/sonner";
+import { useState, useEffect } from 'react';
 
+// Safety timeout - never block Assistant UI
+const PROFILE_TIMEOUT_MS = 2000;
 // Type definitions
 export type AssistantRole = 'analyst' | 'operator';
 export type DecisionStyle = 'decide_for_me' | 'suggest' | 'ask';
@@ -96,9 +99,19 @@ export function useAssistantProfile(): UseAssistantProfileReturn {
   const { user } = useAuth();
   const { authorityLevel: subscriptionAuthority } = useSubscription();
   const queryClient = useQueryClient();
+  const [timedOut, setTimedOut] = useState(false);
+
+  // Safety timeout - after 2 seconds, stop blocking and use defaults
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimedOut(true);
+    }, PROFILE_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fetch profile
-  const { data: profile, isLoading, error } = useQuery({
+  const { data: profile, isLoading: queryLoading, error } = useQuery({
     queryKey: ['assistant-profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -121,6 +134,9 @@ export function useAssistantProfile(): UseAssistantProfileReturn {
     },
     enabled: !!user?.id,
   });
+
+  // After timeout, treat loading as resolved with defaults
+  const isLoading = queryLoading && !timedOut;
 
   // Update profile mutation
   const updateMutation = useMutation({
