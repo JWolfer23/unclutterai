@@ -12,8 +12,8 @@ const Index = () => {
   const { profile: assistantProfile, isLoading: profileLoading } = useAssistantProfile();
   const { tier, isLoading: subscriptionLoading } = useSubscription();
 
-  // Safe primitives for display - never throws
-  const subscriptionTier = tier ?? "free";
+  // Subscription is non-blocking - default to analyst tier if unavailable
+  const subscriptionTier = (!subscriptionLoading && tier) ? tier : "analyst";
 
   // Safe primitive for display - never throws
   const assistantName = assistantProfile?.role ?? "Assistant";
@@ -65,16 +65,13 @@ const Index = () => {
   
   // If onboarding is complete, show real dashboard
   if (onboarding.state.onboardingCompleted) {
-    // Show loading while profile/subscription data loads
-    if (profileLoading || subscriptionLoading) {
+    // Show loading only while profile data loads (subscription is non-blocking)
+    if (profileLoading) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-            <div className="space-y-1 text-sm">
-              {profileLoading && <p className="text-gray-400">Loading stats…</p>}
-              {subscriptionLoading && <p className="text-gray-400">Loading subscription…</p>}
-            </div>
+            <p className="text-gray-400 text-sm">Loading stats…</p>
           </div>
         </div>
       );
