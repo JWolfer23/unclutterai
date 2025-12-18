@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useOpenLoops } from "./useOpenLoops";
 import { useMessages } from "./useMessages";
+import { useFocusStats } from "./useFocusStats";
 
 export type NextBestAction = {
   type: 'CLOSE_LOOPS' | 'URGENT_REPLIES' | 'START_FOCUS';
@@ -33,6 +34,7 @@ const NBA_CONFIG: Record<NextBestAction['type'], Omit<NextBestAction, 'type'>> =
 
 /**
  * Pure selection function - deterministic, no side effects
+ * Priority: CLOSE_LOOPS > URGENT_REPLIES > START_FOCUS
  */
 export function selectNextBestAction(
   openLoopsCount: number,
@@ -55,15 +57,33 @@ export function selectNextBestAction(
 }
 
 /**
- * Hook that computes the Next Best Action based on current user state
+ * Hook that computes the Next Best Action based on current user state.
+ * 
+ * IMPORTANT: Never blocks rendering. All values have safe defaults (0).
+ * Uses data from existing hooks when available.
  */
 export function useNextBestAction() {
+  // Open loops from scan inventory (0 if no scan has been run)
   const { inventory } = useOpenLoops();
+  
+  // Messages for urgent count
   const { messages } = useMessages();
+  
+  // Focus stats for today
+  const { todayMinutes, recentSessions, dailySessions } = useFocusStats();
 
+  // Safe counts with fallbacks to 0
   const openLoopsCount = inventory?.total_count ?? 0;
   const urgentCount = messages?.filter(m => m.priority === 'high' && !m.is_read)?.length ?? 0;
+  const todayFocusMinutes = todayMinutes ?? 0;
+  
+  // Calculate today's sessions from dailySessions or recentSessions
+  const today = new Date().toISOString().split('T')[0];
+  const todaySessions = dailySessions?.[today]?.sessions 
+    ?? recentSessions?.filter(s => s.start_time?.startsWith(today))?.length 
+    ?? 0;
 
+  // Memoized NBA selection - deterministic based on counts
   const nextBestAction = useMemo(
     () => selectNextBestAction(openLoopsCount, urgentCount),
     [openLoopsCount, urgentCount]
@@ -71,7 +91,10 @@ export function useNextBestAction() {
 
   return {
     nextBestAction,
+    // Expose counts for display/debugging
     openLoopsCount,
     urgentCount,
+    todayFocusMinutes,
+    todaySessions,
   };
 }
