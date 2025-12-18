@@ -19,14 +19,15 @@ interface AssistantReadOnlyContextType {
 const AssistantReadOnlyContext = createContext<AssistantReadOnlyContextType | undefined>(undefined);
 
 export const AssistantReadOnlyProvider = ({ children }: { children: ReactNode }) => {
-  const { isOperator } = useAssistantProfile();
+  const { isOperator, isLoading } = useAssistantProfile();
   
   // TEMPORARY: Disable tier restrictions - log but don't block
   // Everyone treated as analyst with basic responses allowed
-  const actualTierCheck = !isOperator();
+  // Also: if still loading after timeout, default to analyst (non-blocking)
+  const actualTierCheck = !isLoading && !isOperator();
   const isReadOnly = false; // Bypassed - never block
   
-  if (actualTierCheck) {
+  if (actualTierCheck && !isLoading) {
     console.log('[Assistant] Tier check: user would be read-only, but restrictions are temporarily disabled');
   }
 

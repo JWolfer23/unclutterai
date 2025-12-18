@@ -13,7 +13,8 @@ export interface SubscriptionState {
   subscriptionStartedAt: string | null;
 }
 
-const SUBSCRIPTION_TIMEOUT_MS = 1000;
+// Safety timeout - never block UI waiting for subscription data
+const SUBSCRIPTION_TIMEOUT_MS = 2000;
 
 export function useSubscription() {
   const { user } = useAuth();
