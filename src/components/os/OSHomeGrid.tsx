@@ -16,6 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 
 export type HighlightedTile = 'OPEN_LOOPS' | 'COMMUNICATIONS' | 'FOCUS' | null;
+export type FocusLockMode = 'CLOSE_LOOPS' | 'URGENT_REPLIES' | null;
 
 interface OSTile {
   id: string;
@@ -28,7 +29,11 @@ interface OSTile {
 
 interface OSHomeGridProps {
   highlightedTile?: HighlightedTile;
+  focusLockMode?: FocusLockMode;
 }
+
+// Tiles that remain enabled during focus lock modes
+const FOCUS_LOCK_ENABLED_TILES = ['clear-open-loops', 'communications'];
 
 const tiles: OSTile[] = [
   {
@@ -120,7 +125,7 @@ const tiles: OSTile[] = [
   },
 ];
 
-export const OSHomeGrid = ({ highlightedTile = null }: OSHomeGridProps) => {
+export const OSHomeGrid = ({ highlightedTile = null, focusLockMode = null }: OSHomeGridProps) => {
   const navigate = useNavigate();
 
   return (
@@ -128,15 +133,20 @@ export const OSHomeGrid = ({ highlightedTile = null }: OSHomeGridProps) => {
       {tiles.map((tile) => {
         const Icon = tile.icon;
         const isHighlighted = highlightedTile && tile.highlightKey === highlightedTile;
+        const isDisabled = focusLockMode && !FOCUS_LOCK_ENABLED_TILES.includes(tile.id);
         
         return (
           <button
             key={tile.id}
-            onClick={() => navigate(tile.href)}
+            onClick={() => !isDisabled && navigate(tile.href)}
             className={`group relative flex flex-col items-start p-4 sm:p-5 rounded-xl 
                        backdrop-blur-md border
-                       hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 ease-out
+                       active:scale-[0.98] transition-all duration-200 ease-out
                        text-left focus:outline-none focus:ring-2 focus:ring-primary/30
+                       ${isDisabled 
+                         ? 'opacity-40 cursor-default' 
+                         : 'hover:scale-[1.02]'
+                       }
                        ${isHighlighted 
                          ? 'bg-primary/15 border-primary/40 shadow-[0_0_20px_rgba(147,51,234,0.2)]' 
                          : 'bg-card/40 border-border/30 hover:bg-card/60 hover:border-border/50'
