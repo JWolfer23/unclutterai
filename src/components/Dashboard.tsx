@@ -1,6 +1,7 @@
 import HeaderSection from "@/components/HeaderSection";
 import { UserStatsOverview } from "@/components/UserStatsOverview";
 import { RecentSessionsList } from "@/components/focus/RecentSessionsList";
+import { FocusRewardsSection } from "@/components/focus/FocusRewardsSection";
 
 interface DashboardProps {
   assistantName: string;
@@ -18,6 +19,7 @@ const Dashboard = ({ assistantName, subscriptionTier }: DashboardProps) => {
       <HeaderSection onShowCommandPalette={handleShowCommandPalette} />
       <main className="container mx-auto px-4 py-6 space-y-6">
         <UserStatsOverview />
+        <FocusRewardsSection />
         <RecentSessionsList />
       </main>
     </div>
