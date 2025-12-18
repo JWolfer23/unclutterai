@@ -1,5 +1,6 @@
 import { useState } from "react";
 import HeaderSection from "@/components/HeaderSection";
+import MorningBriefCard from "@/components/MorningBriefCard";
 import { UserStatsOverview } from "@/components/UserStatsOverview";
 import { RecentSessionsList } from "@/components/focus/RecentSessionsList";
 import { FocusRewardsSection } from "@/components/focus/FocusRewardsSection";
@@ -46,6 +47,7 @@ const Dashboard = ({ assistantName, subscriptionTier }: DashboardProps) => {
           onShowOSView={() => setShowOSView(true)}
         />
         <main className="container mx-auto px-4 py-6 space-y-6">
+          <MorningBriefCard />
           <UserStatsOverview />
           <FocusRewardsSection />
           <RecentSessionsList />
