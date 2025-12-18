@@ -29,18 +29,43 @@ interface Message {
   isStreaming?: boolean; // Track if message is currently streaming
 }
 
-// Streaming message renderer component
+// Streaming message renderer component with safe cleanup
 const StreamingMessage = ({ 
   content, 
-  onComplete 
+  onComplete,
+  cancelSignal,
 }: { 
   content: string; 
   onComplete: () => void;
+  cancelSignal?: boolean; // External signal to cancel streaming
 }) => {
   const [displayedContent, setDisplayedContent] = useState('');
   const [streamFailed, setStreamFailed] = useState(false);
+  const cancelledRef = useRef(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Safe cleanup function - never throws
+  const cleanupStream = useCallback(() => {
+    cancelledRef.current = true;
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  // Handle external cancel signal (e.g., new message sent)
+  useEffect(() => {
+    if (cancelSignal) {
+      cleanupStream();
+      // Show full content immediately on cancel
+      setDisplayedContent(content);
+    }
+  }, [cancelSignal, cleanupStream, content]);
 
   useEffect(() => {
+    // Reset cancelled state for new content
+    cancelledRef.current = false;
+
     if (!ENABLE_ASSISTANT_STREAMING || streamFailed) {
       // Fallback: show full content immediately
       setDisplayedContent(content);
@@ -49,7 +74,16 @@ const StreamingMessage = ({
     }
 
     let index = 0;
-    const streamInterval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
+      // Check if cancelled - exit silently without errors or retries
+      if (cancelledRef.current) {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        return;
+      }
+
       try {
         if (index < content.length) {
           // Stream ~3 characters at a time for smoother effect
@@ -57,20 +91,35 @@ const StreamingMessage = ({
           setDisplayedContent(content.slice(0, index + chunkSize));
           index += chunkSize;
         } else {
-          clearInterval(streamInterval);
-          onComplete();
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          // Only call onComplete if not cancelled
+          if (!cancelledRef.current) {
+            onComplete();
+          }
         }
       } catch (error) {
-        console.error('Streaming render failed, falling back:', error);
+        // Silent fail - just show full content, no errors thrown
+        console.warn('Streaming render interrupted, showing full content');
         setStreamFailed(true);
         setDisplayedContent(content);
-        clearInterval(streamInterval);
-        onComplete();
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        if (!cancelledRef.current) {
+          onComplete();
+        }
       }
     }, 20); // ~50 updates/sec for smooth streaming
 
-    return () => clearInterval(streamInterval);
-  }, [content, onComplete, streamFailed]);
+    // Cleanup on unmount or content change - safe, no errors
+    return () => {
+      cleanupStream();
+    };
+  }, [content, onComplete, streamFailed, cleanupStream]);
 
   return <p className="whitespace-pre-wrap">{displayedContent}</p>;
 };
@@ -109,6 +158,7 @@ export const AssistantChatPanel = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cancelStreaming, setCancelStreaming] = useState(false); // Signal to cancel active streams
   const inputRef = useRef<HTMLInputElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -215,6 +265,13 @@ export const AssistantChatPanel = () => {
 
   const handleSend = useCallback(() => {
     if (!input.trim() || isProcessing) return;
+
+    // Cancel any active streaming messages before sending new message
+    setCancelStreaming(true);
+    // Mark all streaming messages as complete
+    setMessages(prev => prev.map(m => m.isStreaming ? { ...m, isStreaming: false } : m));
+    // Reset cancel signal after a tick
+    setTimeout(() => setCancelStreaming(false), 0);
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -344,7 +401,8 @@ export const AssistantChatPanel = () => {
                     {/* Conditional streaming: if enabled and this is a streaming assistant message */}
                     {msg.role === 'assistant' && msg.isStreaming && ENABLE_ASSISTANT_STREAMING ? (
                       <StreamingMessage 
-                        content={msg.content} 
+                        content={msg.content}
+                        cancelSignal={cancelStreaming}
                         onComplete={() => {
                           setMessages(prev => prev.map(m => 
                             m.id === msg.id ? { ...m, isStreaming: false } : m
