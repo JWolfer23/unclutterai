@@ -65,18 +65,28 @@ const Index = () => {
   }
 
   // =============================================================================
-  // MINIMAL PLACEHOLDER - Login confirmed working if you see this screen
+  // CONDITIONAL RENDERING BASED ON ONBOARDING STATE
   // =============================================================================
+  
+  // If onboarding is complete, show dashboard placeholder
+  if (onboarding.state.onboardingCompleted) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
+        <div className="text-center space-y-4">
+          <p className="text-gray-300">Dashboard placeholder</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Onboarding not complete - show login success placeholder
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold text-green-400">✓ Login Successful</h1>
         <p className="text-gray-300">Logged in as: <span className="text-white font-mono">{user.email}</span></p>
         <p className="text-gray-500 text-sm mt-8">
-          All post-auth hooks disabled. If you see this, auth works.
-        </p>
-        <p className="text-gray-600 text-xs">
-          Next: Re-enable hooks one at a time in Index.tsx
+          Onboarding not complete. Ready to re-enable onboarding flow.
         </p>
       </div>
     </div>
