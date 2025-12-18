@@ -1,0 +1,147 @@
+import { useNavigate } from 'react-router-dom';
+import {
+  Sun,
+  Mic,
+  CircleDot,
+  Focus,
+  MessageSquare,
+  Newspaper,
+  Heart,
+  TrendingUp,
+  Coins,
+  Sliders,
+  Network,
+  BarChart3,
+} from 'lucide-react';
+
+interface OSTile {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  href: string;
+}
+
+const tiles: OSTile[] = [
+  {
+    id: 'morning-brief',
+    title: 'Morning Brief',
+    description: 'Start your day with clarity',
+    icon: Sun,
+    href: '/morning-brief',
+  },
+  {
+    id: 'voice-command',
+    title: 'Voice Command',
+    description: 'Speak to control your OS',
+    icon: Mic,
+    href: '/voice',
+  },
+  {
+    id: 'clear-open-loops',
+    title: 'Clear Open Loops',
+    description: "Close what's unfinished",
+    icon: CircleDot,
+    href: '/open-loops',
+  },
+  {
+    id: 'deep-focus',
+    title: 'Deep Focus',
+    description: 'Enter distraction-free mode',
+    icon: Focus,
+    href: '/focus',
+  },
+  {
+    id: 'communications',
+    title: 'Communications',
+    description: 'Manage messages & replies',
+    icon: MessageSquare,
+    href: '/communication',
+  },
+  {
+    id: 'intelligence-feed',
+    title: 'Intelligence Feed',
+    description: 'Curated insights & news',
+    icon: Newspaper,
+    href: '/intelligence-feed',
+  },
+  {
+    id: 'energy-systems',
+    title: 'Energy Systems',
+    description: 'Track health & energy',
+    icon: Heart,
+    href: '/health',
+  },
+  {
+    id: 'strategy-wealth',
+    title: 'Strategy & Wealth',
+    description: 'Career & financial planning',
+    icon: TrendingUp,
+    href: '/strategy-wealth',
+  },
+  {
+    id: 'token-economy',
+    title: 'Token Economy',
+    description: 'Manage your UCT balance',
+    icon: Coins,
+    href: '/tokens',
+  },
+  {
+    id: 'ai-control',
+    title: 'AI Control',
+    description: 'Customize assistant behavior',
+    icon: Sliders,
+    href: '/customize-ai',
+  },
+  {
+    id: 'network',
+    title: 'Network',
+    description: 'Blockchain & agent network',
+    icon: Network,
+    href: '/crypto',
+  },
+  {
+    id: 'performance-report',
+    title: 'Performance Report',
+    description: 'Review your progress',
+    icon: BarChart3,
+    href: '/performance-report',
+  },
+];
+
+export const OSHomeGrid = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+      {tiles.map((tile) => {
+        const Icon = tile.icon;
+        return (
+          <button
+            key={tile.id}
+            onClick={() => navigate(tile.href)}
+            className="group relative flex flex-col items-start p-4 sm:p-5 rounded-xl 
+                       bg-card/40 backdrop-blur-md border border-border/30
+                       hover:bg-card/60 hover:border-border/50 hover:scale-[1.02]
+                       active:scale-[0.98] transition-all duration-200 ease-out
+                       text-left focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 
+                            rounded-lg bg-primary/10 text-primary mb-3
+                            group-hover:bg-primary/15 transition-colors">
+              <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <h3 className="text-sm sm:text-base font-medium text-foreground mb-1">
+              {tile.title}
+            </h3>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-snug">
+              {tile.description}
+            </p>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+export default OSHomeGrid;
