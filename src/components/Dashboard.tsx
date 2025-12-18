@@ -12,7 +12,17 @@ import { AssistantReadOnlyProvider } from "@/contexts/AssistantReadOnlyContext";
 import OSView from "@/components/OSView";
 import { type NextBestAction } from "@/hooks/useNextBestAction";
 import { NextBestActionCard } from "@/components/dashboard";
-import { OSHomeGrid } from "@/components/os/OSHomeGrid";
+import { OSHomeGrid, type HighlightedTile } from "@/components/os/OSHomeGrid";
+
+// Map NextBestAction type to OSHomeGrid highlight key
+const getHighlightedTile = (actionType: NextBestAction['type']): HighlightedTile => {
+  switch (actionType) {
+    case 'CLOSE_LOOPS': return 'OPEN_LOOPS';
+    case 'URGENT_REPLIES': return 'COMMUNICATIONS';
+    case 'START_FOCUS': return 'FOCUS';
+    default: return null;
+  }
+};
 
 interface DashboardProps {
   assistantName: string;
@@ -55,7 +65,7 @@ const Dashboard = ({ assistantName, subscriptionTier, nextBestAction }: Dashboar
           <NextBestActionCard action={nextBestAction} />
 
           {/* OS Home Grid - navigation tiles */}
-          <OSHomeGrid />
+          <OSHomeGrid highlightedTile={getHighlightedTile(nextBestAction.type)} />
 
           {/* Secondary content: stats, history, panels */}
           <MorningBriefCard />
