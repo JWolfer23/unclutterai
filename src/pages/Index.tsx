@@ -4,6 +4,7 @@ import { useAssistantProfile } from "@/hooks/useAssistantProfile";
 import { useSubscription } from "@/hooks/useSubscription";
 import AuthPage from "@/components/auth/AuthPage";
 import { OnboardingInterview } from "@/components/onboarding/interview/OnboardingInterview";
+import Dashboard from "@/components/Dashboard";
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
@@ -62,16 +63,25 @@ const Index = () => {
   // CONDITIONAL RENDERING BASED ON ONBOARDING STATE
   // =============================================================================
   
-  // If onboarding is complete, show dashboard placeholder
+  // If onboarding is complete, show real dashboard
   if (onboarding.state.onboardingCompleted) {
-    return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
-        <div className="text-center space-y-4">
-          <p className="text-gray-300">Dashboard placeholder</p>
-          <p className="text-gray-500 text-sm">Assistant: {assistantName}</p>
-          <p className="text-gray-500 text-sm">Tier: {subscriptionTier}</p>
+    // Show loading while profile/subscription data loads
+    if (profileLoading || subscriptionLoading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+            <p className="text-gray-300">Loading dashboard...</p>
+          </div>
         </div>
-      </div>
+      );
+    }
+
+    return (
+      <Dashboard 
+        assistantName={assistantName} 
+        subscriptionTier={subscriptionTier} 
+      />
     );
   }
 
