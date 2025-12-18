@@ -24,7 +24,7 @@ const Index = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-gray-300">Loading...</p>
+          <p className="text-gray-400 text-sm">Loading user…</p>
         </div>
       </div>
     );
@@ -36,7 +36,7 @@ const Index = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-gray-300">Initializing...</p>
+          <p className="text-gray-400 text-sm">Loading onboarding…</p>
         </div>
       </div>
     );
@@ -71,7 +71,10 @@ const Index = () => {
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-            <p className="text-gray-300">Loading dashboard...</p>
+            <div className="space-y-1 text-sm">
+              {profileLoading && <p className="text-gray-400">Loading stats…</p>}
+              {subscriptionLoading && <p className="text-gray-400">Loading subscription…</p>}
+            </div>
           </div>
         </div>
       );
