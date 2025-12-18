@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Send, Bot, User, AlertCircle } from 'lucide-react';
+import { Send, Bot, User, AlertCircle, Mic, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,8 @@ import { useReadOnlyExecution } from '@/hooks/useReadOnlyExecution';
 import { useAssistantReadOnly } from '@/contexts/AssistantReadOnlyContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ENABLE_ASSISTANT_STREAMING } from '@/config/flags';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
+import { cn } from '@/lib/utils';
 
 // Safe mode configuration - Analyst is default and locked
 const ASSISTANT_CONFIG = {
@@ -164,6 +166,7 @@ export const AssistantChatPanel = () => {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [cancelStreaming, setCancelStreaming] = useState(false); // Signal to cancel active streams
+  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
   const inputRef = useRef<HTMLInputElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
   const activeStreamIdRef = useRef<string | null>(null); // Track active stream on mobile
@@ -175,6 +178,51 @@ export const AssistantChatPanel = () => {
   const intelligence = useAssistantIntelligence();
   const readOnlyExecution = useReadOnlyExecution();
   const readOnlyContext = useAssistantReadOnly();
+  
+  // Voice input hook
+  const { 
+    isListening, 
+    isSupported: voiceSupported, 
+    transcript: voiceTranscript,
+    startListening: startVoice,
+    stopListening: stopVoice,
+    resetTranscript 
+  } = useVoiceInput({
+    onTranscript: (text) => {
+      // When voice stops, set the transcript as input
+      setInput(prev => prev ? `${prev} ${text}` : text);
+      setVoiceStatus('idle');
+    },
+    onError: () => {
+      setVoiceStatus('idle');
+    }
+  });
+
+  // Sync voice status with listening state
+  useEffect(() => {
+    if (isListening) {
+      setVoiceStatus('listening');
+    }
+  }, [isListening]);
+
+  // Handle push-to-talk press
+  const handleVoicePress = useCallback(() => {
+    if (!voiceSupported || isProcessing) return;
+    resetTranscript();
+    setVoiceStatus('listening');
+    startVoice();
+  }, [voiceSupported, isProcessing, startVoice, resetTranscript]);
+
+  // Handle push-to-talk release
+  const handleVoiceRelease = useCallback(() => {
+    if (!isListening) return;
+    setVoiceStatus('processing');
+    stopVoice();
+    // Processing state will be cleared when onTranscript fires
+    setTimeout(() => {
+      setVoiceStatus('idle');
+    }, 500);
+  }, [isListening, stopVoice]);
 
   // 2-second timeout for data loading - never show indefinite loading
   const [dataTimedOut, setDataTimedOut] = useState(false);
@@ -523,20 +571,54 @@ Suggested actions:
         <div className="flex gap-2">
           <Input
             ref={inputRef}
-            value={input}
+            value={voiceStatus === 'listening' ? voiceTranscript || input : input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about priorities or stats"
-            className="flex-1 h-9 text-sm bg-background/50 border-border/30"
-            disabled={isProcessing}
+            placeholder={voiceStatus === 'listening' ? 'Listening...' : 'Ask about priorities or stats'}
+            className={cn(
+              "flex-1 h-9 text-sm bg-background/50 border-border/30 transition-colors",
+              voiceStatus === 'listening' && "border-primary/50 bg-primary/5"
+            )}
+            disabled={isProcessing || voiceStatus !== 'idle'}
             autoFocus={false}
             tabIndex={0}
           />
+          
+          {/* Push-to-talk microphone button */}
+          {voiceSupported && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onMouseDown={handleVoicePress}
+              onMouseUp={handleVoiceRelease}
+              onMouseLeave={handleVoiceRelease}
+              onTouchStart={handleVoicePress}
+              onTouchEnd={handleVoiceRelease}
+              disabled={isProcessing}
+              className={cn(
+                "h-9 w-9 p-0 transition-all touch-manipulation",
+                voiceStatus === 'idle' && "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                voiceStatus === 'listening' && "bg-primary/20 text-primary ring-2 ring-primary/30",
+                voiceStatus === 'processing' && "bg-muted/50 text-muted-foreground"
+              )}
+              aria-label="Hold to speak"
+            >
+              {voiceStatus === 'processing' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Mic className={cn(
+                  "w-4 h-4 transition-transform",
+                  voiceStatus === 'listening' && "scale-110"
+                )} />
+              )}
+            </Button>
+          )}
+          
           <Button
             ref={sendButtonRef}
             size="sm"
             onClick={handleSend}
-            disabled={!input.trim() || isProcessing}
+            disabled={!input.trim() || isProcessing || voiceStatus !== 'idle'}
             className="h-9 w-9 p-0"
           >
             <Send className="w-4 h-4" />
