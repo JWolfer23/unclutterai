@@ -1,28 +1,16 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useAssistantProfile } from "@/hooks/useAssistantProfile";
 import AuthPage from "@/components/auth/AuthPage";
 import { OnboardingInterview } from "@/components/onboarding/interview/OnboardingInterview";
-import { useEffect } from "react";
-
-// =============================================================================
-// TEMPORARY DEBUG MODE: All post-auth hooks disabled to isolate crash
-// =============================================================================
-// Once login works with this minimal version, re-enable hooks ONE AT A TIME:
-// 1. useOnboarding
-// 2. useAssistantPromotion (chains to useAssistantProfile → useSubscription)
-// 3. toast calls
-// 4. AssistantPromotionFlow component
-// =============================================================================
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
   const onboarding = useOnboarding();
+  const { profile: assistantProfile, isLoading: profileLoading } = useAssistantProfile();
 
-  useEffect(() => {
-    if (user) {
-      console.log("onboarding", onboarding);
-    }
-  }, [user, onboarding]);
+  // Safe primitive for display - never throws
+  const assistantName = assistantProfile?.role ?? "Assistant";
 
   // Show loading spinner while checking auth
   if (authLoading) {
@@ -75,6 +63,7 @@ const Index = () => {
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-8">
         <div className="text-center space-y-4">
           <p className="text-gray-300">Dashboard placeholder</p>
+          <p className="text-gray-500 text-sm">Assistant: {assistantName}</p>
         </div>
       </div>
     );
