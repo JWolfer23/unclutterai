@@ -2,6 +2,14 @@ import { useFocusProtectionContext, QueuedItem, FocusSummary } from '@/contexts/
 
 export type { QueuedItem, FocusSummary };
 
+/**
+ * Hook for accessing focus protection state and actions.
+ * 
+ * Global interruption rules:
+ * - Default: No interruptions during focus
+ * - May interrupt ONLY if user explicitly allows OR urgency is critical
+ * - Otherwise: Defer and log for post-focus summary
+ */
 export const useFocusProtection = () => {
   const {
     state,
@@ -11,6 +19,8 @@ export const useFocusProtection = () => {
     markItemHandled,
     shouldAllowInterruption,
     getQueuedItems,
+    logInterruption,
+    getInterruptionLog,
   } = useFocusProtectionContext();
 
   return {
@@ -20,6 +30,7 @@ export const useFocusProtection = () => {
     startTime: state.startTime,
     suppressNotifications: state.suppressNotifications,
     queuedItemsCount: state.queuedItems.length,
+    interruptionLogCount: state.interruptionLog.length,
 
     // Actions
     enterFocus,
@@ -28,5 +39,7 @@ export const useFocusProtection = () => {
     markItemHandled,
     shouldAllowInterruption,
     getQueuedItems,
+    logInterruption,
+    getInterruptionLog,
   };
 };
