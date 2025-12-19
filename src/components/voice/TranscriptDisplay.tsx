@@ -87,7 +87,7 @@ export const TranscriptDisplay = ({
       {/* Initial idle state */}
       {status === 'idle' && !lastResponse && !showError && (
         <p className="text-white/30 text-sm">
-          Tap the mic to give a command
+          Hold the mic to give a command
         </p>
       )}
     </div>
