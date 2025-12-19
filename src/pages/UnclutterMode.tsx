@@ -16,8 +16,6 @@ const UnclutterMode = () => {
   const {
     phase,
     currentLoop,
-    currentIndex,
-    totalLoops,
     loopsResolved,
     isLoading,
     aiDraft,
@@ -25,7 +23,6 @@ const UnclutterMode = () => {
     uctData,
     startScan,
     resolve,
-    skip,
     generateDraft,
     createTaskFromLoop,
     needsConfirmation,
@@ -45,8 +42,6 @@ const UnclutterMode = () => {
   // Handle send reply
   const handleSendReply = async (finalDraft: string) => {
     setIsSending(true);
-    // In a real implementation, this would send the email
-    // For now, we just mark it as resolved
     await new Promise(r => setTimeout(r, 500)); // Simulate send
     setShowReplyModal(false);
     setIsSending(false);
@@ -60,18 +55,34 @@ const UnclutterMode = () => {
     await resolve('schedule');
   };
 
+  // Handle exit - only allowed in idle or complete phases
+  const handleExit = () => {
+    reset();
+    navigate("/");
+  };
+
+  // Block navigation during resolution - user must complete current item
+  const canExit = phase === 'idle' || phase === 'complete';
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-slate-950 to-slate-900 text-white px-6 py-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        {/* Header - only show back button when not resolving */}
         <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm">Back to Home</span>
-          </button>
+          {canExit ? (
+            <button
+              onClick={handleExit}
+              className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm">Back to Home</span>
+            </button>
+          ) : (
+            <div className="text-white/30 text-sm flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 animate-spin-slow" />
+              <span>Resolve to continue</span>
+            </div>
+          )}
 
           {phase !== 'idle' && phase !== 'scanning' && (
             <div className="flex items-center gap-4">
@@ -80,7 +91,7 @@ const UnclutterMode = () => {
               </div>
               <div>
                 <h1 className="text-lg font-semibold">Unclutter Mode</h1>
-                <p className="text-white/50 text-xs">Close your open loops</p>
+                <p className="text-white/50 text-xs">One at a time</p>
               </div>
             </div>
           )}
@@ -98,13 +109,11 @@ const UnclutterMode = () => {
         {phase === 'resolving' && currentLoop && (
           <LoopScreen
             loop={currentLoop}
-            currentIndex={currentIndex}
-            totalLoops={totalLoops}
+            loopsResolved={loopsResolved}
             onReply={handleReply}
             onSchedule={() => setShowScheduleModal(true)}
             onArchive={() => resolve('archive')}
             onIgnore={() => resolve('ignore')}
-            onSkip={skip}
             isGeneratingDraft={isGeneratingDraft}
             uctData={uctData}
           />
@@ -113,7 +122,7 @@ const UnclutterMode = () => {
         {phase === 'complete' && (
           <UnclutterClosure
             loopsResolved={loopsResolved}
-            onExit={reset}
+            onExit={handleExit}
           />
         )}
 

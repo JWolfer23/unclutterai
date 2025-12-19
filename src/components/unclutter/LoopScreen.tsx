@@ -1,6 +1,6 @@
-import { Mail, Reply, Calendar, Archive, X, SkipForward, Loader2, Zap } from "lucide-react";
+import { Mail, Reply, Calendar, Archive, X, Loader2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Loop, LoopAction } from "@/hooks/useUnclutter";
+import { Loop } from "@/hooks/useUnclutter";
 import { useAssistantProfile } from "@/hooks/useAssistantProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,31 +8,26 @@ import { BetaUCTData } from "@/hooks/useBetaUCT";
 
 interface LoopScreenProps {
   loop: Loop;
-  currentIndex: number;
-  totalLoops: number;
+  loopsResolved: number;
   onReply: () => void;
   onSchedule: () => void;
   onArchive: () => void;
   onIgnore: () => void;
-  onSkip: () => void;
   isGeneratingDraft: boolean;
   uctData?: BetaUCTData | null;
 }
 
 const LoopScreen = ({
   loop,
-  currentIndex,
-  totalLoops,
+  loopsResolved,
   onReply,
   onSchedule,
   onArchive,
   onIgnore,
-  onSkip,
   isGeneratingDraft,
   uctData
 }: LoopScreenProps) => {
   const { user } = useAuth();
-  const { isOperator, requiresConfirmation } = useAssistantProfile();
 
   // Log action approval to track patterns for promotion eligibility
   const logActionApproval = async (actionType: 'reply' | 'schedule' | 'archive') => {
@@ -65,21 +60,21 @@ const LoopScreen = ({
 
   return (
     <div className="max-w-lg mx-auto px-4">
-      {/* Progress indicator with speed boost */}
+      {/* Minimal progress - only shows resolved count, not total */}
       <div className="text-center mb-6 space-y-2">
         <span className="text-white/40 text-sm">
-          Loop {currentIndex + 1} of {totalLoops}
+          {loopsResolved > 0 ? `${loopsResolved} resolved` : 'Focus on this one'}
         </span>
         {uctData && uctData.resolutionSpeedBoost > 1 && (
           <div className="flex items-center justify-center gap-1.5 text-cyan-400">
             <Zap className="h-3.5 w-3.5" />
-            <span className="text-xs font-medium">{uctData.resolutionSpeedBoost}x resolution speed</span>
+            <span className="text-xs font-medium">{uctData.resolutionSpeedBoost}x speed</span>
           </div>
         )}
       </div>
 
-      {/* Loop card */}
-      <div className="rounded-3xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 space-y-5">
+      {/* Loop card - single focused item */}
+      <div className="rounded-3xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* Header with icon and sender */}
         <div className="flex items-start gap-4">
           <div className="p-3 rounded-xl bg-white/10 text-white/60">
@@ -97,11 +92,16 @@ const LoopScreen = ({
           "{loop.summary}"
         </p>
 
+        {/* Instruction */}
+        <p className="text-white/30 text-xs text-center">
+          Choose an action to continue
+        </p>
+
         {/* Divider */}
         <div className="border-t border-white/10 pt-4" />
 
-        {/* Five action buttons */}
-        <div className="grid grid-cols-5 gap-2">
+        {/* Four action buttons - no skip allowed */}
+        <div className="grid grid-cols-4 gap-2">
           <Button
             onClick={handleReply}
             disabled={isGeneratingDraft}
@@ -121,7 +121,7 @@ const LoopScreen = ({
             className="flex flex-col items-center gap-1.5 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-0"
           >
             <Calendar className="h-4 w-4" />
-            <span className="text-xs">Sched</span>
+            <span className="text-xs">Schedule</span>
           </Button>
 
           <Button
@@ -140,15 +140,6 @@ const LoopScreen = ({
           >
             <X className="h-4 w-4" />
             <span className="text-xs">Ignore</span>
-          </Button>
-
-          <Button
-            onClick={onSkip}
-            variant="ghost"
-            className="flex flex-col items-center gap-1.5 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-0"
-          >
-            <SkipForward className="h-4 w-4" />
-            <span className="text-xs">Skip</span>
           </Button>
         </div>
       </div>

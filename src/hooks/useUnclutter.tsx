@@ -173,10 +173,7 @@ export const useUnclutter = () => {
     }
   }, [currentLoop, advance, toast, addUCT, logAction, aiDraft]);
 
-  // Skip without action
-  const skip = useCallback(() => {
-    advance();
-  }, [advance]);
+  // Skip is removed - users must resolve each item to proceed
 
   // Generate AI draft for reply
   const generateDraft = useCallback(async () => {
@@ -294,10 +291,9 @@ export const useUnclutter = () => {
     isLoading,
     aiDraft,
     isGeneratingDraft,
-    uctData, // Expose UCT data for speed boost display
+    uctData,
     startScan,
     resolve,
-    skip,
     generateDraft,
     createTaskFromLoop,
     needsConfirmation,
