@@ -227,3 +227,76 @@ export function formatCount(count: number, singular: string, plural?: string): s
   if (count === 1) return `One ${singular}`;
   return `${count} ${plural || singular + 's'}`;
 }
+
+// Authority-based language modifiers
+// Operator mode: more decisive, less explanatory
+export const AUTHORITY_LANGUAGE = {
+  // Analyst (authority 0): asks, explains, seeks confirmation
+  analyst: {
+    actionPrefix: 'Should I',
+    suggestionPrefix: 'You might want to',
+    confirmationStyle: 'ask', // Always asks
+    explanationLevel: 'verbose', // Explains reasoning
+  },
+  // Operator (authority 1): suggests, acts with implicit permission
+  operator: {
+    actionPrefix: 'I\'ll',
+    suggestionPrefix: '',
+    confirmationStyle: 'implicit', // Acts unless stopped
+    explanationLevel: 'minimal', // Shows outcome, not process
+  },
+} as const;
+
+// Get language style based on authority level
+export function getAuthorityLanguage(authorityLevel: number) {
+  return authorityLevel >= 1 ? AUTHORITY_LANGUAGE.operator : AUTHORITY_LANGUAGE.analyst;
+}
+
+// Operator-style action phrases (decisive, no hedging)
+export const OPERATOR_ACTIONS = {
+  // Direct actions (no "Should I" or "Would you like me to")
+  archiving: 'Archiving.',
+  scheduling: 'Scheduled.',
+  drafting: 'Draft ready.',
+  sending: 'Sent.',
+  closing: 'Closed.',
+  handling: 'Handled.',
+  
+  // Brief confirmations
+  done: 'Done.',
+  complete: 'Complete.',
+  cleared: 'Cleared.',
+  
+  // Quiet failures (no dramatic language)
+  blocked: 'Blocked.',
+  deferred: 'Deferred.',
+  needsInput: 'Needs input.',
+} as const;
+
+// Analyst-style action phrases (asks, explains)
+export const ANALYST_ACTIONS = {
+  archiving: 'Should I archive this?',
+  scheduling: 'Should I schedule this?',
+  drafting: 'I\'ve drafted a response. Would you like to review?',
+  sending: 'Ready to send. Confirm?',
+  closing: 'Should I close this loop?',
+  handling: 'Would you like me to handle this?',
+  
+  done: 'Complete. Here\'s what happened:',
+  complete: 'Task complete.',
+  cleared: 'Inbox cleared.',
+  
+  blocked: 'Unable to proceed. Here\'s why:',
+  deferred: 'Deferred for later. You\'ll see this again.',
+  needsInput: 'I need more information to continue.',
+} as const;
+
+// Get action phrase based on authority
+export function getActionPhrase(
+  action: keyof typeof OPERATOR_ACTIONS, 
+  authorityLevel: number
+): string {
+  return authorityLevel >= 1 
+    ? OPERATOR_ACTIONS[action] 
+    : ANALYST_ACTIONS[action];
+}

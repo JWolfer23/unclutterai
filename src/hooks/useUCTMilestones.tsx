@@ -4,6 +4,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 const PRO_UNLOCK_THRESHOLD = 40;
 const PRO_UNLOCK_DAYS = 30;
@@ -11,7 +12,8 @@ const PRO_UNLOCK_DAYS = 30;
 export function useUCTMilestones() {
   const { user } = useAuth();
   const { data: uctData } = useBetaUCT();
-  const { tier, subscriptionStartedAt } = useSubscription();
+  const { tier } = useSubscription();
+  const queryClient = useQueryClient();
   const hasCheckedRef = useRef(false);
   const previousBalanceRef = useRef<number | null>(null);
 
@@ -35,7 +37,7 @@ export function useUCTMilestones() {
       const expiresAt = new Date(unlockDate.getTime() + PRO_UNLOCK_DAYS * 24 * 60 * 60 * 1000);
 
       // Update subscription to operator tier with UCT unlock flag
-      const { error } = await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           preferences: {
@@ -49,13 +51,32 @@ export function useUCTMilestones() {
         })
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
 
-      // Sync authority level to assistant_profiles
-      await supabase
+      // Promote assistant: role → operator, authority_level → 1, reduced confirmations
+      const { error: assistantError } = await supabase
         .from('assistant_profiles')
-        .update({ authority_level: 1 })
+        .update({ 
+          role: 'operator',
+          authority_level: 1,
+          decision_style: 'suggest', // More decisive - suggest instead of ask
+          allowed_actions: {
+            draft_replies: true,
+            schedule_items: true,
+            archive_items: true,
+            auto_handle_low_risk: false, // Still cautious on full auto
+          },
+          trust_boundaries: {
+            send_messages: false,      // No confirmation needed
+            schedule_meetings: false,  // No confirmation needed
+            delete_content: true,      // Still confirm deletions
+          },
+        })
         .eq('user_id', user.id);
+
+      if (assistantError) {
+        console.error('Failed to promote assistant:', assistantError);
+      }
 
       // Log to focus_ledger
       await supabase.from('focus_ledger').insert({
@@ -64,15 +85,19 @@ export function useUCTMilestones() {
         payload: {
           milestone: 'first_40_uct',
           expires_at: expiresAt.toISOString(),
+          assistant_promoted: true,
         },
       });
+
+      // Invalidate queries so UI updates
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['assistant-profile'] });
 
       // Show earned message - feels achieved, not promotional
       toast.success(
         "You've unlocked your first month of Pro. This is how Operator Mode feels.",
         {
           duration: 8000,
-          className: 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 border-violet-500/30',
         }
       );
     } catch (error) {
