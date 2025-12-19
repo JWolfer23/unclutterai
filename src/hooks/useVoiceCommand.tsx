@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useVoiceInput } from './useVoiceInput';
+import { useWhisperTranscription } from './useWhisperTranscription';
 import { useVoiceTTS } from './useVoiceTTS';
 import { useMessages } from './useMessages';
 import { useTasks } from './useTasks';
@@ -34,13 +34,45 @@ interface UseVoiceCommandReturn {
 export const useVoiceCommand = (): UseVoiceCommandReturn => {
   const navigate = useNavigate();
   const [status, setStatus] = useState<VoiceStatus>('idle');
+  const [transcript, setTranscript] = useState('');
   const [lastResponse, setLastResponse] = useState('');
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null);
   const [pendingCommand, setPendingCommand] = useState<ParsedCommand | null>(null);
+  
+  // Track if we're in the middle of processing to prevent state conflicts
+  const isProcessingRef = useRef(false);
 
   const { messages, updateMessage } = useMessages();
   const { createTask } = useTasks();
-  const { speak, isSpeaking } = useVoiceTTS();
+  const { speak, isSpeaking, stop: stopTTS } = useVoiceTTS();
+  
+  // Use Whisper transcription (OpenAI STT)
+  const { 
+    isRecording,
+    isTranscribing,
+    isSupported,
+    transcript: whisperTranscript,
+    error: whisperError,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+    resetTranscript 
+  } = useWhisperTranscription();
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cancelRecording();
+      stopTTS();
+    };
+  }, [cancelRecording, stopTTS]);
+
+  // Sync transcript from Whisper to local state
+  useEffect(() => {
+    if (whisperTranscript) {
+      setTranscript(whisperTranscript);
+    }
+  }, [whisperTranscript]);
 
   const parseCommand = async (text: string): Promise<ParsedCommand> => {
     try {
@@ -164,45 +196,74 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     }
   };
 
-  const executeCommand = async (text: string) => {
-    setStatus('processing');
-
-    const command = await parseCommand(text);
-
-    if (command.requiresConfirmation) {
-      const confirmMsg = command.confirmationReason === 'bulk_delete'
-        ? `Confirm archiving ${command.bulkCount || 'multiple'} messages?`
-        : command.confirmationReason === 'external_send'
-        ? `Confirm sending this message?`
-        : `Confirm this action?`;
-      
-      setConfirmation({ command, message: confirmMsg });
-      setPendingCommand(command);
-      setStatus('confirming');
-      await speak(confirmMsg);
+  const executeCommand = useCallback(async (text: string) => {
+    if (!text.trim()) {
+      console.log('[VoiceCommand] Empty text, returning to idle');
+      setStatus('idle');
       return;
     }
+    
+    console.log('[VoiceCommand] Executing command:', text);
+    isProcessingRef.current = true;
+    setStatus('processing');
 
-    const result = await executeAction(command);
-    setLastResponse(result.response);
-    setStatus('speaking');
-    await speak(result.response);
-    setStatus('idle');
-  };
+    try {
+      const command = await parseCommand(text);
+
+      if (command.requiresConfirmation) {
+        const confirmMsg = command.confirmationReason === 'bulk_delete'
+          ? `Confirm archiving ${command.bulkCount || 'multiple'} messages?`
+          : command.confirmationReason === 'external_send'
+          ? `Confirm sending this message?`
+          : `Confirm this action?`;
+        
+        setConfirmation({ command, message: confirmMsg });
+        setPendingCommand(command);
+        setStatus('confirming');
+        await speak(confirmMsg);
+        isProcessingRef.current = false;
+        return;
+      }
+
+      const result = await executeAction(command);
+      setLastResponse(result.response);
+      
+      // Speak response
+      setStatus('speaking');
+      await speak(result.response);
+      
+      // Return to idle after speaking
+      setStatus('idle');
+    } catch (error) {
+      console.error('[VoiceCommand] Execution error:', error);
+      setLastResponse("Something went wrong.");
+      setStatus('idle');
+    } finally {
+      isProcessingRef.current = false;
+    }
+  }, [speak, messages, createTask, navigate, updateMessage]);
 
   const confirmAction = async () => {
     if (!pendingCommand) return;
 
     setConfirmation(null);
+    isProcessingRef.current = true;
     setStatus('processing');
     
-    const result = await executeAction(pendingCommand);
-    setLastResponse(result.response);
-    setPendingCommand(null);
-    
-    setStatus('speaking');
-    await speak(result.response);
-    setStatus('idle');
+    try {
+      const result = await executeAction(pendingCommand);
+      setLastResponse(result.response);
+      setPendingCommand(null);
+      
+      setStatus('speaking');
+      await speak(result.response);
+      setStatus('idle');
+    } catch (error) {
+      console.error('[VoiceCommand] Confirm action error:', error);
+      setStatus('idle');
+    } finally {
+      isProcessingRef.current = false;
+    }
   };
 
   const cancelAction = () => {
@@ -212,33 +273,70 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     speak("Cancelled.");
   };
 
-  const handleTranscript = useCallback(async (transcript: string, isFinal: boolean) => {
-    if (isFinal && transcript.trim()) {
-      await executeCommand(transcript);
+  // Start listening - called on press
+  const startListening = useCallback(async () => {
+    // Don't start if already processing or listening
+    if (isProcessingRef.current || isRecording || isTranscribing) {
+      console.log('[VoiceCommand] Ignoring start - already busy');
+      return;
     }
-  }, []);
-
-  const { 
-    isSupported, 
-    transcript,
-    startListening: startVoiceInput,
-    stopListening: stopVoiceInput,
-  } = useVoiceInput({ onTranscript: handleTranscript });
-
-  const startListening = useCallback(() => {
+    
+    // Stop any TTS playback before recording
+    if (isSpeaking) {
+      stopTTS();
+    }
+    
+    console.log('[VoiceCommand] Starting to listen');
+    resetTranscript();
+    setTranscript('');
+    setLastResponse('');
     setStatus('listening');
-    startVoiceInput();
-  }, [startVoiceInput]);
+    
+    await startRecording();
+  }, [isRecording, isTranscribing, isSpeaking, stopTTS, resetTranscript, startRecording]);
 
-  const stopListening = useCallback(() => {
-    stopVoiceInput();
-    if (!transcript) {
+  // Stop listening - called on release
+  const stopListening = useCallback(async () => {
+    // Only stop if we're actually recording
+    if (!isRecording) {
+      console.log('[VoiceCommand] Ignoring stop - not recording');
+      return;
+    }
+    
+    console.log('[VoiceCommand] Stopping listening, transitioning to processing');
+    setStatus('processing');
+    
+    // Stop recording and get the transcript
+    const finalTranscript = await stopRecording();
+    
+    console.log('[VoiceCommand] Final transcript:', finalTranscript);
+    
+    if (finalTranscript && finalTranscript.trim()) {
+      setTranscript(finalTranscript);
+      // Execute the command with the final transcript
+      await executeCommand(finalTranscript);
+    } else if (whisperError) {
+      // Show error and return to idle
+      console.log('[VoiceCommand] Whisper error:', whisperError);
+      setLastResponse("Didn't catch that. Try again.");
+      setStatus('idle');
+    } else {
+      // No transcript, return to idle
+      console.log('[VoiceCommand] No transcript captured');
+      setLastResponse("Didn't catch that. Try again.");
       setStatus('idle');
     }
-  }, [stopVoiceInput, transcript]);
+  }, [isRecording, stopRecording, executeCommand, whisperError]);
+
+  // Derive effective status - account for transcribing state
+  const effectiveStatus: VoiceStatus = 
+    isRecording ? 'listening' :
+    isTranscribing ? 'processing' :
+    isSpeaking ? 'speaking' :
+    status;
 
   return {
-    status: isSpeaking ? 'speaking' : status,
+    status: effectiveStatus,
     transcript,
     lastResponse,
     confirmation,
