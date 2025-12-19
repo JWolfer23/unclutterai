@@ -259,7 +259,7 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
       mediaRecorder.onerror = (event) => {
         console.error('[Whisper] MediaRecorder error:', event);
         cleanup();
-        setError("Didn't catch that");
+        setError("No audio detected. Please try again.");
       };
 
       // Start recording - request data every 250ms for reliable chunk collection
@@ -318,7 +318,7 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
         // Check if we have audio data
         if (audioChunksRef.current.length === 0) {
           console.log('[Whisper] No audio chunks captured');
-          setError("Didn't catch that");
+          setError("No audio detected. Please try again.");
           resolve(null);
           return;
         }
@@ -333,7 +333,7 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
         // Validate minimum size (10KB threshold as per requirements)
         if (blobSize < 10000) {
           console.log('[Whisper] Audio blob too small (<10KB), treating as invalid');
-          setError("Didn't catch that");
+          setError("No audio detected. Please try again.");
           resolve(null);
           return;
         }
@@ -363,7 +363,10 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
             return;
           }
 
-          console.log('[Whisper] Sending to transcription API, base64 length:', base64Audio.length);
+          console.log('[Whisper] Sending to transcription API, base64 length:', base64Audio.length, 'chars');
+          if (import.meta.env.DEV) {
+            console.log('[Whisper] Audio input size for STT:', Math.round(base64Audio.length / 1024), 'KB base64');
+          }
           
           // Send to edge function
           const { data, error: fnError } = await supabase.functions.invoke('speech-to-text', {
@@ -383,7 +386,7 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
 
           if (fnError || data?.error) {
             console.error('[Whisper] Transcription error:', fnError || data?.error);
-            setError("Didn't catch that");
+            setError("No audio detected. Please try again.");
             resolve(null);
             return;
           }
@@ -392,7 +395,7 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
           
           if (!transcribedText) {
             console.log('[Whisper] Empty transcription result');
-            setError("Didn't catch that");
+            setError("No audio detected. Please try again.");
             resolve(null);
             return;
           }
@@ -405,7 +408,7 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
         } catch (err) {
           console.error('[Whisper] Transcription failed:', err);
           setIsTranscribing(false);
-          setError("Didn't catch that");
+          setError("No audio detected. Please try again.");
           resolve(null);
         }
       };
