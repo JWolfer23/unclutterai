@@ -1,10 +1,13 @@
-import React from 'react';
-import { Check, Circle, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, Circle, Sparkles, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useOnboardingMissions } from '@/hooks/useOnboardingMissions';
-import { ONBOARDING_MISSIONS, TOTAL_ONBOARDING_UCT } from '@/lib/onboardingMissions';
+import { useAssistantProfile } from '@/hooks/useAssistantProfile';
+import { TOTAL_ONBOARDING_UCT } from '@/lib/onboardingMissions';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 // Display labels for the 4 missions
 const MISSION_LABELS: Record<string, string> = {
@@ -67,10 +70,106 @@ const MissionItem: React.FC<MissionItemProps> = ({ label, reward, isComplete }) 
   );
 };
 
+// Completion state component
+const CompletionState: React.FC<{ onEnterOperatorMode: () => void; isActivating: boolean }> = ({ 
+  onEnterOperatorMode, 
+  isActivating 
+}) => {
+  return (
+    <div className="flex flex-col items-center text-center py-4 space-y-4">
+      {/* Success icon */}
+      <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+        <Sparkles className="w-6 h-6 text-primary" />
+      </div>
+      
+      {/* Title */}
+      <div className="space-y-1">
+        <h3 className="text-lg font-semibold text-foreground">40 UCT earned</h3>
+        <p className="text-sm text-muted-foreground">
+          You've unlocked your first month of Pro.
+        </p>
+      </div>
+      
+      {/* CTA Button */}
+      <Button 
+        onClick={onEnterOperatorMode}
+        disabled={isActivating}
+        className="gap-2"
+      >
+        <Zap className="w-4 h-4" />
+        {isActivating ? 'Activating...' : 'Enter Operator Mode'}
+      </Button>
+    </div>
+  );
+};
+
 export const MissionProgressCard: React.FC = () => {
   const { missions, totalUctEarned, completedCount, totalCount } = useOnboardingMissions();
+  const { profile, updateProfile } = useAssistantProfile();
+  const [isActivating, setIsActivating] = useState(false);
   
   const progressPercent = (totalUctEarned / TARGET_UCT) * 100;
+  const allComplete = completedCount >= totalCount && totalCount > 0;
+  const isAlreadyOperator = profile?.role === 'operator';
+
+  // Handle entering Operator Mode
+  const handleEnterOperatorMode = async () => {
+    if (isAlreadyOperator) {
+      toast({
+        title: "Already in Operator Mode",
+        description: "Your assistant is already operating autonomously.",
+      });
+      return;
+    }
+
+    setIsActivating(true);
+    try {
+      await updateProfile({
+        role: 'operator',
+        authority_level: 1,
+        decision_style: 'suggest',
+        allowed_actions: {
+          draft_replies: true,
+          schedule_items: true,
+          archive_items: true,
+          auto_handle_low_risk: false,
+        },
+        trust_boundaries: {
+          send_messages: false, // No confirmation needed
+          schedule_meetings: false, // No confirmation needed
+          delete_content: true, // Still requires confirmation
+        },
+      });
+      
+      toast({
+        title: "Operator Mode activated",
+        description: "Your assistant can now take action on your behalf.",
+      });
+    } catch (error) {
+      console.error('Failed to activate Operator Mode:', error);
+      toast({
+        title: "Couldn't activate",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsActivating(false);
+    }
+  };
+
+  // Show completion state when all missions done
+  if (allComplete) {
+    return (
+      <Card className="bg-card/40 backdrop-blur-md border-border/30 border-primary/20">
+        <CardContent className="pt-6">
+          <CompletionState 
+            onEnterOperatorMode={handleEnterOperatorMode} 
+            isActivating={isActivating}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-card/40 backdrop-blur-md border-border/30">
@@ -112,15 +211,6 @@ export const MissionProgressCard: React.FC = () => {
             />
           ))}
         </div>
-        
-        {/* Completion message */}
-        {totalUctEarned >= TARGET_UCT && (
-          <div className="pt-2 text-center">
-            <p className="text-xs text-primary/80 font-medium">
-              All missions complete. Pro features unlocked.
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
