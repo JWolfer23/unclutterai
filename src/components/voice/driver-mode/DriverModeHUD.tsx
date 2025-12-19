@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { X, Volume2, VolumeX } from 'lucide-react';
+import { X, Volume2, VolumeX, Smartphone } from 'lucide-react';
 import { DriverCommandButton } from './DriverCommandButton';
 import { useDriverMode } from '@/hooks/useDriverMode';
 import { useNextBestAction } from '@/hooks/useNextBestAction';
@@ -292,8 +292,30 @@ export const DriverModeHUD: React.FC<DriverModeHUDProps> = ({ onExit }) => {
           ))}
         </div>
 
+        {/* Native unlock info panel */}
+        <div className="mt-10 w-full max-w-md">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Smartphone className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-medium text-white/90">
+                  Full Driver Mode unlocks in the native app
+                </h4>
+                <p className="mt-1 text-xs text-white/50 leading-relaxed">
+                  Browsers limit voice input. Native enables hands-free command execution, lock-screen voice, and background intelligence.
+                </p>
+                <button className="mt-2 text-xs text-primary/80 hover:text-primary transition-colors">
+                  Notify me when native ships
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Bottom hint - minimal */}
-        <p className="mt-12 text-xs text-white/20 text-center">
+        <p className="mt-6 text-xs text-white/20 text-center">
           Tap a command. No typing needed.
         </p>
       </div>
