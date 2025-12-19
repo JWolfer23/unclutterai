@@ -1,3 +1,5 @@
+import { useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAssistantProfile } from "@/hooks/useAssistantProfile";
@@ -6,10 +8,11 @@ import { useNextBestAction, type NextBestAction } from "@/hooks/useNextBestActio
 import { useMorningMode } from "@/hooks/useMorningMode";
 import AuthPage from "@/components/auth/AuthPage";
 import { OnboardingInterview } from "@/components/onboarding/interview/OnboardingInterview";
-import { MorningModeOverlay } from "@/components/morning-mode";
+import { MorningModeOverlay, type MorningModeExitAction } from "@/components/morning-mode";
 import Dashboard from "@/components/Dashboard";
 
 const Index = () => {
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const onboarding = useOnboarding();
   const { profile: assistantProfile, isLoading: profileLoading } = useAssistantProfile();
@@ -18,6 +21,23 @@ const Index = () => {
   
   // Morning Mode - auto-triggers on first app open per day
   const morningMode = useMorningMode();
+
+  // Handle Morning Mode exit with navigation
+  const handleMorningModeComplete = useCallback((action: MorningModeExitAction) => {
+    morningMode.completeMorningMode();
+    
+    switch (action) {
+      case 'focus':
+        navigate('/focus');
+        break;
+      case 'unclutter':
+        navigate('/unclutter');
+        break;
+      case 'defer':
+        // Stay on dashboard - user chose "later today"
+        break;
+    }
+  }, [morningMode, navigate]);
 
   // Subscription is non-blocking - default to analyst tier if unavailable
   const subscriptionTier = (!subscriptionLoading && tier) ? tier : "analyst";
@@ -91,8 +111,7 @@ const Index = () => {
           focusStreak={morningMode.focusStreak}
           priorities={morningMode.priorities}
           isLoading={morningMode.isLoading}
-          onBegin={morningMode.completeMorningMode}
-          onDismiss={morningMode.dismissMorningMode}
+          onComplete={handleMorningModeComplete}
         />
       );
     }
