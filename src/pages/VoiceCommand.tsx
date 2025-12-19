@@ -95,8 +95,7 @@ const VoiceCommand = () => {
           <VoiceButton
             status={status}
             isSupported={isSupported}
-            onPress={startListening}
-            onRelease={stopListening}
+            onToggle={status === 'listening' ? stopListening : startListening}
           />
 
           {/* Quick Commands */}
