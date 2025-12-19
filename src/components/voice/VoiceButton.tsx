@@ -1,17 +1,17 @@
-import { Mic, MicOff, Loader2 } from "lucide-react";
+import { Mic, MicOff, Loader2, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VoiceButtonProps {
   status: 'idle' | 'listening' | 'processing' | 'speaking' | 'confirming';
   isSupported: boolean;
-  onPress: () => void;
-  onRelease: () => void;
+  onToggle: () => void;
 }
 
-export const VoiceButton = ({ status, isSupported, onPress, onRelease }: VoiceButtonProps) => {
+export const VoiceButton = ({ status, isSupported, onToggle }: VoiceButtonProps) => {
   const isListening = status === 'listening';
   const isProcessing = status === 'processing';
   const isSpeaking = status === 'speaking';
+  const isDisabled = isProcessing || isSpeaking;
 
   if (!isSupported) {
     return (
@@ -36,27 +36,16 @@ export const VoiceButton = ({ status, isSupported, onPress, onRelease }: VoiceBu
           <div className="absolute -inset-6 rounded-full bg-purple-500/30 blur-2xl animate-pulse" />
         )}
         
-        {/* Button */}
+        {/* Button - Tap to toggle */}
         <button
-          onMouseDown={onPress}
-          onMouseUp={onRelease}
-          onMouseLeave={isListening ? onRelease : undefined}
-          onTouchStart={(e) => {
-            e.preventDefault(); // Prevent double-firing on mobile
-            onPress();
-          }}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            onRelease();
-          }}
-          onTouchCancel={onRelease}
-          disabled={isProcessing || isSpeaking}
+          onClick={onToggle}
+          disabled={isDisabled}
           className={cn(
             "relative w-32 h-32 rounded-full flex items-center justify-center",
             "transition-all duration-300 select-none touch-manipulation",
             "border-2",
             isListening 
-              ? "bg-gradient-to-br from-purple-600 to-blue-600 border-purple-400 shadow-[0_0_40px_rgba(147,51,234,0.5)]"
+              ? "bg-gradient-to-br from-red-600 to-orange-600 border-red-400 shadow-[0_0_40px_rgba(239,68,68,0.5)]"
               : isProcessing || isSpeaking
               ? "bg-white/10 border-white/20 cursor-wait"
               : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 active:scale-95"
@@ -77,11 +66,10 @@ export const VoiceButton = ({ status, isSupported, onPress, onRelease }: VoiceBu
                 />
               ))}
             </div>
+          ) : isListening ? (
+            <Square className="h-10 w-10 text-white fill-white" />
           ) : (
-            <Mic className={cn(
-              "h-12 w-12 transition-colors",
-              isListening ? "text-white" : "text-white/60"
-            )} />
+            <Mic className="h-12 w-12 text-white/60" />
           )}
         </button>
       </div>
@@ -89,12 +77,12 @@ export const VoiceButton = ({ status, isSupported, onPress, onRelease }: VoiceBu
       {/* Status text */}
       <p className={cn(
         "text-sm font-medium transition-colors",
-        isListening ? "text-purple-400" : "text-white/50"
+        isListening ? "text-red-400" : "text-white/50"
       )}>
-        {isListening ? "Listening..." : 
+        {isListening ? "Tap to stop" : 
          isProcessing ? "Processing..." :
          isSpeaking ? "Speaking..." :
-         "Hold to speak"}
+         "Tap to speak"}
       </p>
     </div>
   );
