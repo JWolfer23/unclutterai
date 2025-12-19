@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Send, Bot, User, AlertCircle, Mic, Loader2 } from 'lucide-react';
+import { Send, Bot, User, AlertCircle, Mic, Loader2, Volume2, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { useAssistantReadOnly } from '@/contexts/AssistantReadOnlyContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ENABLE_ASSISTANT_STREAMING } from '@/config/flags';
 import { useWhisperTranscription } from '@/hooks/useWhisperTranscription';
+import { useVoiceTTS } from '@/hooks/useVoiceTTS';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 // Safe mode configuration - Analyst is default and locked
@@ -168,10 +169,14 @@ export const AssistantChatPanel = () => {
   const [cancelStreaming, setCancelStreaming] = useState(false); // Signal to cancel active streams
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
   const [pendingTranscript, setPendingTranscript] = useState<string>('');
+  const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
   const activeStreamIdRef = useRef<string | null>(null); // Track active stream on mobile
   const { toast } = useToast();
+
+  // Text-to-speech hook for playing responses
+  const { isSpeaking, isLoading: ttsLoading, speak, stop: stopTTS } = useVoiceTTS();
 
   // Detect mobile for single-stream restriction
   const isMobile = useIsMobile();
@@ -237,6 +242,21 @@ export const AssistantChatPanel = () => {
     if (!isRecording) return;
     await stopRecording();
   }, [isRecording, stopRecording]);
+
+  // Handle play response button
+  const handlePlayResponse = useCallback(async (messageId: string, content: string) => {
+    if (isSpeaking && playingMessageId === messageId) {
+      // Stop playing current message
+      stopTTS();
+      setPlayingMessageId(null);
+    } else {
+      // Stop any current playback first
+      stopTTS();
+      setPlayingMessageId(messageId);
+      await speak(content);
+      setPlayingMessageId(null);
+    }
+  }, [isSpeaking, playingMessageId, stopTTS, speak]);
 
   // 2-second timeout for data loading - never show indefinite loading
   const [dataTimedOut, setDataTimedOut] = useState(false);
@@ -532,32 +552,56 @@ Suggested actions:
                       )}
                     </div>
                   )}
-                  <div
-                    className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
-                      msg.role === 'user'
-                        ? 'bg-primary/20 text-foreground'
-                        : msg.isError
-                        ? 'bg-destructive/10 text-foreground/90'
-                        : 'bg-muted/50 text-foreground/90'
-                    }`}
-                  >
-                    {/* Conditional streaming: if enabled and this is a streaming assistant message */}
-                    {msg.role === 'assistant' && msg.isStreaming && ENABLE_ASSISTANT_STREAMING ? (
-                      <StreamingMessage 
-                        content={msg.content}
-                        cancelSignal={cancelStreaming}
-                        onComplete={() => {
-                          // Clear active stream on mobile when complete
-                          if (isMobile && activeStreamIdRef.current === msg.id) {
-                            activeStreamIdRef.current = null;
-                          }
-                          setMessages(prev => prev.map(m => 
-                            m.id === msg.id ? { ...m, isStreaming: false } : m
-                          ));
-                        }}
-                      />
-                    ) : (
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <div className="flex flex-col gap-1.5">
+                    <div
+                      className={`rounded-lg px-3 py-2 text-xs ${
+                        msg.role === 'user'
+                          ? 'bg-primary/20 text-foreground'
+                          : msg.isError
+                          ? 'bg-destructive/10 text-foreground/90'
+                          : 'bg-muted/50 text-foreground/90'
+                      }`}
+                    >
+                      {/* Conditional streaming: if enabled and this is a streaming assistant message */}
+                      {msg.role === 'assistant' && msg.isStreaming && ENABLE_ASSISTANT_STREAMING ? (
+                        <StreamingMessage 
+                          content={msg.content}
+                          cancelSignal={cancelStreaming}
+                          onComplete={() => {
+                            // Clear active stream on mobile when complete
+                            if (isMobile && activeStreamIdRef.current === msg.id) {
+                              activeStreamIdRef.current = null;
+                            }
+                            setMessages(prev => prev.map(m => 
+                              m.id === msg.id ? { ...m, isStreaming: false } : m
+                            ));
+                          }}
+                        />
+                      ) : (
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      )}
+                    </div>
+                    {/* Play response button for assistant messages (not streaming, not error) */}
+                    {msg.role === 'assistant' && !msg.isStreaming && !msg.isError && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePlayResponse(msg.id, msg.content)}
+                        disabled={ttsLoading && playingMessageId === msg.id}
+                        className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground self-start gap-1"
+                      >
+                        {(isSpeaking || ttsLoading) && playingMessageId === msg.id ? (
+                          <>
+                            <Square className="w-3 h-3" />
+                            Stop
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3 h-3" />
+                            Play response
+                          </>
+                        )}
+                      </Button>
                     )}
                   </div>
                   {msg.role === 'user' && (
