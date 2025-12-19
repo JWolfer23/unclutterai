@@ -1,13 +1,21 @@
-import { Mic, MicOff, Loader2, Square } from "lucide-react";
+import { Mic, MicOff, Loader2, Square, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VoiceButtonProps {
   status: 'idle' | 'listening' | 'processing' | 'speaking' | 'confirming';
   isSupported: boolean;
   onToggle: () => void;
+  audioLevel?: number; // 0-1 normalized
+  hasAudioInput?: boolean;
 }
 
-export const VoiceButton = ({ status, isSupported, onToggle }: VoiceButtonProps) => {
+export const VoiceButton = ({ 
+  status, 
+  isSupported, 
+  onToggle,
+  audioLevel = 0,
+  hasAudioInput = true
+}: VoiceButtonProps) => {
   const isListening = status === 'listening';
   const isProcessing = status === 'processing';
   const isSpeaking = status === 'speaking';
@@ -24,16 +32,22 @@ export const VoiceButton = ({ status, isSupported, onToggle }: VoiceButtonProps)
     );
   }
 
+  // Generate waveform bars based on audio level
+  const waveformBars = [0.6, 1, 0.7, 0.9, 0.5];
+  
   return (
     <div className="flex flex-col items-center gap-4">
       {/* Outer glow ring */}
       <div className={cn(
         "relative transition-all duration-300",
-        isListening && "animate-pulse"
+        isListening && audioLevel > 0.1 && "animate-pulse"
       )}>
-        {/* Ambient glow */}
+        {/* Ambient glow - intensity based on audio level */}
         {isListening && (
-          <div className="absolute -inset-6 rounded-full bg-purple-500/30 blur-2xl animate-pulse" />
+          <div 
+            className="absolute -inset-6 rounded-full bg-red-500/30 blur-2xl transition-opacity duration-100"
+            style={{ opacity: 0.3 + audioLevel * 0.7 }}
+          />
         )}
         
         {/* Button - Tap to toggle */}
@@ -67,23 +81,50 @@ export const VoiceButton = ({ status, isSupported, onToggle }: VoiceButtonProps)
               ))}
             </div>
           ) : isListening ? (
-            <Square className="h-10 w-10 text-white fill-white" />
+            // Waveform visualization responding to audio level
+            <div className="flex items-center gap-1">
+              {waveformBars.map((multiplier, i) => (
+                <div
+                  key={i}
+                  className="w-2 bg-white rounded-full transition-all duration-75"
+                  style={{
+                    height: `${12 + (audioLevel * 28 * multiplier)}px`,
+                  }}
+                />
+              ))}
+            </div>
           ) : (
             <Mic className="h-12 w-12 text-white/60" />
           )}
         </button>
       </div>
 
-      {/* Status text */}
-      <p className={cn(
-        "text-sm font-medium transition-colors",
-        isListening ? "text-red-400" : "text-white/50"
-      )}>
-        {isListening ? "Tap to stop" : 
-         isProcessing ? "Processing..." :
-         isSpeaking ? "Speaking..." :
-         "Tap to speak"}
-      </p>
+      {/* Status text with no-audio warning */}
+      <div className="flex flex-col items-center gap-1">
+        {isListening && !hasAudioInput ? (
+          <div className="flex items-center gap-1.5 text-amber-400">
+            <AlertTriangle className="w-4 h-4" />
+            <p className="text-sm font-medium">No sound detected</p>
+          </div>
+        ) : (
+          <p className={cn(
+            "text-sm font-medium transition-colors",
+            isListening ? "text-red-400" : "text-white/50"
+          )}>
+            {isListening ? "Tap to stop" : 
+             isProcessing ? "Processing..." :
+             isSpeaking ? "Speaking..." :
+             "Tap to speak"}
+          </p>
+        )}
+        
+        {/* Debug: Show audio level when listening */}
+        {isListening && (
+          <p className="text-xs text-white/30">
+            Level: {Math.round(audioLevel * 100)}%
+          </p>
+        )}
+      </div>
     </div>
   );
 };
