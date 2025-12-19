@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useAssistantProfile, UseAssistantProfileReturn } from '@/hooks/useAssistantProfile';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -11,14 +11,39 @@ interface AssistantProfileProviderProps {
 export function AssistantProfileProvider({ children }: AssistantProfileProviderProps) {
   const { user } = useAuth();
   const assistantProfile = useAssistantProfile();
+  const hasCreatedProfile = useRef(false);
 
-  // Auto-create profile if user exists but profile doesn't
+  // Auto-create profile on first login if none exists
   useEffect(() => {
-    if (user && !assistantProfile.isLoading && !assistantProfile.profile) {
-      // Profile will be created during onboarding, but create a default if somehow missing
-      // This is a safety net - onboarding should handle creation
+    const shouldCreateProfile = 
+      user && 
+      !assistantProfile.isLoading && 
+      !assistantProfile.profile && 
+      !hasCreatedProfile.current;
+
+    if (shouldCreateProfile) {
+      hasCreatedProfile.current = true;
+      
+      // Create default analyst profile with safe defaults
+      assistantProfile.createProfile({
+        role: 'analyst',
+        authority_level: 0,
+        tone_preference: 'calm',
+        decision_style: 'ask',
+        interruption_preference: 'balanced',
+      }).catch((error) => {
+        console.error('[AssistantProfile] Failed to auto-create profile:', error);
+        hasCreatedProfile.current = false; // Allow retry on error
+      });
     }
-  }, [user, assistantProfile.isLoading, assistantProfile.profile]);
+  }, [user, assistantProfile.isLoading, assistantProfile.profile, assistantProfile.createProfile]);
+
+  // Reset flag when user logs out
+  useEffect(() => {
+    if (!user) {
+      hasCreatedProfile.current = false;
+    }
+  }, [user]);
 
   return (
     <AssistantProfileContext.Provider value={assistantProfile}>
