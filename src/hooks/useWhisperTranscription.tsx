@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface UseWhisperTranscriptionReturn {
@@ -9,6 +9,7 @@ interface UseWhisperTranscriptionReturn {
   error: string | null;
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<string | null>;
+  cancelRecording: () => void;
   resetTranscript: () => void;
 }
 
@@ -21,11 +22,69 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const isCancelledRef = useRef(false);
 
   // Check if MediaRecorder is supported
   const isSupported = typeof window !== 'undefined' && 
     'MediaRecorder' in window && 
     'mediaDevices' in navigator;
+
+  // Cleanup function for safe teardown
+  const cleanup = useCallback(() => {
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+    } catch {
+      // Ignore stop errors
+    }
+    mediaRecorderRef.current = null;
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        try {
+          track.stop();
+        } catch {
+          // Ignore track stop errors
+        }
+      });
+      streamRef.current = null;
+    }
+    
+    audioChunksRef.current = [];
+    setIsRecording(false);
+  }, []);
+
+  // Cancel recording without transcribing (for navigation/interruption)
+  const cancelRecording = useCallback(() => {
+    console.log('[Whisper] Recording cancelled');
+    isCancelledRef.current = true;
+    cleanup();
+    setIsTranscribing(false);
+    setError(null);
+  }, [cleanup]);
+
+  // Cleanup on unmount (navigation away)
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
+
+  // Cancel on visibility change (tab switch, navigation)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isRecording) {
+        console.log('[Whisper] Page hidden, cancelling recording');
+        cancelRecording();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isRecording, cancelRecording]);
 
   const startRecording = useCallback(async () => {
     if (!isSupported) {
@@ -33,13 +92,20 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
       return;
     }
 
+    // Prevent overlapping recordings
+    if (isRecording || isTranscribing) {
+      console.log('[Whisper] Already recording or transcribing, ignoring start');
+      return;
+    }
+
     try {
+      isCancelledRef.current = false;
       setError(null);
       setTranscript('');
       audioChunksRef.current = [];
 
-      // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // Request microphone access with timeout to prevent UI blocking
+      const micPromise = navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -47,6 +113,19 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
           sampleRate: 16000,
         }
       });
+
+      // 5 second timeout for microphone access
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Microphone access timeout')), 5000);
+      });
+
+      const stream = await Promise.race([micPromise, timeoutPromise]);
+      
+      // Check if cancelled while waiting for mic
+      if (isCancelledRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
       
       streamRef.current = stream;
 
@@ -61,9 +140,15 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data.size > 0 && !isCancelledRef.current) {
           audioChunksRef.current.push(event.data);
         }
+      };
+
+      mediaRecorder.onerror = () => {
+        console.error('[Whisper] MediaRecorder error');
+        cleanup();
+        setError("Didn't catch that");
       };
 
       mediaRecorder.start(100); // Collect data every 100ms
@@ -72,12 +157,19 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
 
     } catch (err) {
       console.error('[Whisper] Failed to start recording:', err);
+      cleanup();
       setError('Could not access microphone');
     }
-  }, [isSupported]);
+  }, [isSupported, isRecording, isTranscribing, cleanup]);
 
   const stopRecording = useCallback(async (): Promise<string | null> => {
     if (!mediaRecorderRef.current || !isRecording) {
+      return null;
+    }
+
+    // Check if already cancelled
+    if (isCancelledRef.current) {
+      cleanup();
       return null;
     }
 
@@ -92,6 +184,12 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
         }
 
         setIsRecording(false);
+        
+        // Check if cancelled during recording
+        if (isCancelledRef.current) {
+          resolve(null);
+          return;
+        }
         
         // Check if we have audio data
         if (audioChunksRef.current.length === 0) {
@@ -120,6 +218,13 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
           // Convert to base64
           const reader = new FileReader();
           reader.onloadend = async () => {
+            // Check if cancelled during transcription
+            if (isCancelledRef.current) {
+              setIsTranscribing(false);
+              resolve(null);
+              return;
+            }
+
             const base64Audio = (reader.result as string).split(',')[1];
             
             console.log('[Whisper] Sending to transcription API...');
@@ -133,6 +238,12 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
             });
 
             setIsTranscribing(false);
+
+            // Check if cancelled while waiting for API
+            if (isCancelledRef.current) {
+              resolve(null);
+              return;
+            }
 
             if (fnError || data?.error) {
               console.error('[Whisper] Transcription error:', fnError || data?.error);
@@ -175,7 +286,7 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
 
       mediaRecorder.stop();
     });
-  }, [isRecording]);
+  }, [isRecording, cleanup]);
 
   const resetTranscript = useCallback(() => {
     setTranscript('');
@@ -190,6 +301,7 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
     error,
     startRecording,
     stopRecording,
+    cancelRecording,
     resetTranscript,
   };
 };

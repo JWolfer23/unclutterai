@@ -195,8 +195,17 @@ export const AssistantChatPanel = () => {
     error: voiceError,
     startRecording,
     stopRecording,
+    cancelRecording,
     resetTranscript 
   } = useWhisperTranscription();
+
+  // Cleanup voice on unmount (navigation)
+  useEffect(() => {
+    return () => {
+      cancelRecording();
+      stopTTS();
+    };
+  }, [cancelRecording, stopTTS]);
 
   // Sync voice status with recording/transcribing state
   useEffect(() => {
@@ -232,10 +241,17 @@ export const AssistantChatPanel = () => {
   // Handle push-to-talk press
   const handleVoicePress = useCallback(async () => {
     if (!voiceSupported || isProcessing || voiceStatus !== 'idle') return;
+    
+    // Stop any TTS playback before recording - prevents overlap
+    if (isSpeaking || ttsLoading) {
+      stopTTS();
+      setPlayingMessageId(null);
+    }
+    
     resetTranscript();
     setPendingTranscript('');
     await startRecording();
-  }, [voiceSupported, isProcessing, voiceStatus, startRecording, resetTranscript]);
+  }, [voiceSupported, isProcessing, voiceStatus, isSpeaking, ttsLoading, stopTTS, startRecording, resetTranscript]);
 
   // Handle push-to-talk release
   const handleVoiceRelease = useCallback(async () => {
