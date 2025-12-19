@@ -3,6 +3,14 @@
  * 
  * These rules apply to Driver Mode and all Assistant voice output.
  * 
+ * STRICT DRIVER MODE PRIORITY RULE:
+ * - Assistant ALWAYS surfaces exactly ONE Next Best Action
+ * - NEVER present multiple tasks verbally
+ * - NEVER ask "what would you like to do?"
+ * - If no action needed, speak: "Nothing urgent needs your attention."
+ * 
+ * This rule OVERRIDES all other UI logic in Driver Mode.
+ * 
  * CORE PRINCIPLES:
  * 1. Voice output must never present multiple options
  * 2. Voice output must never ask open-ended questions
@@ -55,7 +63,8 @@ const OPEN_ENDED_PATTERNS = [
 ];
 
 const REASSURANCE_PHRASES = {
-  nothingUrgent: "Nothing urgent needs attention.",
+  // DRIVER MODE CANONICAL PHRASE - do not change
+  nothingUrgent: "Nothing urgent needs your attention.",
   allClear: "All clear.",
   handledIt: "Handled.",
   noActionNeeded: "No action needed.",
