@@ -1004,6 +1004,36 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_missions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          mission_id: string
+          uct_awarded: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mission_id: string
+          uct_awarded?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mission_id?: string
+          uct_awarded?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1554,6 +1584,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_onboarding_mission: {
+        Args: { p_mission_id: string; p_uct_reward?: number; p_user_id: string }
+        Returns: Json
+      }
       get_focus_minutes_by_day: {
         Args: { p_user_id: string }
         Returns: {

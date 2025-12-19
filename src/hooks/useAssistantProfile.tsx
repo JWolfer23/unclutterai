@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from "@/components/ui/sonner";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // Safety timeout - never block Assistant UI
 const PROFILE_TIMEOUT_MS = 2000;
@@ -219,8 +219,22 @@ export function useAssistantProfile(): UseAssistantProfileReturn {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['assistant-profile', user?.id] });
+      // Trigger assistant setup mission completion
+      if (user?.id) {
+        try {
+          await supabase.rpc('complete_onboarding_mission', {
+            p_user_id: user.id,
+            p_mission_id: 'assistant_setup',
+            p_uct_reward: 10,
+          });
+          queryClient.invalidateQueries({ queryKey: ['onboarding-missions'] });
+          queryClient.invalidateQueries({ queryKey: ['uct-balance'] });
+        } catch (e) {
+          console.error('Failed to complete assistant_setup mission:', e);
+        }
+      }
     },
     onError: (error) => {
       console.error('Failed to create assistant profile:', error);

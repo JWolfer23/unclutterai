@@ -4,6 +4,7 @@ import { useToast } from './use-toast';
 import { useAssistantProfile } from './useAssistantProfile';
 import { useBetaUCT } from './useBetaUCT';
 import { useActionLog } from './useActionLog';
+import { useOnboardingMissions } from './useOnboardingMissions';
 import { UCT_REWARDS } from '@/lib/uctBetaRules';
 
 export interface Loop {
@@ -39,6 +40,7 @@ export const useUnclutter = () => {
   const { canAutoHandle, requiresConfirmation } = useAssistantProfile();
   const { addUCT, data: uctData } = useBetaUCT();
   const { logAction } = useActionLog();
+  const { checkAndCompleteMission } = useOnboardingMissions();
 
   const currentLoop = loops[currentIndex] || null;
   const totalLoops = loops.length;
@@ -83,8 +85,10 @@ export const useUnclutter = () => {
       setCurrentIndex(prev => prev + 1);
     } else {
       setPhase('complete');
+      // Trigger first unclutter mission on session complete
+      checkAndCompleteMission('first_unclutter');
     }
-  }, [currentIndex, loops.length]);
+  }, [currentIndex, loops.length, checkAndCompleteMission]);
 
   // Resolve current loop with an action and award UCT - persists outcome to database
   const resolve = useCallback(async (action: LoopAction) => {
