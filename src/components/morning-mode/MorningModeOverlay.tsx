@@ -1,15 +1,16 @@
-import { Flame, Target, ArrowRight, Loader2, X } from 'lucide-react';
+import { Flame, Target, Focus, Inbox, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { MorningPriority } from '@/hooks/useMorningMode';
 
+export type MorningModeExitAction = 'focus' | 'unclutter' | 'defer';
+
 interface MorningModeOverlayProps {
   focusStreak: number;
   priorities: MorningPriority[];
   isLoading: boolean;
-  onBegin: () => void;
-  onDismiss: () => void;
+  onComplete: (action: MorningModeExitAction) => void;
 }
 
 // Get time-appropriate greeting
@@ -24,21 +25,13 @@ export function MorningModeOverlay({
   focusStreak,
   priorities,
   isLoading,
-  onBegin,
-  onDismiss,
+  onComplete,
 }: MorningModeOverlayProps) {
   const greeting = getGreeting();
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
-      {/* Dismiss button - subtle, top right */}
-      <button
-        onClick={onDismiss}
-        className="absolute top-6 right-6 text-white/30 hover:text-white/60 transition-colors"
-        aria-label="Dismiss"
-      >
-        <X className="w-5 h-5" />
-      </button>
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6 overflow-hidden">
+      {/* No dismiss button - user must choose an action */}
 
       <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Greeting */}
@@ -105,7 +98,7 @@ export function MorningModeOverlay({
               {priorities.map((priority, index) => (
                 <Card 
                   key={priority.id} 
-                  className="bg-white/5 border-white/10 p-4 hover:bg-white/8 transition-colors"
+                  className="bg-white/5 border-white/10 p-4"
                 >
                   <div className="flex items-start gap-3">
                     <span className="text-white/30 text-sm font-mono w-5 flex-shrink-0">
@@ -126,19 +119,49 @@ export function MorningModeOverlay({
           )}
         </div>
 
-        {/* Begin CTA */}
-        <Button
-          onClick={onBegin}
-          size="lg"
-          className="w-full bg-white text-slate-900 hover:bg-white/90 font-medium h-14 text-base group"
-        >
-          Begin
-          <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-        </Button>
+        {/* Exit Actions - Must choose one */}
+        <div className="space-y-3 pt-4">
+          <p className="text-center text-white/40 text-xs uppercase tracking-wider">
+            Choose how to begin
+          </p>
+          
+          {/* Primary: Start Focus */}
+          <Button
+            onClick={() => onComplete('focus')}
+            size="lg"
+            className="w-full bg-white text-slate-900 hover:bg-white/90 font-medium h-14 text-base group"
+          >
+            <Focus className="w-5 h-5 mr-2" />
+            Start Focus
+          </Button>
 
-        {/* Subtle hint */}
-        <p className="text-center text-white/30 text-xs">
-          Press Begin to start your focused day
+          {/* Secondary options */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => onComplete('unclutter')}
+              variant="outline"
+              size="lg"
+              className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 h-12"
+            >
+              <Inbox className="w-4 h-4 mr-2" />
+              Unclutter
+            </Button>
+            
+            <Button
+              onClick={() => onComplete('defer')}
+              variant="outline"
+              size="lg"
+              className="bg-white/5 border-white/20 text-white/70 hover:bg-white/10 hover:border-white/30 h-12"
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              Later today
+            </Button>
+          </div>
+        </div>
+
+        {/* Subtle hint - no silent exit */}
+        <p className="text-center text-white/20 text-xs">
+          Pick one to continue
         </p>
       </div>
     </div>
