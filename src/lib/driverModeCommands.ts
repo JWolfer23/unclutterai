@@ -56,6 +56,42 @@ export const DRIVER_COMMANDS: Omit<DriverCommand, 'action'>[] = [
 export const DRIVER_MODE_GREETING = "You're in Driver Mode. I'll handle prioritization.";
 
 /**
+ * Spoken confirmations for Driver Mode actions
+ * 
+ * Rules:
+ * - Voice confirms execution
+ * - Voice never narrates UI
+ * - Voice never explains mechanics
+ */
+export const DRIVER_CONFIRMATIONS = {
+  // Execution confirmations
+  startingFocus: "Starting focus now.",
+  clearingInbox: "Clearing your inbox.",
+  summarizing: "Summarizing now.",
+  
+  // Next best action responses
+  closingLoops: (count: number) => 
+    count === 1 ? "One item needs closure." : `${count} items need closure.`,
+  urgentMessages: (count: number) => 
+    count === 1 ? "One urgent message." : `${count} urgent messages.`,
+  readyToFocus: "All clear. Ready to focus.",
+  
+  // Reassurance (nothing to do)
+  nothingUrgent: "Nothing urgent needs your attention.",
+  allClear: "All clear.",
+  inboxEmpty: "Inbox is empty.",
+  
+  // Cannot proceed explanations (calm, brief)
+  cannotClear: "Nothing to clear.",
+  alreadyInFocus: "Already in focus.",
+  noMessages: "No messages to summarize.",
+  
+  // Guide phrases (for multi-step actions)
+  guidingInbox: "I'll guide you through clearing your inbox.",
+  guidingLoops: "I'll guide you through your open items.",
+} as const;
+
+/**
  * Generate spoken response for Next Best Action
  */
 export function getNextBestActionSpeech(
@@ -64,26 +100,12 @@ export function getNextBestActionSpeech(
 ): string {
   switch (type) {
     case 'CLOSE_LOOPS':
-      return count && count > 1 
-        ? `${count} items need closure. Tap to review.`
-        : 'One item needs closure.';
+      return DRIVER_CONFIRMATIONS.closingLoops(count || 1);
     case 'URGENT_REPLIES':
-      return count && count > 1
-        ? `${count} urgent messages. Tap to reply.`
-        : 'One urgent message.';
+      return DRIVER_CONFIRMATIONS.urgentMessages(count || 1);
     case 'START_FOCUS':
-      return 'All clear. Ready to focus.';
+      return DRIVER_CONFIRMATIONS.readyToFocus;
     default:
-      return 'Nothing urgent.';
+      return DRIVER_CONFIRMATIONS.nothingUrgent;
   }
 }
-
-/**
- * Reassurance phrases for Driver Mode
- */
-export const DRIVER_REASSURANCE = {
-  nothingUrgent: 'Nothing urgent.',
-  allClear: 'All clear.',
-  handled: 'Handled.',
-  deferred: 'Deferred.',
-} as const;
