@@ -1,18 +1,18 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Send, Bot, User, AlertCircle, Mic, Loader2, Volume2, Square } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Send, Bot, User, AlertCircle, Mic, Volume2, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAssistantIntelligence } from '@/hooks/useAssistantIntelligence';
 import { useReadOnlyExecution } from '@/hooks/useReadOnlyExecution';
 import { useAssistantReadOnly } from '@/contexts/AssistantReadOnlyContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ENABLE_ASSISTANT_STREAMING } from '@/config/flags';
-import { useWhisperTranscription } from '@/hooks/useWhisperTranscription';
 import { useVoiceTTS } from '@/hooks/useVoiceTTS';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 // Safe mode configuration - Analyst is default and locked
 const ASSISTANT_CONFIG = {
   mode: 'analyst' as const,  // Default: Analyst mode (read-only)
@@ -167,13 +167,11 @@ export const AssistantChatPanel = () => {
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [cancelStreaming, setCancelStreaming] = useState(false); // Signal to cancel active streams
-  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'processing'>('idle');
-  const [pendingTranscript, setPendingTranscript] = useState<string>('');
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
   const activeStreamIdRef = useRef<string | null>(null); // Track active stream on mobile
-  const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Text-to-speech hook for playing responses
   const { isSpeaking, isLoading: ttsLoading, speak, stop: stopTTS } = useVoiceTTS();
@@ -185,79 +183,23 @@ export const AssistantChatPanel = () => {
   const intelligence = useAssistantIntelligence();
   const readOnlyExecution = useReadOnlyExecution();
   const readOnlyContext = useAssistantReadOnly();
-  
-  // Whisper transcription hook (OpenAI Speech-to-Text)
-  const { 
-    isRecording,
-    isTranscribing,
-    isSupported: voiceSupported, 
-    transcript: voiceTranscript,
-    error: voiceError,
-    startRecording,
-    stopRecording,
-    cancelRecording,
-    resetTranscript 
-  } = useWhisperTranscription();
 
-  // Cleanup voice on unmount (navigation)
+  // Cleanup TTS on unmount (navigation)
   useEffect(() => {
     return () => {
-      cancelRecording();
       stopTTS();
     };
-  }, [cancelRecording, stopTTS]);
+  }, [stopTTS]);
 
-  // Sync voice status with recording/transcribing state
-  useEffect(() => {
-    if (isRecording) {
-      setVoiceStatus('listening');
-    } else if (isTranscribing) {
-      setVoiceStatus('processing');
-    } else {
-      setVoiceStatus('idle');
-    }
-  }, [isRecording, isTranscribing]);
-
-  // Handle transcription errors
-  useEffect(() => {
-    if (voiceError && voiceStatus === 'idle') {
-      toast({
-        description: voiceError,
-        variant: "default",
-        duration: 2000,
-      });
-    }
-  }, [voiceError, voiceStatus, toast]);
-
-  // Update pending transcript while recording
-  useEffect(() => {
-    if (voiceTranscript) {
-      setPendingTranscript(voiceTranscript);
-      // Set the transcript to input for user to review before sending
-      setInput(voiceTranscript);
-    }
-  }, [voiceTranscript]);
-
-  // Handle push-to-talk press
-  const handleVoicePress = useCallback(async () => {
-    if (!voiceSupported || isProcessing || voiceStatus !== 'idle') return;
-    
-    // Stop any TTS playback before recording - prevents overlap
+  // Handle mic button click - navigate to Voice Command page
+  const handleVoiceClick = useCallback(() => {
+    // Stop any TTS playback before navigating
     if (isSpeaking || ttsLoading) {
       stopTTS();
       setPlayingMessageId(null);
     }
-    
-    resetTranscript();
-    setPendingTranscript('');
-    await startRecording();
-  }, [voiceSupported, isProcessing, voiceStatus, isSpeaking, ttsLoading, stopTTS, startRecording, resetTranscript]);
-
-  // Handle push-to-talk release
-  const handleVoiceRelease = useCallback(async () => {
-    if (!isRecording) return;
-    await stopRecording();
-  }, [isRecording, stopRecording]);
+    navigate('/voice-command');
+  }, [isSpeaking, ttsLoading, stopTTS, navigate]);
 
   // Handle play response button
   const handlePlayResponse = useCallback(async (messageId: string, content: string) => {
@@ -648,56 +590,39 @@ Suggested actions:
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={
-              voiceStatus === 'listening' ? 'Listening...' : 
-              voiceStatus === 'processing' ? 'Transcribing...' : 
-              'Ask about priorities or stats'
-            }
-            className={cn(
-              "flex-1 h-9 text-sm bg-background/50 border-border/30 transition-colors",
-              voiceStatus === 'listening' && "border-primary/50 bg-primary/5",
-              voiceStatus === 'processing' && "border-muted-foreground/30 bg-muted/10"
-            )}
-            disabled={isProcessing || voiceStatus !== 'idle'}
+            placeholder="Ask about priorities or stats"
+            className="flex-1 h-9 text-sm bg-background/50 border-border/30"
+            disabled={isProcessing}
             autoFocus={false}
             tabIndex={0}
           />
           
-          {/* Push-to-talk microphone button */}
-          {voiceSupported && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onMouseDown={handleVoicePress}
-              onMouseUp={handleVoiceRelease}
-              onMouseLeave={handleVoiceRelease}
-              onTouchStart={handleVoicePress}
-              onTouchEnd={handleVoiceRelease}
-              disabled={isProcessing}
-              className={cn(
-                "h-9 w-9 p-0 transition-all touch-manipulation",
-                voiceStatus === 'idle' && "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                voiceStatus === 'listening' && "bg-primary/20 text-primary ring-2 ring-primary/30",
-                voiceStatus === 'processing' && "bg-muted/50 text-muted-foreground"
-              )}
-              aria-label="Hold to speak"
-            >
-              {voiceStatus === 'processing' ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Mic className={cn(
-                  "w-4 h-4 transition-transform",
-                  voiceStatus === 'listening' && "scale-110"
-                )} />
-              )}
-            </Button>
-          )}
+          {/* Mic button - redirects to Voice Command (inline capture disabled for beta) */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleVoiceClick}
+                  disabled={isProcessing}
+                  className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  aria-label="Voice Command"
+                >
+                  <Mic className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">Use Voice Command for hands-free control</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <Button
             ref={sendButtonRef}
             size="sm"
             onClick={handleSend}
-            disabled={!input.trim() || isProcessing || voiceStatus !== 'idle'}
+            disabled={!input.trim() || isProcessing}
             className="h-9 w-9 p-0"
           >
             <Send className="w-4 h-4" />
