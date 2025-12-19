@@ -215,10 +215,10 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     // Guard: only execute if we have a valid transcript
     if (!text || !text.trim()) {
       logStateTransition('processing', 'speaking', 'empty text');
-      const noTranscriptResponse = "I didn't catch that. Try again.";
-      setLastResponse(noTranscriptResponse);
+      const noAudioResponse = "No audio detected. Please try again.";
+      setLastResponse(noAudioResponse);
       setStatus('speaking');
-      await speak(noTranscriptResponse);
+      await speak(noAudioResponse);
       logStateTransition('speaking', 'idle', 'error feedback complete');
       setStatus('idle');
       return;
@@ -375,9 +375,9 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
         logStateTransition('transcribing', 'executing', `"${finalTranscript}"`);
         await executeCommand(finalTranscript);
       } else {
-        // Empty/failed transcript - surface clear error
+        // Empty/failed transcript - explicit error, no suggestions
         logStateTransition('transcribing', 'error', 'empty transcript');
-        const errorMsg = "I didn't catch that. Try again.";
+        const errorMsg = "No audio detected. Please try again.";
         setLastResponse(errorMsg);
         setStatus('speaking');
         await speak(errorMsg);
