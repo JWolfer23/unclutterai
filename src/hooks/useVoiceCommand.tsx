@@ -204,20 +204,28 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     }
   };
 
+  // Dev mode state transition logger
+  const logStateTransition = useCallback((from: string, to: string, detail?: string) => {
+    if (import.meta.env.DEV) {
+      console.log(`[VoiceCommand] State: ${from} → ${to}${detail ? ` (${detail})` : ''}`);
+    }
+  }, []);
+
   const executeCommand = useCallback(async (text: string) => {
     // Guard: only execute if we have a valid transcript
     if (!text || !text.trim()) {
-      console.log('[VoiceCommand] Empty text, providing feedback');
+      logStateTransition('processing', 'speaking', 'empty text');
       const noTranscriptResponse = "I didn't catch that. Try again.";
       setLastResponse(noTranscriptResponse);
       setStatus('speaking');
       await speak(noTranscriptResponse);
+      logStateTransition('speaking', 'idle', 'error feedback complete');
       setStatus('idle');
       return;
     }
     
-    console.log('[VoiceCommand] Executing command:', text);
     isProcessingRef.current = true;
+    logStateTransition('executing', 'processing', `parsing: "${text}"`);
     setStatus('processing');
 
     try {
@@ -241,6 +249,7 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
           ? `Confirm sending this message?`
           : `Confirm this action?`;
         
+        logStateTransition('processing', 'confirming', command.action);
         setConfirmation({ command, message: confirmMsg });
         setPendingCommand(command);
         setStatus('confirming');
@@ -249,28 +258,32 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
         return;
       }
 
+      logStateTransition('processing', 'executing', command.action);
       const result = await executeAction(command);
       setLastResponse(result.response);
       
       // Speak response
+      logStateTransition('executing', 'speaking', 'response ready');
       setStatus('speaking');
       await speak(result.response);
       
       // Return to idle after speaking
+      logStateTransition('speaking', 'idle', 'complete');
       setStatus('idle');
     } catch (error) {
       console.error('[VoiceCommand] Execution error:', error);
       const errorResponse = SUGGESTION_RESPONSE;
       setLastResponse(errorResponse);
       
-      // Always speak feedback before returning to idle
+      logStateTransition('processing', 'speaking', 'error');
       setStatus('speaking');
       await speak(errorResponse);
+      logStateTransition('speaking', 'idle', 'error feedback complete');
       setStatus('idle');
     } finally {
       isProcessingRef.current = false;
     }
-  }, [speak, messages, createTask, navigate, updateMessage]);
+  }, [speak, messages, createTask, navigate, updateMessage, logStateTransition]);
 
   const confirmAction = async () => {
     if (!pendingCommand) return;
@@ -308,11 +321,13 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     setStatus('idle');
   };
 
-  // Start listening - called on press
+  // Start listening - called on press/hold
   const startListening = useCallback(async () => {
     // Don't start if already processing or listening
     if (isProcessingRef.current || isRecording || isTranscribing) {
-      console.log('[VoiceCommand] Ignoring start - already busy');
+      if (import.meta.env.DEV) {
+        console.log('[VoiceCommand] Ignoring start - already busy');
+      }
       return;
     }
     
@@ -321,24 +336,26 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
       stopTTS();
     }
     
-    console.log('[VoiceCommand] Starting to listen');
+    logStateTransition('idle', 'listening', 'mic pressed');
     resetTranscript();
     setTranscript('');
     setLastResponse('');
     setStatus('listening');
     
     await startRecording();
-  }, [isRecording, isTranscribing, isSpeaking, stopTTS, resetTranscript, startRecording]);
+  }, [isRecording, isTranscribing, isSpeaking, stopTTS, resetTranscript, startRecording, logStateTransition]);
 
-  // Stop listening - called on release
+  // Stop listening - called on release (auto-executes)
   const stopListening = useCallback(async () => {
     // Only stop if we're actually recording
     if (!isRecording) {
-      console.log('[VoiceCommand] Ignoring stop - not recording');
+      if (import.meta.env.DEV) {
+        console.log('[VoiceCommand] Ignoring stop - not recording');
+      }
       return;
     }
     
-    console.log('[VoiceCommand] Stopping listening, transitioning to processing');
+    logStateTransition('listening', 'processing', 'mic released → transcribing');
     setStatus('processing');
     
     // Stop recording and get the transcript
@@ -352,21 +369,22 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     // Only execute if we have a valid transcript
     if (finalTranscript && finalTranscript.trim()) {
       setTranscript(finalTranscript);
-      console.log('[VoiceCommand] Processing transcript:', finalTranscript);
-      // Execute the command with the final transcript
+      logStateTransition('processing', 'executing', `transcript: "${finalTranscript}"`);
+      // Execute the command with the final transcript - this handles its own state transitions
       await executeCommand(finalTranscript);
     } else {
       // No transcript OR STT failed - show "I didn't catch that"
-      console.log('[VoiceCommand] No transcript received, showing error');
+      logStateTransition('processing', 'speaking', 'no transcript');
       const didntCatchResponse = "I didn't catch that. Try again.";
       setLastResponse(didntCatchResponse);
       
       // Speak the response then return to idle
       setStatus('speaking');
       await speak(didntCatchResponse);
+      logStateTransition('speaking', 'idle', 'error feedback complete');
       setStatus('idle');
     }
-  }, [isRecording, stopRecording, executeCommand, speak]);
+  }, [isRecording, stopRecording, executeCommand, speak, logStateTransition]);
 
   // Derive effective status - account for transcribing state
   const effectiveStatus: VoiceStatus = 

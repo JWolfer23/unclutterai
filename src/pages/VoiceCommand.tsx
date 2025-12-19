@@ -93,11 +93,12 @@ const VoiceCommand = () => {
             status={status}
           />
 
-          {/* Voice Button */}
+          {/* Voice Button - Hold to speak, release to execute */}
           <VoiceButton
             status={status}
             isSupported={isSupported}
-            onToggle={status === 'listening' ? stopListening : startListening}
+            onStart={startListening}
+            onStop={stopListening}
             audioLevel={audioLevel}
             hasAudioInput={hasAudioInput}
           />

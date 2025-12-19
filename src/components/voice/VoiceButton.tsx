@@ -1,10 +1,12 @@
-import { Mic, MicOff, Loader2, Square, AlertTriangle } from "lucide-react";
+import { Mic, MicOff, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRef, useCallback } from "react";
 
 interface VoiceButtonProps {
   status: 'idle' | 'listening' | 'processing' | 'speaking' | 'confirming';
   isSupported: boolean;
-  onToggle: () => void;
+  onStart: () => void;
+  onStop: () => void;
   audioLevel?: number; // 0-1 normalized
   hasAudioInput?: boolean;
 }
@@ -12,7 +14,8 @@ interface VoiceButtonProps {
 export const VoiceButton = ({ 
   status, 
   isSupported, 
-  onToggle,
+  onStart,
+  onStop,
   audioLevel = 0,
   hasAudioInput = true
 }: VoiceButtonProps) => {
@@ -20,6 +23,28 @@ export const VoiceButton = ({
   const isProcessing = status === 'processing';
   const isSpeaking = status === 'speaking';
   const isDisabled = isProcessing || isSpeaking;
+  
+  // Track if we're currently holding
+  const isHoldingRef = useRef(false);
+
+  // Handle press start (mouse or touch)
+  const handlePressStart = useCallback(() => {
+    if (isDisabled) return;
+    isHoldingRef.current = true;
+    onStart();
+  }, [isDisabled, onStart]);
+
+  // Handle press end (mouse or touch)
+  const handlePressEnd = useCallback(() => {
+    if (!isHoldingRef.current) return;
+    isHoldingRef.current = false;
+    onStop();
+  }, [onStop]);
+
+  // Prevent context menu on long press (mobile)
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
 
   if (!isSupported) {
     return (
@@ -50,9 +75,15 @@ export const VoiceButton = ({
           />
         )}
         
-        {/* Button - Tap to toggle */}
+        {/* Button - Hold to speak, release to execute */}
         <button
-          onClick={onToggle}
+          onMouseDown={handlePressStart}
+          onMouseUp={handlePressEnd}
+          onMouseLeave={handlePressEnd}
+          onTouchStart={handlePressStart}
+          onTouchEnd={handlePressEnd}
+          onTouchCancel={handlePressEnd}
+          onContextMenu={handleContextMenu}
           disabled={isDisabled}
           className={cn(
             "relative w-32 h-32 rounded-full flex items-center justify-center",
@@ -111,15 +142,15 @@ export const VoiceButton = ({
             "text-sm font-medium transition-colors",
             isListening ? "text-red-400" : "text-white/50"
           )}>
-            {isListening ? "Tap to stop" : 
-             isProcessing ? "Processing..." :
+            {isListening ? "Release to send" : 
+             isProcessing ? "Transcribing..." :
              isSpeaking ? "Speaking..." :
-             "Tap to speak"}
+             "Hold to speak"}
           </p>
         )}
         
         {/* Debug: Show audio level when listening */}
-        {isListening && (
+        {isListening && import.meta.env.DEV && (
           <p className="text-xs text-white/30">
             Level: {Math.round(audioLevel * 100)}%
           </p>
