@@ -24,6 +24,7 @@ const VoiceCommand = () => {
     audioLevel,
     hasAudioInput,
     isFallbackMode,
+    isIOSSafari,
     startListening,
     stopListening,
     executeCommand,
@@ -94,8 +95,8 @@ const VoiceCommand = () => {
             status={status}
           />
 
-          {/* Voice Button - hidden in fallback mode */}
-          {!isFallbackMode && (
+          {/* Voice Button - secondary in iOS Safari mode, hidden in full fallback */}
+          {!isFallbackMode ? (
             <VoiceButton
               status={status}
               isSupported={isSupported}
@@ -103,8 +104,9 @@ const VoiceCommand = () => {
               onStop={stopListening}
               audioLevel={audioLevel}
               hasAudioInput={hasAudioInput}
+              isSecondary={isIOSSafari}
             />
-          )}
+          ) : null}
 
           {/* Quick Commands - highlighted in fallback mode */}
           <div className="w-full mt-8">
