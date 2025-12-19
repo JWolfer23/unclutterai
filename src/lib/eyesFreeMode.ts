@@ -62,10 +62,18 @@ const OPEN_ENDED_PATTERNS = [
   /^can you (describe|explain|tell)/i,
 ];
 
+// Import canonical phrases from central voice script
+import { 
+  NBA_NOTHING, 
+  CONF_ALL_CLEAR, 
+  ERR_TRY_AGAIN,
+  ERR_NOT_AVAILABLE,
+} from './driverModeVoice';
+
 const REASSURANCE_PHRASES = {
-  // DRIVER MODE CANONICAL PHRASE - do not change
-  nothingUrgent: "Nothing urgent needs your attention.",
-  allClear: "All clear.",
+  // DRIVER MODE CANONICAL PHRASE - from central voice script
+  nothingUrgent: NBA_NOTHING,
+  allClear: CONF_ALL_CLEAR,
   handledIt: "Handled.",
   noActionNeeded: "No action needed.",
   focusProtected: "Your focus is protected.",

@@ -12,6 +12,7 @@ import {
   getNextBestActionSpeech,
   type DriverCommandId,
 } from '@/lib/driverModeCommands';
+import { getMessageSummary } from '@/lib/driverModeVoice';
 import { useMessages } from '@/hooks/useMessages';
 
 interface DriverModeHUDProps {
@@ -128,18 +129,11 @@ export const DriverModeHUD: React.FC<DriverModeHUDProps> = ({ onExit }) => {
         await speakRecommendation(DRIVER_CONFIRMATIONS.summarizing);
       }
       
-      // Brief pause then deliver summary
+      // Brief pause then deliver summary using central voice script
       await new Promise(resolve => setTimeout(resolve, 400));
       
-      let summary: string;
-      if (count === 1) {
-        summary = `One message from ${unreadMessages[0].sender_name}.`;
-      } else {
-        const senders = [...new Set(unreadMessages.map(m => m.sender_name))];
-        summary = senders.length <= 2 
-          ? `${count} messages from ${senders.join(' and ')}.`
-          : `${count} messages from ${senders.length} people.`;
-      }
+      const senders = [...new Set(unreadMessages.map(m => m.sender_name))];
+      const summary = getMessageSummary(count, senders);
       
       setStatusText(summary);
       if (!isMuted) {
