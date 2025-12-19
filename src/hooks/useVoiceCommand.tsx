@@ -23,6 +23,7 @@ interface UseVoiceCommandReturn {
   status: VoiceStatus;
   transcript: string;
   lastResponse: string;
+  transcriptionError: string | null;
   confirmation: ConfirmationState | null;
   isSupported: boolean;
   startListening: () => void;
@@ -355,6 +356,7 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     status: effectiveStatus,
     transcript,
     lastResponse,
+    transcriptionError: whisperError,
     confirmation,
     isSupported,
     startListening,

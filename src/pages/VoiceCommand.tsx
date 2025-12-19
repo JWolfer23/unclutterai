@@ -18,6 +18,7 @@ const VoiceCommand = () => {
     status,
     transcript,
     lastResponse,
+    transcriptionError,
     confirmation,
     isSupported,
     startListening,
@@ -86,6 +87,7 @@ const VoiceCommand = () => {
           <TranscriptDisplay
             transcript={transcript}
             lastResponse={lastResponse}
+            transcriptionError={transcriptionError}
             status={status}
           />
 
