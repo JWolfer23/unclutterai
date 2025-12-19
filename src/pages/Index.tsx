@@ -3,8 +3,10 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAssistantProfile } from "@/hooks/useAssistantProfile";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useNextBestAction, type NextBestAction } from "@/hooks/useNextBestAction";
+import { useMorningMode } from "@/hooks/useMorningMode";
 import AuthPage from "@/components/auth/AuthPage";
 import { OnboardingInterview } from "@/components/onboarding/interview/OnboardingInterview";
+import { MorningModeOverlay } from "@/components/morning-mode";
 import Dashboard from "@/components/Dashboard";
 
 const Index = () => {
@@ -13,6 +15,9 @@ const Index = () => {
   const { profile: assistantProfile, isLoading: profileLoading } = useAssistantProfile();
   const { tier, isLoading: subscriptionLoading } = useSubscription();
   const { nextBestAction } = useNextBestAction();
+  
+  // Morning Mode - auto-triggers on first app open per day
+  const morningMode = useMorningMode();
 
   // Subscription is non-blocking - default to analyst tier if unavailable
   const subscriptionTier = (!subscriptionLoading && tier) ? tier : "analyst";
@@ -65,7 +70,7 @@ const Index = () => {
   // CONDITIONAL RENDERING BASED ON ONBOARDING STATE
   // =============================================================================
   
-  // If onboarding is complete, show real dashboard
+  // If onboarding is complete, check for Morning Mode
   if (onboarding.state.onboardingCompleted) {
     // Show loading only while profile data loads (subscription is non-blocking)
     if (profileLoading) {
@@ -76,6 +81,19 @@ const Index = () => {
             <p className="text-gray-400 text-sm">Loading stats…</p>
           </div>
         </div>
+      );
+    }
+
+    // Morning Mode overlay - auto-triggers on first app open per calendar day
+    if (morningMode.isActive) {
+      return (
+        <MorningModeOverlay
+          focusStreak={morningMode.focusStreak}
+          priorities={morningMode.priorities}
+          isLoading={morningMode.isLoading}
+          onBegin={morningMode.completeMorningMode}
+          onDismiss={morningMode.dismissMorningMode}
+        />
       );
     }
 
