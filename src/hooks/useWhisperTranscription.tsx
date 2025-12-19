@@ -86,6 +86,27 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
     };
   }, [isRecording, cancelRecording]);
 
+  // Get supported MIME type - prefer webm, fallback to mp4 for Safari/iOS
+  const getSupportedMimeType = useCallback((): string => {
+    const types = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/mp4',
+      'audio/mp4;codecs=mp4a.40.2',
+      'audio/aac',
+      'audio/mpeg',
+      '' // Empty string = browser default
+    ];
+    
+    for (const type of types) {
+      if (type === '' || MediaRecorder.isTypeSupported(type)) {
+        console.log('[Whisper] Using MIME type:', type || 'browser default');
+        return type;
+      }
+    }
+    return '';
+  }, []);
+
   const startRecording = useCallback(async () => {
     if (!isSupported) {
       setError('Audio recording not supported');
@@ -110,7 +131,6 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 16000,
         }
       });
 
@@ -129,41 +149,49 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
       
       streamRef.current = stream;
 
-      // Determine best available format
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm') 
-          ? 'audio/webm'
-          : 'audio/mp4';
-
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      // Get best supported MIME type for this browser
+      const mimeType = getSupportedMimeType();
+      
+      // Create MediaRecorder with explicit options
+      const recorderOptions: MediaRecorderOptions = {};
+      if (mimeType) {
+        recorderOptions.mimeType = mimeType;
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, recorderOptions);
       mediaRecorderRef.current = mediaRecorder;
+      
+      console.log('[Whisper] MediaRecorder created with mimeType:', mediaRecorder.mimeType);
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0 && !isCancelledRef.current) {
+      // Accumulate audio chunks
+      mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        console.log('[Whisper] Data available, size:', event.data.size);
+        if (event.data && event.data.size > 0 && !isCancelledRef.current) {
           audioChunksRef.current.push(event.data);
         }
       };
 
-      mediaRecorder.onerror = () => {
-        console.error('[Whisper] MediaRecorder error');
+      mediaRecorder.onerror = (event) => {
+        console.error('[Whisper] MediaRecorder error:', event);
         cleanup();
         setError("Didn't catch that");
       };
 
-      mediaRecorder.start(100); // Collect data every 100ms
+      // Start recording - request data every 250ms for reliable chunk collection
+      mediaRecorder.start(250);
       setIsRecording(true);
-      console.log('[Whisper] Recording started with format:', mimeType);
+      console.log('[Whisper] Recording started, state:', mediaRecorder.state);
 
     } catch (err) {
       console.error('[Whisper] Failed to start recording:', err);
       cleanup();
       setError('Could not access microphone');
     }
-  }, [isSupported, isRecording, isTranscribing, cleanup]);
+  }, [isSupported, isRecording, isTranscribing, cleanup, getSupportedMimeType]);
 
   const stopRecording = useCallback(async (): Promise<string | null> => {
     if (!mediaRecorderRef.current || !isRecording) {
+      console.log('[Whisper] Stop called but no active recording');
       return null;
     }
 
@@ -176,7 +204,18 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
     return new Promise((resolve) => {
       const mediaRecorder = mediaRecorderRef.current!;
       
+      // Request final data before stopping (important for Safari)
+      if (mediaRecorder.state === 'recording') {
+        try {
+          mediaRecorder.requestData();
+        } catch (e) {
+          console.log('[Whisper] requestData not supported, continuing...');
+        }
+      }
+      
       mediaRecorder.onstop = async () => {
+        console.log('[Whisper] MediaRecorder stopped, chunks collected:', audioChunksRef.current.length);
+        
         // Stop all tracks
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
@@ -193,20 +232,22 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
         
         // Check if we have audio data
         if (audioChunksRef.current.length === 0) {
-          console.log('[Whisper] No audio data captured');
+          console.log('[Whisper] No audio chunks captured');
           setError("Didn't catch that");
           resolve(null);
           return;
         }
 
-        // Combine audio chunks
-        const mimeType = mediaRecorder.mimeType;
+        // Combine all audio chunks into a single Blob
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        console.log('[Whisper] Audio blob size:', audioBlob.size, 'bytes');
+        const blobSize = audioBlob.size;
+        
+        console.log('[Whisper] Final audio blob size:', blobSize, 'bytes, type:', mimeType);
 
-        // Check minimum size (very short recordings may fail)
-        if (audioBlob.size < 1000) {
-          console.log('[Whisper] Audio too short');
+        // Validate minimum size (10KB threshold as per requirements)
+        if (blobSize < 10000) {
+          console.log('[Whisper] Audio blob too small (<10KB), treating as invalid');
           setError("Didn't catch that");
           resolve(null);
           return;
@@ -215,66 +256,66 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
         setIsTranscribing(true);
 
         try {
-          // Convert to base64
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            // Check if cancelled during transcription
-            if (isCancelledRef.current) {
-              setIsTranscribing(false);
-              resolve(null);
-              return;
-            }
-
-            const base64Audio = (reader.result as string).split(',')[1];
-            
-            console.log('[Whisper] Sending to transcription API...');
-            
-            // Send to edge function
-            const { data, error: fnError } = await supabase.functions.invoke('speech-to-text', {
-              body: { 
-                audio: base64Audio,
-                mimeType: mimeType 
+          // Convert blob to base64
+          const base64Audio = await new Promise<string>((resolveBase64, rejectBase64) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              if (typeof reader.result === 'string') {
+                const base64 = reader.result.split(',')[1];
+                resolveBase64(base64);
+              } else {
+                rejectBase64(new Error('FileReader result is not a string'));
               }
-            });
+            };
+            reader.onerror = () => rejectBase64(reader.error);
+            reader.readAsDataURL(audioBlob);
+          });
 
+          // Check if cancelled during transcription
+          if (isCancelledRef.current) {
             setIsTranscribing(false);
+            resolve(null);
+            return;
+          }
 
-            // Check if cancelled while waiting for API
-            if (isCancelledRef.current) {
-              resolve(null);
-              return;
+          console.log('[Whisper] Sending to transcription API, base64 length:', base64Audio.length);
+          
+          // Send to edge function
+          const { data, error: fnError } = await supabase.functions.invoke('speech-to-text', {
+            body: { 
+              audio: base64Audio,
+              mimeType: mimeType 
             }
+          });
 
-            if (fnError || data?.error) {
-              console.error('[Whisper] Transcription error:', fnError || data?.error);
-              setError("Didn't catch that");
-              resolve(null);
-              return;
-            }
+          setIsTranscribing(false);
 
-            const transcribedText = data?.text?.trim();
-            
-            if (!transcribedText) {
-              console.log('[Whisper] Empty transcription result');
-              setError("Didn't catch that");
-              resolve(null);
-              return;
-            }
+          // Check if cancelled while waiting for API
+          if (isCancelledRef.current) {
+            resolve(null);
+            return;
+          }
 
-            console.log('[Whisper] Transcription result:', transcribedText);
-            setTranscript(transcribedText);
-            setError(null);
-            resolve(transcribedText);
-          };
-
-          reader.onerror = () => {
-            console.error('[Whisper] FileReader error');
-            setIsTranscribing(false);
+          if (fnError || data?.error) {
+            console.error('[Whisper] Transcription error:', fnError || data?.error);
             setError("Didn't catch that");
             resolve(null);
-          };
+            return;
+          }
 
-          reader.readAsDataURL(audioBlob);
+          const transcribedText = data?.text?.trim();
+          
+          if (!transcribedText) {
+            console.log('[Whisper] Empty transcription result');
+            setError("Didn't catch that");
+            resolve(null);
+            return;
+          }
+
+          console.log('[Whisper] Transcription result:', transcribedText);
+          setTranscript(transcribedText);
+          setError(null);
+          resolve(transcribedText);
           
         } catch (err) {
           console.error('[Whisper] Transcription failed:', err);
