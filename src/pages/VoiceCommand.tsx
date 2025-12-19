@@ -21,6 +21,8 @@ const VoiceCommand = () => {
     transcriptionError,
     confirmation,
     isSupported,
+    audioLevel,
+    hasAudioInput,
     startListening,
     stopListening,
     executeCommand,
@@ -96,6 +98,8 @@ const VoiceCommand = () => {
             status={status}
             isSupported={isSupported}
             onToggle={status === 'listening' ? stopListening : startListening}
+            audioLevel={audioLevel}
+            hasAudioInput={hasAudioInput}
           />
 
           {/* Quick Commands */}

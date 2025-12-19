@@ -7,6 +7,8 @@ interface UseWhisperTranscriptionReturn {
   isSupported: boolean;
   transcript: string;
   error: string | null;
+  audioLevel: number; // 0-1 normalized audio level
+  hasAudioInput: boolean; // true if audio detected
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<string | null>;
   cancelRecording: () => void;
@@ -18,11 +20,18 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [hasAudioInput, setHasAudioInput] = useState(true);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const isCancelledRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const audioDetectedRef = useRef(false);
+  const noAudioTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check if MediaRecorder is supported
   const isSupported = typeof window !== 'undefined' && 
@@ -31,6 +40,29 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
 
   // Cleanup function for safe teardown
   const cleanup = useCallback(() => {
+    // Stop animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
+    // Clear no-audio timeout
+    if (noAudioTimeoutRef.current) {
+      clearTimeout(noAudioTimeoutRef.current);
+      noAudioTimeoutRef.current = null;
+    }
+    
+    // Close audio context
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch {
+        // Ignore close errors
+      }
+      audioContextRef.current = null;
+      analyserRef.current = null;
+    }
+    
     try {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
@@ -53,6 +85,9 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
     
     audioChunksRef.current = [];
     setIsRecording(false);
+    setAudioLevel(0);
+    setHasAudioInput(true);
+    audioDetectedRef.current = false;
   }, []);
 
   // Cancel recording without transcribing (for navigation/interruption)
@@ -121,8 +156,10 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
 
     try {
       isCancelledRef.current = false;
+      audioDetectedRef.current = false;
       setError(null);
       setTranscript('');
+      setHasAudioInput(true);
       audioChunksRef.current = [];
 
       // Request microphone access with timeout to prevent UI blocking
@@ -148,6 +185,54 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
       }
       
       streamRef.current = stream;
+
+      // Set up audio analysis for level monitoring
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        audioContextRef.current = new AudioContextClass();
+        analyserRef.current = audioContextRef.current.createAnalyser();
+        analyserRef.current.fftSize = 256;
+        
+        const source = audioContextRef.current.createMediaStreamSource(stream);
+        source.connect(analyserRef.current);
+        
+        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+        
+        // Start monitoring audio levels
+        const updateLevel = () => {
+          if (!analyserRef.current || isCancelledRef.current) return;
+          
+          analyserRef.current.getByteFrequencyData(dataArray);
+          
+          // Calculate average level
+          const sum = dataArray.reduce((a, b) => a + b, 0);
+          const avg = sum / dataArray.length;
+          const normalizedLevel = Math.min(avg / 128, 1); // Normalize to 0-1
+          
+          setAudioLevel(normalizedLevel);
+          
+          // Check if audio detected (threshold > 0.05)
+          if (normalizedLevel > 0.05) {
+            audioDetectedRef.current = true;
+            setHasAudioInput(true);
+          }
+          
+          animationFrameRef.current = requestAnimationFrame(updateLevel);
+        };
+        
+        updateLevel();
+        console.log('[Whisper] Audio level monitoring started');
+      } catch (e) {
+        console.log('[Whisper] Audio analysis not supported, continuing without level monitoring');
+      }
+
+      // Set up "no audio detected" warning after 2 seconds
+      noAudioTimeoutRef.current = setTimeout(() => {
+        if (!audioDetectedRef.current && !isCancelledRef.current) {
+          console.log('[Whisper] No audio detected after 2 seconds');
+          setHasAudioInput(false);
+        }
+      }, 2000);
 
       // Get best supported MIME type for this browser
       const mimeType = getSupportedMimeType();
@@ -340,6 +425,8 @@ export const useWhisperTranscription = (): UseWhisperTranscriptionReturn => {
     isSupported,
     transcript,
     error,
+    audioLevel,
+    hasAudioInput,
     startRecording,
     stopRecording,
     cancelRecording,

@@ -26,6 +26,8 @@ interface UseVoiceCommandReturn {
   transcriptionError: string | null;
   confirmation: ConfirmationState | null;
   isSupported: boolean;
+  audioLevel: number;
+  hasAudioInput: boolean;
   startListening: () => void;
   stopListening: () => void;
   executeCommand: (text: string) => Promise<void>;
@@ -55,6 +57,8 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     isSupported,
     transcript: whisperTranscript,
     error: whisperError,
+    audioLevel,
+    hasAudioInput,
     startRecording,
     stopRecording,
     cancelRecording,
@@ -363,6 +367,8 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     transcriptionError: whisperError,
     confirmation,
     isSupported,
+    audioLevel,
+    hasAudioInput,
     startListening,
     stopListening,
     executeCommand,
