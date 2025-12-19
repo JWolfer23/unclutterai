@@ -41,32 +41,59 @@ export const DriverModeHUD: React.FC<DriverModeHUDProps> = ({ onExit }) => {
     return () => deactivate();
   }, [activate, deactivate]);
 
-  // Speak greeting and Next Best Action on mount (once)
+  // STRICT DRIVER MODE RULE: Always speak exactly ONE action or "nothing urgent"
+  // Never present multiple options. Never ask questions.
   useEffect(() => {
     if (hasSpokenGreeting.current || isMuted) return;
     hasSpokenGreeting.current = true;
 
-    const speakIntro = async () => {
-      // Speak greeting
+    const speakSingleAction = async () => {
+      // Speak greeting first
       await speakRecommendation(DRIVER_MODE_GREETING);
       
-      // Small pause then speak NBA
+      // Small pause then speak the ONE Next Best Action
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const nbaCount = nextBestAction.type === 'CLOSE_LOOPS' ? openLoopsCount :
-                       nextBestAction.type === 'URGENT_REPLIES' ? urgentCount : 0;
-      const nbaSpeech = getNextBestActionSpeech(nextBestAction.type, nbaCount);
+      // Determine single action or "nothing urgent"
+      const hasUrgentAction = openLoopsCount > 0 || urgentCount > 0;
       
-      setStatusText(nbaSpeech);
-      await speakRecommendation(nbaSpeech);
+      if (!hasUrgentAction) {
+        // Nothing urgent - speak reassurance, not options
+        const speech = DRIVER_CONFIRMATIONS.nothingUrgent;
+        setStatusText(speech);
+        await speakRecommendation(speech);
+      } else {
+        // ONE action only - never multiple
+        const nbaCount = nextBestAction.type === 'CLOSE_LOOPS' ? openLoopsCount :
+                         nextBestAction.type === 'URGENT_REPLIES' ? urgentCount : 0;
+        const nbaSpeech = getNextBestActionSpeech(nextBestAction.type, nbaCount);
+        
+        setStatusText(nbaSpeech);
+        await speakRecommendation(nbaSpeech);
+      }
     };
 
-    speakIntro();
+    speakSingleAction();
   }, [speakRecommendation, nextBestAction, openLoopsCount, urgentCount, isMuted]);
 
-  // Command handlers
+  // Command handlers - STRICT: Always ONE action, never ask questions
   const handleWhatsNext = useCallback(async () => {
     setActiveCommand('whats_next');
+    
+    // Check if there's anything actionable
+    const hasUrgentAction = openLoopsCount > 0 || urgentCount > 0;
+    
+    if (!hasUrgentAction) {
+      // Nothing urgent - speak reassurance, not options
+      setStatusText(DRIVER_CONFIRMATIONS.nothingUrgent);
+      if (!isMuted) {
+        await speakRecommendation(DRIVER_CONFIRMATIONS.nothingUrgent);
+      }
+      setActiveCommand(null);
+      return;
+    }
+    
+    // ONE action only
     const nbaCount = nextBestAction.type === 'CLOSE_LOOPS' ? openLoopsCount :
                      nextBestAction.type === 'URGENT_REPLIES' ? urgentCount : 0;
     const speech = getNextBestActionSpeech(nextBestAction.type, nbaCount);

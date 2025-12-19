@@ -58,6 +58,12 @@ export const DRIVER_MODE_GREETING = "You're in Driver Mode. I'll handle prioriti
 /**
  * Spoken confirmations for Driver Mode actions
  * 
+ * STRICT DRIVER MODE PRIORITY RULE:
+ * - ALWAYS surface exactly ONE Next Best Action
+ * - NEVER present multiple tasks verbally
+ * - NEVER ask "what would you like to do?"
+ * - If no action needed, speak: "Nothing urgent needs your attention."
+ * 
  * Rules:
  * - Voice confirms execution
  * - Voice never narrates UI
@@ -69,15 +75,17 @@ export const DRIVER_CONFIRMATIONS = {
   clearingInbox: "Clearing your inbox.",
   summarizing: "Summarizing now.",
   
-  // Next best action responses
+  // Next best action responses - always ONE action, never multiple
   closingLoops: (count: number) => 
     count === 1 ? "One item needs closure." : `${count} items need closure.`,
   urgentMessages: (count: number) => 
     count === 1 ? "One urgent message." : `${count} urgent messages.`,
   readyToFocus: "All clear. Ready to focus.",
   
-  // Reassurance (nothing to do)
+  // CANONICAL: Nothing urgent phrase - overrides all other UI logic
   nothingUrgent: "Nothing urgent needs your attention.",
+  
+  // Other reassurance (calm, brief)
   allClear: "All clear.",
   inboxEmpty: "Inbox is empty.",
   
