@@ -9,6 +9,7 @@ interface VoiceButtonProps {
   onStop: () => void;
   audioLevel?: number; // 0-1 normalized
   hasAudioInput?: boolean;
+  isSecondary?: boolean; // For iOS Safari fallback mode - mic is visually de-emphasized
 }
 
 export const VoiceButton = ({ 
@@ -17,7 +18,8 @@ export const VoiceButton = ({
   onStart,
   onStop,
   audioLevel = 0,
-  hasAudioInput = true
+  hasAudioInput = true,
+  isSecondary = false
 }: VoiceButtonProps) => {
   const isListening = status === 'listening';
   const isProcessing = status === 'processing';
@@ -61,15 +63,22 @@ export const VoiceButton = ({
   // Generate waveform bars based on audio level
   const waveformBars = [0.6, 1, 0.7, 0.9, 0.5];
   
+  // Secondary mode: smaller button, muted colors for iOS Safari
+  const buttonSize = isSecondary ? "w-20 h-20" : "w-32 h-32";
+  const iconSize = isSecondary ? "h-8 w-8" : "h-12 w-12";
+  
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className={cn(
+      "flex flex-col items-center gap-4",
+      isSecondary && "opacity-60"
+    )}>
       {/* Outer glow ring */}
       <div className={cn(
         "relative transition-all duration-300",
         isListening && audioLevel > 0.1 && "animate-pulse"
       )}>
-        {/* Ambient glow - intensity based on audio level */}
-        {isListening && (
+        {/* Ambient glow - intensity based on audio level, dimmer in secondary mode */}
+        {isListening && !isSecondary && (
           <div 
             className="absolute -inset-6 rounded-full bg-red-500/30 blur-2xl transition-opacity duration-100"
             style={{ opacity: 0.3 + audioLevel * 0.7 }}
@@ -87,18 +96,23 @@ export const VoiceButton = ({
           onContextMenu={handleContextMenu}
           disabled={isDisabled}
           className={cn(
-            "relative w-32 h-32 rounded-full flex items-center justify-center",
+            "relative rounded-full flex items-center justify-center",
+            buttonSize,
             "transition-all duration-300 select-none touch-manipulation",
             "border-2",
-            isListening 
-              ? "bg-gradient-to-br from-red-600 to-orange-600 border-red-400 shadow-[0_0_40px_rgba(239,68,68,0.5)]"
-              : isProcessing || isSpeaking
-              ? "bg-white/10 border-white/20 cursor-wait"
-              : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 active:scale-95"
+            isSecondary
+              ? isListening
+                ? "bg-white/20 border-white/30"
+                : "bg-white/5 border-white/10 hover:bg-white/10"
+              : isListening 
+                ? "bg-gradient-to-br from-red-600 to-orange-600 border-red-400 shadow-[0_0_40px_rgba(239,68,68,0.5)]"
+                : isProcessing || isSpeaking
+                  ? "bg-white/10 border-white/20 cursor-wait"
+                  : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 active:scale-95"
           )}
         >
           {isProcessing ? (
-            <Loader2 className="h-12 w-12 text-white animate-spin" />
+            <Loader2 className={cn(iconSize, "text-white animate-spin")} />
           ) : isSpeaking ? (
             <div className="flex items-center gap-1">
               {[1, 2, 3].map((i) => (
@@ -113,7 +127,6 @@ export const VoiceButton = ({
               ))}
             </div>
           ) : isListening ? (
-            // Waveform visualization responding to audio level
             <div className="flex items-center gap-1">
               {waveformBars.map((multiplier, i) => (
                 <div
@@ -126,7 +139,7 @@ export const VoiceButton = ({
               ))}
             </div>
           ) : (
-            <Mic className="h-12 w-12 text-white/60" />
+            <Mic className={cn(iconSize, "text-white/60")} />
           )}
         </button>
       </div>
