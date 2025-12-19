@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   DRIVER_COMMANDS, 
   DRIVER_MODE_GREETING,
+  DRIVER_CONFIRMATIONS,
   getNextBestActionSpeech,
   type DriverCommandId,
 } from '@/lib/driverModeCommands';
@@ -25,7 +26,6 @@ export const DriverModeHUD: React.FC<DriverModeHUDProps> = ({ onExit }) => {
   const { 
     speakRecommendation, 
     speakConfirmation, 
-    speakReassurance,
     isSpeaking,
     stop: stopSpeaking,
   } = useEyesFreeVoice();
@@ -88,25 +88,36 @@ export const DriverModeHUD: React.FC<DriverModeHUDProps> = ({ onExit }) => {
     const unreadMessages = messages?.filter(m => !m.is_read) || [];
     const count = unreadMessages.length;
     
-    let speech: string;
     if (count === 0) {
-      speech = 'No unread messages.';
-    } else if (count === 1) {
-      const msg = unreadMessages[0];
-      speech = `One message from ${msg.sender_name}.`;
-    } else {
-      // Get unique senders
-      const senders = [...new Set(unreadMessages.map(m => m.sender_name))];
-      if (senders.length <= 2) {
-        speech = `${count} messages from ${senders.join(' and ')}.`;
-      } else {
-        speech = `${count} messages from ${senders.length} people.`;
+      // Cannot proceed - explain calmly
+      setStatusText(DRIVER_CONFIRMATIONS.noMessages);
+      if (!isMuted) {
+        await speakRecommendation(DRIVER_CONFIRMATIONS.noMessages);
       }
-    }
-    
-    setStatusText(speech);
-    if (!isMuted) {
-      await speakRecommendation(speech);
+    } else {
+      // Confirm execution - no UI narration
+      setStatusText(DRIVER_CONFIRMATIONS.summarizing);
+      if (!isMuted) {
+        await speakRecommendation(DRIVER_CONFIRMATIONS.summarizing);
+      }
+      
+      // Brief pause then deliver summary
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      let summary: string;
+      if (count === 1) {
+        summary = `One message from ${unreadMessages[0].sender_name}.`;
+      } else {
+        const senders = [...new Set(unreadMessages.map(m => m.sender_name))];
+        summary = senders.length <= 2 
+          ? `${count} messages from ${senders.join(' and ')}.`
+          : `${count} messages from ${senders.length} people.`;
+      }
+      
+      setStatusText(summary);
+      if (!isMuted) {
+        await speakRecommendation(summary);
+      }
     }
     setActiveCommand(null);
   }, [messages, speakRecommendation, isMuted]);
@@ -116,37 +127,51 @@ export const DriverModeHUD: React.FC<DriverModeHUDProps> = ({ onExit }) => {
     const unreadMessages = messages?.filter(m => !m.is_read) || [];
     
     if (unreadMessages.length === 0) {
-      setStatusText('Nothing to clear.');
+      // Cannot proceed - explain calmly
+      setStatusText(DRIVER_CONFIRMATIONS.cannotClear);
       if (!isMuted) {
-        await speakReassurance('allClear');
+        await speakRecommendation(DRIVER_CONFIRMATIONS.cannotClear);
       }
     } else {
-      // Mark all as read
+      // Confirm execution with guide phrase for multi-item action
+      const confirmSpeech = unreadMessages.length > 3 
+        ? DRIVER_CONFIRMATIONS.guidingInbox 
+        : DRIVER_CONFIRMATIONS.clearingInbox;
+      
+      setStatusText(confirmSpeech);
+      if (!isMuted) {
+        await speakRecommendation(confirmSpeech);
+      }
+      
+      // Execute action
       for (const msg of unreadMessages) {
         updateMessage({ id: msg.id, updates: { is_read: true } });
       }
-      const speech = `Cleared ${unreadMessages.length} messages.`;
-      setStatusText(speech);
+      
+      // Brief pause then confirm completion
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setStatusText(DRIVER_CONFIRMATIONS.allClear);
       if (!isMuted) {
-        await speakConfirmation('done');
+        await speakConfirmation(DRIVER_CONFIRMATIONS.allClear);
       }
     }
     setActiveCommand(null);
-  }, [messages, updateMessage, speakConfirmation, speakReassurance, isMuted]);
+  }, [messages, updateMessage, speakRecommendation, speakConfirmation, isMuted]);
 
   const handleStartFocus = useCallback(async () => {
     setActiveCommand('start_focus');
-    setStatusText('Starting focus session.');
     
+    // Confirm execution - no mechanics explanation
+    setStatusText(DRIVER_CONFIRMATIONS.startingFocus);
     if (!isMuted) {
-      await speakConfirmation('Starting focus.');
+      await speakConfirmation(DRIVER_CONFIRMATIONS.startingFocus);
     }
     
     // Navigate to focus mode
     setTimeout(() => {
       navigate('/focus');
       onExit();
-    }, 1000);
+    }, 800);
   }, [speakConfirmation, navigate, onExit, isMuted]);
 
   // Map command IDs to handlers
