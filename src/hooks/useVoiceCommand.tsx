@@ -222,6 +222,17 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
 
     try {
       const command = await parseCommand(text);
+      
+      // Dev mode logging: transcript + parsed intent
+      if (import.meta.env.DEV) {
+        console.log('[VoiceCommand] Transcript:', text);
+        console.log('[VoiceCommand] Parsed Intent:', {
+          action: command.action,
+          category: command.category,
+          context: command.context,
+          requiresConfirmation: command.requiresConfirmation,
+        });
+      }
 
       if (command.requiresConfirmation) {
         const confirmMsg = command.confirmationReason === 'bulk_delete'
@@ -333,16 +344,20 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     // Stop recording and get the transcript
     const finalTranscript = await stopRecording();
     
-    console.log('[VoiceCommand] Final transcript:', finalTranscript);
+    // Dev mode logging
+    if (import.meta.env.DEV) {
+      console.log('[VoiceCommand] STT Result:', finalTranscript || '(empty)');
+    }
     
     // Only execute if we have a valid transcript
     if (finalTranscript && finalTranscript.trim()) {
       setTranscript(finalTranscript);
+      console.log('[VoiceCommand] Processing transcript:', finalTranscript);
       // Execute the command with the final transcript
       await executeCommand(finalTranscript);
     } else {
-      // No transcript - provide specific "didn't catch that" feedback
-      console.log('[VoiceCommand] No transcript received');
+      // No transcript OR STT failed - show "I didn't catch that"
+      console.log('[VoiceCommand] No transcript received, showing error');
       const didntCatchResponse = "I didn't catch that. Try again.";
       setLastResponse(didntCatchResponse);
       
