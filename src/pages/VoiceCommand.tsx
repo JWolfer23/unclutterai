@@ -23,6 +23,7 @@ const VoiceCommand = () => {
     isSupported,
     audioLevel,
     hasAudioInput,
+    isFallbackMode,
     startListening,
     stopListening,
     executeCommand,
@@ -93,21 +94,24 @@ const VoiceCommand = () => {
             status={status}
           />
 
-          {/* Voice Button - Hold to speak, release to execute */}
-          <VoiceButton
-            status={status}
-            isSupported={isSupported}
-            onStart={startListening}
-            onStop={stopListening}
-            audioLevel={audioLevel}
-            hasAudioInput={hasAudioInput}
-          />
+          {/* Voice Button - hidden in fallback mode */}
+          {!isFallbackMode && (
+            <VoiceButton
+              status={status}
+              isSupported={isSupported}
+              onStart={startListening}
+              onStop={stopListening}
+              audioLevel={audioLevel}
+              hasAudioInput={hasAudioInput}
+            />
+          )}
 
-          {/* Quick Commands */}
+          {/* Quick Commands - highlighted in fallback mode */}
           <div className="w-full mt-8">
             <QuickCommands 
               onSelect={handleQuickCommand} 
               disabled={isProcessing}
+              highlighted={isFallbackMode}
             />
           </div>
         </div>
@@ -115,7 +119,10 @@ const VoiceCommand = () => {
         {/* Footer hint */}
         <div className="text-center py-4">
           <p className="text-xs text-white/30">
-            Try: "What's next?" • "Run morning brief" • "Create task: [description]"
+            {isFallbackMode 
+              ? "Voice input is limited on this device. Use the command buttons above."
+              : 'Try: "What\'s next?" • "Run morning brief" • "Create task: [description]"'
+            }
           </p>
         </div>
       </div>

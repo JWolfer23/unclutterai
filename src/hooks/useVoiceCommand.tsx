@@ -28,6 +28,7 @@ interface UseVoiceCommandReturn {
   isSupported: boolean;
   audioLevel: number;
   hasAudioInput: boolean;
+  isFallbackMode: boolean;
   startListening: () => void;
   stopListening: () => void;
   executeCommand: (text: string) => Promise<void>;
@@ -42,6 +43,8 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
   const [lastResponse, setLastResponse] = useState('');
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null);
   const [pendingCommand, setPendingCommand] = useState<ParsedCommand | null>(null);
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0);
+  const [isFallbackMode, setIsFallbackMode] = useState(false);
   
   // Track if we're in the middle of processing to prevent state conflicts
   const isProcessingRef = useRef(false);
@@ -370,19 +373,45 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
       }
       
       if (finalTranscript && finalTranscript.trim()) {
-        // Valid transcript - execute immediately
+        // Valid transcript - reset failure count, execute immediately
+        setConsecutiveFailures(0);
         setTranscript(finalTranscript);
         logStateTransition('transcribing', 'executing', `"${finalTranscript}"`);
         await executeCommand(finalTranscript);
       } else {
-        // Empty/failed transcript - explicit error, no suggestions
-        logStateTransition('transcribing', 'error', 'empty transcript');
-        const errorMsg = "No audio detected. Please try again.";
-        setLastResponse(errorMsg);
-        setStatus('speaking');
-        await speak(errorMsg);
-        logStateTransition('speaking', 'idle');
-        setStatus('idle');
+        // Empty/failed transcript - track consecutive failures
+        const newFailureCount = consecutiveFailures + 1;
+        setConsecutiveFailures(newFailureCount);
+        
+        // Detect iOS Safari
+        const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && 
+                           !('MSStream' in window) &&
+                           /Safari/.test(navigator.userAgent);
+        
+        if (import.meta.env.DEV) {
+          console.log('[VoiceCommand] Failure count:', newFailureCount, 'iOS Safari:', isIOSSafari);
+        }
+        
+        // After 2 consecutive failures on iOS Safari, switch to fallback mode
+        if (newFailureCount >= 2 && isIOSSafari) {
+          logStateTransition('transcribing', 'fallback', 'iOS voice limited');
+          setIsFallbackMode(true);
+          const fallbackMsg = "Voice is limited on this device. Tap a command to continue.";
+          setLastResponse(fallbackMsg);
+          setStatus('speaking');
+          await speak(fallbackMsg);
+          logStateTransition('speaking', 'idle');
+          setStatus('idle');
+        } else {
+          // Standard error - but don't loop forever
+          logStateTransition('transcribing', 'error', 'empty transcript');
+          const errorMsg = "No audio detected. Please try again.";
+          setLastResponse(errorMsg);
+          setStatus('speaking');
+          await speak(errorMsg);
+          logStateTransition('speaking', 'idle');
+          setStatus('idle');
+        }
       }
     } catch (err) {
       console.error('[VoiceCommand] Stop error:', err);
@@ -394,7 +423,7 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     } finally {
       isProcessingRef.current = false;
     }
-  }, [isRecording, stopRecording, executeCommand, speak, logStateTransition]);
+  }, [isRecording, stopRecording, executeCommand, speak, logStateTransition, consecutiveFailures]);
 
   // Derive effective status - account for transcribing state
   const effectiveStatus: VoiceStatus = 
@@ -412,6 +441,7 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     isSupported,
     audioLevel,
     hasAudioInput,
+    isFallbackMode,
     startListening,
     stopListening,
     executeCommand,
