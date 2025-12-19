@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useFocusStreaks } from "./useFocusStreaks";
 import { useFocusRewards } from "./useFocusRewards";
+import { useOnboardingMissions } from "./useOnboardingMissions";
 
 interface FocusSession {
   id: string;
@@ -26,6 +27,7 @@ export const useFocusSessions = () => {
   const queryClient = useQueryClient();
   const { updateStreak } = useFocusStreaks();
   const { completeSessionWithRewardsAsync } = useFocusRewards();
+  const { checkAndCompleteMission } = useOnboardingMissions();
 
   // Fetch user's focus sessions
   const { data: sessions = [], isLoading, error } = useQuery({
@@ -80,6 +82,8 @@ export const useFocusSessions = () => {
         title: "🎯 Focus Session Started",
         description: `${data.planned_minutes} minute session is now active`,
       });
+      // Trigger first focus mission completion
+      checkAndCompleteMission('first_focus');
     },
   });
 

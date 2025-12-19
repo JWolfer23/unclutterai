@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from "@/components/ui/sonner";
 import { useQueryClient } from '@tanstack/react-query';
+import { useOnboardingMissions } from './useOnboardingMissions';
 
 interface EmailCredential {
   id: string;
@@ -21,6 +22,7 @@ export function useGmailAuth() {
   const [credentials, setCredentials] = useState<EmailCredential[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const { checkAndCompleteMission } = useOnboardingMissions();
 
   // Fetch connected Gmail accounts
   const fetchCredentials = useCallback(async () => {
@@ -94,6 +96,8 @@ export function useGmailAuth() {
         const email = searchParams.get('email');
         toast.success(`Gmail connected: ${email || 'successfully'}`);
         fetchCredentials();
+        // Trigger connect gmail mission
+        checkAndCompleteMission('connect_gmail');
         // Auto-trigger initial sync after connection
         setTimeout(() => syncNow(), 1000);
       } else if (oauthStatus === 'error') {
