@@ -40,17 +40,25 @@ export const VoiceButton = ({ status, isSupported, onPress, onRelease }: VoiceBu
         <button
           onMouseDown={onPress}
           onMouseUp={onRelease}
-          onTouchStart={onPress}
-          onTouchEnd={onRelease}
+          onMouseLeave={isListening ? onRelease : undefined}
+          onTouchStart={(e) => {
+            e.preventDefault(); // Prevent double-firing on mobile
+            onPress();
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            onRelease();
+          }}
+          onTouchCancel={onRelease}
           disabled={isProcessing || isSpeaking}
           className={cn(
             "relative w-32 h-32 rounded-full flex items-center justify-center",
-            "transition-all duration-300 select-none",
+            "transition-all duration-300 select-none touch-manipulation",
             "border-2",
             isListening 
               ? "bg-gradient-to-br from-purple-600 to-blue-600 border-purple-400 shadow-[0_0_40px_rgba(147,51,234,0.5)]"
               : isProcessing || isSpeaking
-              ? "bg-white/10 border-white/20"
+              ? "bg-white/10 border-white/20 cursor-wait"
               : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 active:scale-95"
           )}
         >
