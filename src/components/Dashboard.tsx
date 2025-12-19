@@ -13,6 +13,10 @@ import OSView from "@/components/OSView";
 import { type NextBestAction } from "@/hooks/useNextBestAction";
 import { NextBestActionCard } from "@/components/dashboard";
 import { OSHomeGrid, type HighlightedTile, type FocusLockMode } from "@/components/os/OSHomeGrid";
+import { MissionProgressCard } from "@/components/onboarding/MissionProgressCard";
+import { useOnboardingMissions } from "@/hooks/useOnboardingMissions";
+import { differenceInDays } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
 
 // Map NextBestAction type to OSHomeGrid highlight key
 const getHighlightedTile = (actionType: NextBestAction['type']): HighlightedTile => {
@@ -40,6 +44,8 @@ interface DashboardProps {
 const Dashboard = ({ assistantName, subscriptionTier, nextBestAction }: DashboardProps) => {
   const { focusSessions, missedMessages, generateRecoveryData } = useFocusRecovery();
   const [showOSView, setShowOSView] = useState(false);
+  const { user } = useAuth();
+  const { completedCount, totalCount } = useOnboardingMissions();
   
   // Safe no-op handler for command palette
   const handleShowCommandPalette = () => {
@@ -54,6 +60,12 @@ const Dashboard = ({ assistantName, subscriptionTier, nextBestAction }: Dashboar
   const hasRecoveryData = missedMessages && missedMessages.length > 0;
   const defaultFocusScore = lastSession?.score ?? 85;
   const recoveryData = hasRecoveryData ? generateRecoveryData(missedMessages, defaultFocusScore) : null;
+
+  // Show MissionProgressCard during first week OR until all missions complete
+  const userCreatedAt = user?.created_at ? new Date(user.created_at) : new Date();
+  const daysSinceSignup = differenceInDays(new Date(), userCreatedAt);
+  const allMissionsComplete = completedCount >= totalCount;
+  const showMissionCard = daysSinceSignup <= 7 || !allMissionsComplete;
 
   // Show OS View as separate view (not overlay)
   if (showOSView) {
@@ -70,6 +82,9 @@ const Dashboard = ({ assistantName, subscriptionTier, nextBestAction }: Dashboar
         <main className="container mx-auto px-4 py-6 space-y-6">
           {/* Next Best Action - prominent position */}
           <NextBestActionCard action={nextBestAction} />
+
+          {/* Mission Progress - visible during first week or until complete */}
+          {showMissionCard && <MissionProgressCard />}
 
           {/* OS Home Grid - navigation tiles */}
           <OSHomeGrid 
