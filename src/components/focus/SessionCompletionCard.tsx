@@ -16,6 +16,7 @@ import {
   getLevelEncouragement, 
   getStreakEncouragement 
 } from "@/lib/focusMicroCopy";
+import { CONF_FOCUS_END } from "@/lib/driverModeVoice";
 
 // Trust-focused completion messages
 const COMPLETION_MESSAGES = {
@@ -32,10 +33,8 @@ const COMPLETION_MESSAGES = {
   },
 };
 
-// Driver Mode voice confirmations
-const DRIVER_VOICE = {
-  completion: "Focus complete. Nothing important was missed.",
-};
+// Driver Mode voice confirmation - use central constant
+const DRIVER_VOICE_COMPLETION = CONF_FOCUS_END;
 
 interface XPData {
   xp_earned: number;
@@ -98,7 +97,7 @@ export const SessionCompletionCard = ({
     if (isDriverMode && !hasSpokenRef.current) {
       hasSpokenRef.current = true;
       setTimeout(() => {
-        speak(DRIVER_VOICE.completion);
+        speak(DRIVER_VOICE_COMPLETION);
       }, 500);
     }
   }, [isDriverMode, speak]);
