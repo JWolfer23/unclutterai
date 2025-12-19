@@ -52,6 +52,7 @@ export const UCT_REWARDS = {
   loop_reply_sent: 0.10,      // Action taken
   loop_task_created: 0.08,    // Task conversion
   loop_speed_bonus: 0.03,     // If resolved quickly
+  unclutter_complete: 0.5,    // Session completion bonus
   
   // Streaks
   streak_3_day: 1,
