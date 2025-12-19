@@ -29,17 +29,18 @@ export const VoiceButton = ({
 
   // Handle press start (mouse or touch)
   const handlePressStart = useCallback(() => {
-    if (isDisabled) return;
+    if (isDisabled || isListening) return;
     isHoldingRef.current = true;
     onStart();
-  }, [isDisabled, onStart]);
+  }, [isDisabled, isListening, onStart]);
 
-  // Handle press end (mouse or touch)
+  // Handle press end - immediately triggers transcription
   const handlePressEnd = useCallback(() => {
-    if (!isHoldingRef.current) return;
+    if (!isHoldingRef.current || !isListening) return;
     isHoldingRef.current = false;
+    // Immediately send to transcription on release
     onStop();
-  }, [onStop]);
+  }, [isListening, onStop]);
 
   // Prevent context menu on long press (mobile)
   const handleContextMenu = useCallback((e: React.MouseEvent) => {

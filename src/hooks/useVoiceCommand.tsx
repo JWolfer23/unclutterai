@@ -323,15 +323,15 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
 
   // Start listening - called on press/hold
   const startListening = useCallback(async () => {
-    // Don't start if already processing or listening
-    if (isProcessingRef.current || isRecording || isTranscribing) {
+    // Guard: don't start if busy
+    if (isProcessingRef.current || isRecording || isTranscribing || status === 'processing') {
       if (import.meta.env.DEV) {
-        console.log('[VoiceCommand] Ignoring start - already busy');
+        console.log('[VoiceCommand] Ignoring start - busy');
       }
       return;
     }
     
-    // Stop any TTS playback before recording
+    // Stop any TTS before starting
     if (isSpeaking) {
       stopTTS();
     }
@@ -343,11 +343,11 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     setStatus('listening');
     
     await startRecording();
-  }, [isRecording, isTranscribing, isSpeaking, stopTTS, resetTranscript, startRecording, logStateTransition]);
+  }, [isRecording, isTranscribing, status, isSpeaking, stopTTS, resetTranscript, startRecording, logStateTransition]);
 
-  // Stop listening - called on release (auto-executes)
+  // Stop listening - called on release (auto-executes immediately)
   const stopListening = useCallback(async () => {
-    // Only stop if we're actually recording
+    // Guard: only process if recording
     if (!isRecording) {
       if (import.meta.env.DEV) {
         console.log('[VoiceCommand] Ignoring stop - not recording');
@@ -355,34 +355,44 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
       return;
     }
     
-    logStateTransition('listening', 'processing', 'mic released → transcribing');
+    // Mark processing immediately to prevent re-entry
+    isProcessingRef.current = true;
+    logStateTransition('listening', 'transcribing', 'mic released');
     setStatus('processing');
     
-    // Stop recording and get the transcript
-    const finalTranscript = await stopRecording();
-    
-    // Dev mode logging
-    if (import.meta.env.DEV) {
-      console.log('[VoiceCommand] STT Result:', finalTranscript || '(empty)');
-    }
-    
-    // Only execute if we have a valid transcript
-    if (finalTranscript && finalTranscript.trim()) {
-      setTranscript(finalTranscript);
-      logStateTransition('processing', 'executing', `transcript: "${finalTranscript}"`);
-      // Execute the command with the final transcript - this handles its own state transitions
-      await executeCommand(finalTranscript);
-    } else {
-      // No transcript OR STT failed - show "I didn't catch that"
-      logStateTransition('processing', 'speaking', 'no transcript');
-      const didntCatchResponse = "I didn't catch that. Try again.";
-      setLastResponse(didntCatchResponse);
+    try {
+      // Stop recording and immediately get transcript
+      const finalTranscript = await stopRecording();
       
-      // Speak the response then return to idle
+      // Dev logging
+      if (import.meta.env.DEV) {
+        console.log('[VoiceCommand] STT Result:', finalTranscript || '(empty)');
+      }
+      
+      if (finalTranscript && finalTranscript.trim()) {
+        // Valid transcript - execute immediately
+        setTranscript(finalTranscript);
+        logStateTransition('transcribing', 'executing', `"${finalTranscript}"`);
+        await executeCommand(finalTranscript);
+      } else {
+        // Empty/failed transcript - surface clear error
+        logStateTransition('transcribing', 'error', 'empty transcript');
+        const errorMsg = "I didn't catch that. Try again.";
+        setLastResponse(errorMsg);
+        setStatus('speaking');
+        await speak(errorMsg);
+        logStateTransition('speaking', 'idle');
+        setStatus('idle');
+      }
+    } catch (err) {
+      console.error('[VoiceCommand] Stop error:', err);
+      const errorMsg = "Something went wrong. Try again.";
+      setLastResponse(errorMsg);
       setStatus('speaking');
-      await speak(didntCatchResponse);
-      logStateTransition('speaking', 'idle', 'error feedback complete');
+      await speak(errorMsg);
       setStatus('idle');
+    } finally {
+      isProcessingRef.current = false;
     }
   }, [isRecording, stopRecording, executeCommand, speak, logStateTransition]);
 
