@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-export type ActionType = 'archive' | 'draft_created' | 'schedule' | 'ignore' | 'auto_reply' | 'task_created';
+export type ActionType = 'archive' | 'draft_created' | 'schedule' | 'ignore' | 'auto_reply' | 'task_created' | 'mark_done' | 'delegate';
 export type TargetType = 'message' | 'task' | 'draft';
 
 export interface ActionLogEntry {

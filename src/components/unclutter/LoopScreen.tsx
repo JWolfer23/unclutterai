@@ -1,66 +1,32 @@
-import { Mail, Reply, Calendar, Archive, X, Loader2, Zap } from "lucide-react";
+import { Mail, Check, Calendar, Users, Archive, X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Loop } from "@/hooks/useUnclutter";
-import { useAssistantProfile } from "@/hooks/useAssistantProfile";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { BetaUCTData } from "@/hooks/useBetaUCT";
 
 interface LoopScreenProps {
   loop: Loop;
   loopsResolved: number;
-  onReply: () => void;
+  onDone: () => void;
   onSchedule: () => void;
+  onDelegate: () => void;
   onArchive: () => void;
   onIgnore: () => void;
-  isGeneratingDraft: boolean;
   uctData?: BetaUCTData | null;
 }
 
 const LoopScreen = ({
   loop,
   loopsResolved,
-  onReply,
+  onDone,
   onSchedule,
+  onDelegate,
   onArchive,
   onIgnore,
-  isGeneratingDraft,
   uctData
 }: LoopScreenProps) => {
-  const { user } = useAuth();
-
-  // Log action approval to track patterns for promotion eligibility
-  const logActionApproval = async (actionType: 'reply' | 'schedule' | 'archive') => {
-    if (!user?.id) return;
-    try {
-      await supabase.from('ai_feedback').insert({
-        user_id: user.id,
-        ai_block_type: `action_approved_${actionType}`,
-        thumbs_up: true,
-      });
-    } catch (error) {
-      console.error('Failed to log action approval:', error);
-    }
-  };
-
-  const handleReply = async () => {
-    await logActionApproval('reply');
-    onReply();
-  };
-
-  const handleSchedule = async () => {
-    await logActionApproval('schedule');
-    onSchedule();
-  };
-
-  const handleArchive = async () => {
-    await logActionApproval('archive');
-    onArchive();
-  };
-
   return (
     <div className="max-w-lg mx-auto px-4">
-      {/* Minimal progress - only shows resolved count, not total */}
+      {/* Minimal progress - only shows resolved count */}
       <div className="text-center mb-6 space-y-2">
         <span className="text-white/40 text-sm">
           {loopsResolved > 0 ? `${loopsResolved} resolved` : 'Focus on this one'}
@@ -94,29 +60,24 @@ const LoopScreen = ({
 
         {/* Instruction */}
         <p className="text-white/30 text-xs text-center">
-          Choose an action to continue
+          Choose exactly one outcome
         </p>
 
         {/* Divider */}
         <div className="border-t border-white/10 pt-4" />
 
-        {/* Four action buttons - no skip allowed */}
-        <div className="grid grid-cols-4 gap-2">
+        {/* Five action buttons - exactly 5 outcomes */}
+        <div className="grid grid-cols-5 gap-2">
           <Button
-            onClick={handleReply}
-            disabled={isGeneratingDraft}
-            className="flex flex-col items-center gap-1.5 h-auto py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white"
+            onClick={onDone}
+            className="flex flex-col items-center gap-1.5 h-auto py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white"
           >
-            {isGeneratingDraft ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Reply className="h-4 w-4" />
-            )}
-            <span className="text-xs">Reply</span>
+            <Check className="h-4 w-4" />
+            <span className="text-xs">Done</span>
           </Button>
 
           <Button
-            onClick={handleSchedule}
+            onClick={onSchedule}
             variant="ghost"
             className="flex flex-col items-center gap-1.5 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-0"
           >
@@ -125,7 +86,16 @@ const LoopScreen = ({
           </Button>
 
           <Button
-            onClick={handleArchive}
+            onClick={onDelegate}
+            variant="ghost"
+            className="flex flex-col items-center gap-1.5 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-0"
+          >
+            <Users className="h-4 w-4" />
+            <span className="text-xs">Delegate</span>
+          </Button>
+
+          <Button
+            onClick={onArchive}
             variant="ghost"
             className="flex flex-col items-center gap-1.5 h-auto py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border-0"
           >
