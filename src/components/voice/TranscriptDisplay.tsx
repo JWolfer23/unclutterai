@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface TranscriptDisplayProps {
   transcript: string;
@@ -14,12 +14,19 @@ export const TranscriptDisplay = ({
   transcriptionError,
   status 
 }: TranscriptDisplayProps) => {
-  const showTranscript = status === 'listening' || (status === 'processing' && transcript);
-  const showResponse = status === 'speaking' || (status === 'idle' && lastResponse);
+  // Show transcript during listening, processing, and speaking (until execution completes)
+  const showTranscript = transcript && (
+    status === 'listening' || 
+    status === 'processing' || 
+    status === 'speaking'
+  );
+  
+  // Show response after processing completes
+  const showResponse = lastResponse && (status === 'speaking' || status === 'idle');
   const showError = transcriptionError && status === 'idle' && !lastResponse;
 
   return (
-    <div className="min-h-[100px] flex flex-col items-center justify-center text-center px-4">
+    <div className="min-h-[120px] flex flex-col items-center justify-center text-center px-4 gap-4">
       {/* Listening indicator */}
       {status === 'listening' && !transcript && (
         <div className="space-y-2 animate-in fade-in duration-200">
@@ -30,26 +37,24 @@ export const TranscriptDisplay = ({
         </div>
       )}
 
-      {/* Show transcript while listening or processing */}
-      {showTranscript && transcript && (
+      {/* Show transcript - stays visible during processing and speaking */}
+      {showTranscript && (
         <div className="space-y-2 animate-in fade-in duration-200">
           <p className="text-xs text-white/40 uppercase tracking-wider">You said</p>
           <p className={cn(
             "text-lg text-white font-medium transition-opacity",
-            status === 'processing' && "opacity-60"
+            (status === 'processing' || status === 'speaking') && "opacity-80"
           )}>
             "{transcript}"
           </p>
         </div>
       )}
 
-      {/* Show processing state without transcript */}
-      {status === 'processing' && !transcript && (
-        <div className="space-y-2 animate-in fade-in duration-200">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin" />
-            <p className="text-sm text-white/50">Processing...</p>
-          </div>
+      {/* Show processing state */}
+      {status === 'processing' && (
+        <div className="flex items-center gap-2 animate-in fade-in duration-200">
+          <div className="w-4 h-4 border-2 border-white/30 border-t-white/80 rounded-full animate-spin" />
+          <p className="text-sm text-white/50">Processing...</p>
         </div>
       )}
 
@@ -66,10 +71,13 @@ export const TranscriptDisplay = ({
         </div>
       )}
 
-      {/* Show response after processing */}
-      {showResponse && lastResponse && (
+      {/* Show response after processing - with success indicator */}
+      {showResponse && (
         <div className="space-y-2 animate-in fade-in duration-300">
-          <p className="text-xs text-purple-400/60 uppercase tracking-wider">Response</p>
+          <div className="flex items-center justify-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <p className="text-xs text-emerald-400/80 uppercase tracking-wider">Response</p>
+          </div>
           <p className="text-lg text-white/90 leading-relaxed max-w-sm">
             {lastResponse}
           </p>
