@@ -35,6 +35,7 @@ import { AssistantProfileProvider } from "@/components/AssistantProfileProvider"
 import { FocusProtectionProvider } from "@/contexts/FocusProtectionContext";
 import { AssistantMemoryProvider, useAssistantMemory } from "@/contexts/AssistantMemoryContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { UCTMilestoneProvider } from "@/components/UCTMilestoneProvider";
 
 const queryClient = new QueryClient();
 
@@ -106,13 +107,15 @@ const App = () => {
           <AssistantProfileProvider>
             <FocusProtectionProvider>
               <AssistantMemoryProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <Sonner />
-                  <BrowserRouter>
-                    <AppRoutes />
-                  </BrowserRouter>
-                </TooltipProvider>
+                <UCTMilestoneProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <BrowserRouter>
+                      <AppRoutes />
+                    </BrowserRouter>
+                  </TooltipProvider>
+                </UCTMilestoneProvider>
               </AssistantMemoryProvider>
             </FocusProtectionProvider>
           </AssistantProfileProvider>
