@@ -17,7 +17,7 @@ export interface Loop {
 }
 
 export type UnclutterPhase = 'idle' | 'scanning' | 'resolving' | 'complete';
-export type LoopAction = 'reply' | 'schedule' | 'archive' | 'ignore' | 'skip';
+export type LoopAction = 'done' | 'schedule' | 'delegate' | 'archive' | 'ignore';
 
 export interface UnclutterState {
   phase: UnclutterPhase;
@@ -86,24 +86,93 @@ export const useUnclutter = () => {
     }
   }, [currentIndex, loops.length]);
 
-  // Resolve current loop with an action and award UCT
+  // Resolve current loop with an action and award UCT - persists outcome to database
   const resolve = useCallback(async (action: LoopAction) => {
     if (!currentLoop) return;
 
     try {
-      let uctReward = UCT_REWARDS.loop_resolved; // Base reward
-      let taskId: string | null = null;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
 
-      // Handle action
-      if (action === 'archive') {
+      let uctReward = UCT_REWARDS.loop_resolved; // Base reward
+
+      // Persist the outcome to database by updating message metadata
+      const updatePayload: Record<string, unknown> = {
+        is_read: true,
+        metadata: {
+          unclutter_outcome: action,
+          resolved_at: new Date().toISOString()
+        }
+      };
+
+      // Handle specific actions
+      if (action === 'done') {
+        // Mark as done/completed - no further action needed
         await supabase
           .from('messages')
-          .update({ is_read: true, is_archived: true })
+          .update(updatePayload)
           .eq('id', currentLoop.messageId);
-        setLoopsResolved(prev => prev + 1);
-        uctReward += UCT_REWARDS.loop_archive;
+        
+        await logAction({
+          actionType: 'mark_done',
+          targetType: 'message',
+          targetId: currentLoop.messageId,
+          what: `Marked "${currentLoop.subject}" as done`,
+          why: 'User completed the item',
+          isUndoable: false,
+          source: 'unclutter',
+        });
+        uctReward += UCT_REWARDS.loop_reply_sent;
 
-        // Log archive action
+      } else if (action === 'schedule') {
+        await supabase
+          .from('messages')
+          .update(updatePayload)
+          .eq('id', currentLoop.messageId);
+        
+        uctReward += UCT_REWARDS.loop_task_created;
+        // Note: task creation handled via createTaskFromLoop
+
+      } else if (action === 'delegate') {
+        await supabase
+          .from('messages')
+          .update({
+            ...updatePayload,
+            metadata: {
+              unclutter_outcome: 'delegate',
+              resolved_at: new Date().toISOString(),
+              delegated: true
+            }
+          })
+          .eq('id', currentLoop.messageId);
+        
+        // Create a task for delegation tracking
+        await supabase.from('tasks').insert({
+          user_id: user.id,
+          title: `Delegate: ${currentLoop.subject}`,
+          description: `Delegated from ${currentLoop.sender}: ${currentLoop.summary}`,
+          priority: 'medium',
+          status: 'pending',
+          metadata: { delegated: true, messageId: currentLoop.messageId }
+        });
+        
+        await logAction({
+          actionType: 'delegate',
+          targetType: 'message',
+          targetId: currentLoop.messageId,
+          what: `Delegated "${currentLoop.subject}" to someone else`,
+          why: 'User chose to delegate this item',
+          isUndoable: true,
+          source: 'unclutter',
+        });
+        uctReward += UCT_REWARDS.loop_task_created;
+
+      } else if (action === 'archive') {
+        await supabase
+          .from('messages')
+          .update({ ...updatePayload, is_archived: true })
+          .eq('id', currentLoop.messageId);
+        
         await logAction({
           actionType: 'archive',
           targetType: 'message',
@@ -114,14 +183,14 @@ export const useUnclutter = () => {
           isUndoable: true,
           source: 'unclutter',
         });
+        uctReward += UCT_REWARDS.loop_archive;
+
       } else if (action === 'ignore') {
         await supabase
           .from('messages')
-          .update({ is_read: true })
+          .update(updatePayload)
           .eq('id', currentLoop.messageId);
-        setLoopsResolved(prev => prev + 1);
-
-        // Log ignore action
+        
         await logAction({
           actionType: 'ignore',
           targetType: 'message',
@@ -131,30 +200,12 @@ export const useUnclutter = () => {
           isUndoable: false,
           source: 'unclutter',
         });
-      } else if (action === 'reply') {
-        setLoopsResolved(prev => prev + 1);
-        uctReward += UCT_REWARDS.loop_reply_sent;
-
-        // Log reply action (draft created)
-        await logAction({
-          actionType: 'draft_created',
-          targetType: 'message',
-          targetId: currentLoop.messageId,
-          what: `Created reply draft for "${currentLoop.subject}"`,
-          why: 'Response needed',
-          context: { draftContent: aiDraft },
-          isUndoable: true,
-          source: 'unclutter',
-        });
-      } else if (action === 'schedule') {
-        setLoopsResolved(prev => prev + 1);
-        uctReward += UCT_REWARDS.loop_task_created;
-        // Note: task logging happens in createTaskFromLoop
       }
-      // 'skip' doesn't count as resolved and gets no reward
 
-      // Award UCT if action was taken (not skip)
-      if (action !== 'skip' && uctReward > 0) {
+      setLoopsResolved(prev => prev + 1);
+
+      // Award UCT
+      if (uctReward > 0) {
         try {
           await addUCT(uctReward, `unclutter_${action}`);
         } catch (e) {
@@ -171,7 +222,7 @@ export const useUnclutter = () => {
         variant: "destructive"
       });
     }
-  }, [currentLoop, advance, toast, addUCT, logAction, aiDraft]);
+  }, [currentLoop, advance, toast, addUCT, logAction]);
 
   // Skip is removed - users must resolve each item to proceed
 
@@ -255,19 +306,16 @@ export const useUnclutter = () => {
 
   // Check if action requires confirmation - UCT level can reduce confirmations
   const needsConfirmation = useCallback((action: LoopAction): boolean => {
-    // UCT level overrides
-    if (action === 'reply' && uctData?.skipSendConfirm) {
-      return false;
-    }
+    // UCT level overrides for schedule
     if (action === 'schedule' && uctData?.skipScheduleConfirm) {
       return false;
     }
     
     // Fall back to profile settings
-    if (action === 'reply') {
-      return requiresConfirmation('send_messages');
-    }
     if (action === 'schedule') {
+      return requiresConfirmation('schedule_meetings');
+    }
+    if (action === 'delegate') {
       return requiresConfirmation('schedule_meetings');
     }
     return false;

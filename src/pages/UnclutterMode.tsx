@@ -18,37 +18,17 @@ const UnclutterMode = () => {
     currentLoop,
     loopsResolved,
     isLoading,
-    aiDraft,
-    isGeneratingDraft,
     uctData,
     startScan,
     resolve,
-    generateDraft,
     createTaskFromLoop,
     needsConfirmation,
     reset
   } = useUnclutter();
 
-  const [showReplyModal, setShowReplyModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [isSending, setIsSending] = useState(false);
 
-  // Handle reply action
-  const handleReply = async () => {
-    await generateDraft();
-    setShowReplyModal(true);
-  };
-
-  // Handle send reply
-  const handleSendReply = async (finalDraft: string) => {
-    setIsSending(true);
-    await new Promise(r => setTimeout(r, 500)); // Simulate send
-    setShowReplyModal(false);
-    setIsSending(false);
-    await resolve('reply');
-  };
-
-  // Handle schedule
+  // Handle schedule with date
   const handleSchedule = async (date: Date) => {
     await createTaskFromLoop(date);
     setShowScheduleModal(false);
@@ -110,11 +90,11 @@ const UnclutterMode = () => {
           <LoopScreen
             loop={currentLoop}
             loopsResolved={loopsResolved}
-            onReply={handleReply}
+            onDone={() => resolve('done')}
             onSchedule={() => setShowScheduleModal(true)}
+            onDelegate={() => resolve('delegate')}
             onArchive={() => resolve('archive')}
             onIgnore={() => resolve('ignore')}
-            isGeneratingDraft={isGeneratingDraft}
             uctData={uctData}
           />
         )}
@@ -123,17 +103,6 @@ const UnclutterMode = () => {
           <UnclutterClosure
             loopsResolved={loopsResolved}
             onExit={handleExit}
-          />
-        )}
-
-        {/* Reply Modal */}
-        {showReplyModal && aiDraft && (
-          <ReplyModal
-            draft={aiDraft}
-            onSend={handleSendReply}
-            onClose={() => setShowReplyModal(false)}
-            isSending={isSending}
-            requiresConfirmation={needsConfirmation('reply')}
           />
         )}
 
