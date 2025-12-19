@@ -1,58 +1,102 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { useAssistantProfile } from '@/hooks/useAssistantProfile';
+import { useAssistantProfile, AssistantRole } from '@/hooks/useAssistantProfile';
 
 interface TooltipState {
   visible: boolean;
   x: number;
   y: number;
   actionName: string;
+  explanation: string;
+  suggestion: string;
 }
 
 interface AssistantReadOnlyContextType {
   isReadOnly: boolean;
+  currentRole: AssistantRole;
   interceptExecution: (actionName: string) => boolean;
   tooltipState: TooltipState;
-  showTooltip: (element: HTMLElement | null, actionName: string) => void;
+  showTooltip: (element: HTMLElement | null, actionName: string, explanation?: string, suggestion?: string) => void;
   hideTooltip: () => void;
 }
+
+// Role-based action permissions
+const ANALYST_BLOCKED_ACTIONS = new Set([
+  'sendMessage',
+  'autoReply',
+]);
+
+const ANALYST_REQUIRES_CONFIRMATION = new Set([
+  'createTask',
+  'updateTask',
+  'deleteTask',
+  'archiveMessage',
+  'scheduleAction',
+  'draftReply',
+  'startFocusSession',
+  'claimUCT',
+  'spendUCT',
+]);
+
+// Calm explanations for blocked actions
+const BLOCKED_EXPLANATIONS: Record<string, { message: string; suggestion: string }> = {
+  sendMessage: {
+    message: 'I can\'t send messages directly in Analyst mode.',
+    suggestion: 'I can draft this for your review, or you can enable Operator mode for autonomous sending.',
+  },
+  autoReply: {
+    message: 'Autonomous replies require Operator mode.',
+    suggestion: 'I can suggest a reply for you to send manually, or upgrade to Operator mode.',
+  },
+  default: {
+    message: 'This action requires additional permissions.',
+    suggestion: 'Check your assistant settings to enable this capability.',
+  },
+};
 
 const AssistantReadOnlyContext = createContext<AssistantReadOnlyContextType | undefined>(undefined);
 
 export const AssistantReadOnlyProvider = ({ children }: { children: ReactNode }) => {
-  const { isOperator, isLoading } = useAssistantProfile();
+  const { isOperator, isLoading, profile } = useAssistantProfile();
   
-  // TEMPORARY: Disable tier restrictions - log but don't block
-  // Everyone treated as analyst with basic responses allowed
-  // Also: if still loading after timeout, default to analyst (non-blocking)
-  const actualTierCheck = !isLoading && !isOperator();
-  const isReadOnly = false; // Bypassed - never block
+  const currentRole: AssistantRole = profile?.role || 'analyst';
+  const isAnalyst = !isOperator();
   
-  if (actualTierCheck && !isLoading) {
-    console.log('[Assistant] Tier check: user would be read-only, but restrictions are temporarily disabled');
-  }
+  // Analyst mode is read-only for certain actions
+  const isReadOnly = isAnalyst;
 
   const [tooltipState, setTooltipState] = useState<TooltipState>({
     visible: false,
     x: 0,
     y: 0,
     actionName: '',
+    explanation: '',
+    suggestion: '',
   });
 
-  const showTooltip = useCallback((element: HTMLElement | null, actionName: string) => {
+  const showTooltip = useCallback((
+    element: HTMLElement | null, 
+    actionName: string,
+    explanation?: string,
+    suggestion?: string
+  ) => {
     if (!element) return;
     
     const rect = element.getBoundingClientRect();
+    const explanationData = BLOCKED_EXPLANATIONS[actionName] || BLOCKED_EXPLANATIONS.default;
+    
     setTooltipState({
       visible: true,
       x: rect.left + rect.width / 2,
       y: rect.top - 8,
       actionName,
+      explanation: explanation || explanationData.message,
+      suggestion: suggestion || explanationData.suggestion,
     });
 
-    // Auto-hide after 3 seconds
+    // Auto-hide after 4 seconds
     setTimeout(() => {
       setTooltipState(prev => ({ ...prev, visible: false }));
-    }, 3000);
+    }, 4000);
   }, []);
 
   const hideTooltip = useCallback(() => {
@@ -60,17 +104,37 @@ export const AssistantReadOnlyProvider = ({ children }: { children: ReactNode })
   }, []);
 
   const interceptExecution = useCallback((actionName: string): boolean => {
-    // TEMPORARY: Log tier check but never block
-    if (actualTierCheck) {
-      console.log(`[Assistant] Execution intercepted (logged only): ${actionName}`);
+    // Skip if still loading - don't block
+    if (isLoading) {
+      return false;
     }
-    return false; // Never block - restrictions temporarily disabled
-  }, [actualTierCheck]);
+    
+    // Operators have full access
+    if (!isAnalyst) {
+      return false;
+    }
+    
+    // Analysts are blocked from certain actions
+    if (ANALYST_BLOCKED_ACTIONS.has(actionName)) {
+      console.log(`[Assistant] Analyst blocked from: ${actionName}`);
+      return true;
+    }
+    
+    // Analysts require confirmation for other actions (handled by caller)
+    if (ANALYST_REQUIRES_CONFIRMATION.has(actionName)) {
+      console.log(`[Assistant] Analyst requires confirmation for: ${actionName}`);
+      // Don't block, but log - confirmation handled by useRoleExecution
+      return false;
+    }
+    
+    return false;
+  }, [isLoading, isAnalyst]);
 
   return (
     <AssistantReadOnlyContext.Provider
       value={{
         isReadOnly,
+        currentRole,
         interceptExecution,
         tooltipState,
         showTooltip,
@@ -88,8 +152,9 @@ export const useAssistantReadOnly = () => {
     // Return safe defaults if used outside provider
     return {
       isReadOnly: true,
+      currentRole: 'analyst' as AssistantRole,
       interceptExecution: () => true,
-      tooltipState: { visible: false, x: 0, y: 0, actionName: '' },
+      tooltipState: { visible: false, x: 0, y: 0, actionName: '', explanation: '', suggestion: '' },
       showTooltip: () => {},
       hideTooltip: () => {},
     };

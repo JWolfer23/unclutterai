@@ -243,8 +243,10 @@ export const AssistantChatPanel = () => {
   const generateResponse = useCallback((userMessage: string): string => {
     try {
       const lowerMessage = userMessage.toLowerCase();
+      const currentRole = readOnlyExecution?.currentRole || 'analyst';
+      const isAnalyst = currentRole === 'analyst';
 
-      // Check for execution requests first (analyst mode blocks execution)
+      // Check for execution requests first
       for (const { pattern, action } of EXECUTION_PATTERNS) {
         if (pattern.test(lowerMessage)) {
           if (readOnlyExecution?.attemptExecution) {
@@ -252,12 +254,22 @@ export const AssistantChatPanel = () => {
             
             if (result.blocked) {
               result.showTooltip();
-              const explanation = readOnlyExecution.getExplanation?.(action) ?? 'This action requires elevated permissions.';
-              return `${explanation}\n\nExecution requires Operator authority. I can analyze and advise, but cannot modify state at Analyst tier.`;
+              // Calm, non-judgmental explanation with helpful suggestion
+              const baseExplanation = result.explanation || 'This action requires additional permissions.';
+              const suggestion = result.suggestion || (isAnalyst 
+                ? 'You can enable Operator mode in assistant settings for autonomous actions.'
+                : 'Please confirm you\'d like to proceed.');
+              
+              return `${baseExplanation}\n\n${suggestion}`;
+            }
+            
+            // Action allowed but may require confirmation
+            if (result.requiresConfirmation) {
+              return `I can ${action.replace(/([A-Z])/g, ' $1').toLowerCase().trim()} for you. Would you like me to proceed?\n\nReply "yes" to confirm, or I can explain more about this action.`;
             }
           } else {
             // Fallback if hook not ready
-            return `This action requires Operator authority. Currently operating in Analyst mode.`;
+            return `I'm still initializing. Please try again in a moment.`;
           }
         }
       }
@@ -423,8 +435,10 @@ export const AssistantChatPanel = () => {
     }
   };
 
-  // Analyst Mode is always active and locked - no conditional check needed
-  // This ensures read-only behavior without toggling capability
+  // Get current role for dynamic display
+  const currentRole = readOnlyExecution?.currentRole || 'analyst';
+  const roleDisplayText = currentRole === 'operator' ? 'Operator' : 'Analyst';
+  const roleStatusText = currentRole === 'operator' ? 'Active' : 'Suggest Only';
 
   return (
     <Card className="bg-card/50 border-border/30 backdrop-blur-sm flex-shrink-0">
@@ -432,8 +446,13 @@ export const AssistantChatPanel = () => {
         <CardTitle className="text-sm font-medium text-foreground/90 flex items-center gap-2">
           <Bot className="w-4 h-4 text-primary/70" />
           Assistant
-          <span className="text-xs text-muted-foreground font-normal ml-auto px-2 py-0.5 bg-muted/30 rounded">
-            Analyst · Read Only
+          <span className={cn(
+            "text-xs font-normal ml-auto px-2 py-0.5 rounded",
+            currentRole === 'operator' 
+              ? "bg-primary/20 text-primary" 
+              : "bg-muted/30 text-muted-foreground"
+          )}>
+            {roleDisplayText} · {roleStatusText}
           </span>
         </CardTitle>
       </CardHeader>
