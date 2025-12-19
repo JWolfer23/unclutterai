@@ -1,16 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { 
   Sparkles, 
   Brain, 
   Zap, 
   Target,
-  TrendingUp,
   Users,
   Clock,
   CheckSquare
 } from "lucide-react";
+import { BetaIndicator } from "@/components/beta";
+import { BETA_PHRASES } from "@/lib/betaMessaging";
 
 const AIAssistant = () => {
   const suggestions = [
@@ -49,11 +49,14 @@ const AIAssistant = () => {
       {/* AI Insights */}
       <Card className="glass-card bg-gradient-to-br from-purple-500/10 to-indigo-500/10">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center space-x-2 text-lg">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <Brain className="w-4 h-4 text-white" />
+          <CardTitle className="flex items-center justify-between text-lg">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-4 h-4 text-white" />
+              </div>
+              <span>AI Assistant</span>
             </div>
-            <span>AI Assistant</span>
+            <BetaIndicator variant="badge" />
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -95,14 +98,14 @@ const AIAssistant = () => {
         </CardContent>
       </Card>
 
-      {/* AI Status */}
-      <Card className="glass-card bg-gradient-to-br from-green-500/10 to-emerald-500/10">
+      {/* AI Status - Beta Training Indicator */}
+      <Card className="glass-card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/10">
         <CardContent className="p-4">
           <div className="flex items-center space-x-3">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="w-3 h-3 bg-primary/60 rounded-full animate-pulse"></div>
             <div>
-              <p className="text-sm font-medium text-green-800">AI is Learning</p>
-              <p className="text-xs text-green-600">Processing 23 new messages...</p>
+              <p className="text-sm font-medium text-foreground/80">{BETA_PHRASES.training.primary}</p>
+              <p className="text-xs text-muted-foreground">{BETA_PHRASES.training.secondary}</p>
             </div>
           </div>
         </CardContent>

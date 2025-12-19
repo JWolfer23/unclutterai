@@ -14,6 +14,7 @@ import {
   type VoiceOutputType,
   EYES_FREE_PHRASES,
 } from '@/lib/eyesFreeMode';
+import { BETA_VOICE, getSpokenError } from '@/lib/betaMessaging';
 
 export interface UseEyesFreeVoiceReturn {
   // Core speak functions that enforce rules
@@ -29,6 +30,10 @@ export interface UseEyesFreeVoiceReturn {
     actions: T[],
     formatAction: (action: T) => string
   ) => Promise<{ spoken: T | null; alternatives: T[] }>;
+  
+  
+  // Beta-friendly error handling (never blames user)
+  speakError: (technicalError?: string) => Promise<void>;
   
   // Silent acknowledgment (UI only, no voice)
   acknowledgeSilently: (uiContext: string) => void;
@@ -195,6 +200,21 @@ export function useEyesFreeVoice(): UseEyesFreeVoiceReturn {
   }, [ttsSpeak, speakReassurance, isInFocus]);
 
   /**
+   * Beta-friendly error speaking - never blames user, never says "failed"
+   */
+  const speakError = useCallback(async (technicalError?: string) => {
+    const friendlyError = getSpokenError(technicalError);
+    
+    setLastOutput({
+      type: 'reassurance',
+      spokenText: friendlyError,
+    });
+    
+    lastSpokenRef.current = Date.now();
+    await ttsSpeak(friendlyError);
+  }, [ttsSpeak]);
+
+  /**
    * Silent acknowledgment - updates UI context without speaking
    */
   const acknowledgeSilently = useCallback((uiContext: string) => {
@@ -207,6 +227,7 @@ export function useEyesFreeVoice(): UseEyesFreeVoiceReturn {
     speakReassurance,
     speak,
     speakPrimaryAction,
+    speakError,
     acknowledgeSilently,
     isSpeaking,
     isLoading,

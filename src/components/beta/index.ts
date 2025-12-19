@@ -1,0 +1,1 @@
+export { BetaIndicator } from './BetaIndicator';

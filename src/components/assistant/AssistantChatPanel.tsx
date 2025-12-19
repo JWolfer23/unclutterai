@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Bot, User, AlertCircle, Mic, Volume2, Square } from 'lucide-react';
+import { Send, Bot, User, Mic, Volume2, Square, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ENABLE_ASSISTANT_STREAMING } from '@/config/flags';
 import { useVoiceTTS } from '@/hooks/useVoiceTTS';
 import { cn } from '@/lib/utils';
+import { BetaIndicator } from '@/components/beta';
+import { humanizeError, BETA_PHRASES } from '@/lib/betaMessaging';
 // Safe mode configuration - Analyst is default and locked
 const ASSISTANT_CONFIG = {
   mode: 'analyst' as const,  // Default: Analyst mode (read-only)
@@ -24,9 +26,10 @@ const ASSISTANT_CONFIG = {
   dataTimeoutMs: 2000, // Max 2 seconds for data loading
 };
 
-const DATA_UNAVAILABLE_MESSAGE = 'No actionable insights available yet.';
-const TIMEOUT_FALLBACK_MESSAGE = 'No actionable insights available yet.';
-const FALLBACK_MESSAGE = 'No actionable insights available yet.';
+// Beta-friendly fallback messages - never blame user, never say "failed"
+const DATA_UNAVAILABLE_MESSAGE = BETA_PHRASES.limitations.learning;
+const TIMEOUT_FALLBACK_MESSAGE = BETA_PHRASES.errors.takingLonger;
+const FALLBACK_MESSAGE = BETA_PHRASES.errors.couldntComplete;
 
 interface Message {
   id: string;
@@ -446,6 +449,7 @@ export const AssistantChatPanel = () => {
         <CardTitle className="text-sm font-medium text-foreground/90 flex items-center gap-2">
           <Bot className="w-4 h-4 text-primary/70" />
           Assistant
+          <BetaIndicator variant="badge" className="ml-1" />
           <span className={cn(
             "text-xs font-normal ml-auto px-2 py-0.5 rounded",
             currentRole === 'operator' 
