@@ -201,8 +201,13 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
   };
 
   const executeCommand = useCallback(async (text: string) => {
-    if (!text.trim()) {
-      console.log('[VoiceCommand] Empty text, returning to idle');
+    // Guard: only execute if we have a valid transcript
+    if (!text || !text.trim()) {
+      console.log('[VoiceCommand] Empty text, providing feedback');
+      const noTranscriptResponse = "I didn't catch that. Try again.";
+      setLastResponse(noTranscriptResponse);
+      setStatus('speaking');
+      await speak(noTranscriptResponse);
       setStatus('idle');
       return;
     }
@@ -326,24 +331,23 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
     
     console.log('[VoiceCommand] Final transcript:', finalTranscript);
     
+    // Only execute if we have a valid transcript
     if (finalTranscript && finalTranscript.trim()) {
       setTranscript(finalTranscript);
       // Execute the command with the final transcript
       await executeCommand(finalTranscript);
     } else {
-      // No transcript - provide helpful feedback with suggestions
-      console.log('[VoiceCommand] No transcript or error');
-      const helpfulResponse = whisperError 
-        ? SUGGESTION_RESPONSE
-        : SUGGESTION_RESPONSE;
-      setLastResponse(helpfulResponse);
+      // No transcript - provide specific "didn't catch that" feedback
+      console.log('[VoiceCommand] No transcript received');
+      const didntCatchResponse = "I didn't catch that. Try again.";
+      setLastResponse(didntCatchResponse);
       
-      // Speak the suggestion then return to idle
+      // Speak the response then return to idle
       setStatus('speaking');
-      await speak(helpfulResponse);
+      await speak(didntCatchResponse);
       setStatus('idle');
     }
-  }, [isRecording, stopRecording, executeCommand, whisperError, speak]);
+  }, [isRecording, stopRecording, executeCommand, speak]);
 
   // Derive effective status - account for transcribing state
   const effectiveStatus: VoiceStatus = 
