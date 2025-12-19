@@ -24,6 +24,13 @@ interface FocusProtectionState {
   startTime: Date | null;
   suppressNotifications: boolean;
   queuedItems: QueuedItem[];
+  // Track interruption events for analytics
+  interruptionLog: Array<{
+    timestamp: Date;
+    urgency: 'critical' | 'time_sensitive' | 'informational';
+    allowed: boolean;
+    reason: string;
+  }>;
 }
 
 interface FocusProtectionContextType {
@@ -34,6 +41,8 @@ interface FocusProtectionContextType {
   markItemHandled: (itemId: string) => void;
   shouldAllowInterruption: (urgency: 'critical' | 'time_sensitive' | 'informational') => boolean;
   getQueuedItems: () => QueuedItem[];
+  logInterruption: (urgency: 'critical' | 'time_sensitive' | 'informational', allowed: boolean, reason: string) => void;
+  getInterruptionLog: () => FocusProtectionState['interruptionLog'];
 }
 
 const initialState: FocusProtectionState = {
@@ -42,31 +51,42 @@ const initialState: FocusProtectionState = {
   startTime: null,
   suppressNotifications: false,
   queuedItems: [],
+  interruptionLog: [],
 };
 
 const FocusProtectionContext = createContext<FocusProtectionContextType | null>(null);
 
 export const FocusProtectionProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<FocusProtectionState>(initialState);
-  const { profile, shouldInterrupt } = useAssistantProfile();
+  const { profile } = useAssistantProfile();
   const itemIdCounter = useRef(0);
 
   const enterFocus = useCallback((sessionId: string) => {
+    console.log('[FocusProtection] Entering focus mode:', sessionId);
     setState({
       isInFocus: true,
       sessionId,
       startTime: new Date(),
       suppressNotifications: true,
       queuedItems: [],
+      interruptionLog: [],
     });
   }, []);
 
   const exitFocus = useCallback((): FocusSummary => {
-    const { queuedItems } = state;
+    const { queuedItems, interruptionLog } = state;
     
     const itemsReceived = queuedItems.length;
     const itemsHandled = queuedItems.filter(item => item.handled).length;
     const itemsNeedingAttention = queuedItems.filter(item => !item.handled).length;
+
+    console.log('[FocusProtection] Exiting focus mode. Summary:', {
+      itemsReceived,
+      itemsHandled,
+      itemsNeedingAttention,
+      totalInterruptions: interruptionLog.length,
+      allowedInterruptions: interruptionLog.filter(l => l.allowed).length,
+    });
 
     // Reset state
     setState(initialState);
@@ -86,6 +106,8 @@ export const FocusProtectionProvider = ({ children }: { children: ReactNode }) =
       timestamp: new Date(),
     };
 
+    console.log('[FocusProtection] Queuing item:', newItem.title, 'Urgency:', newItem.urgency);
+
     setState(prev => ({
       ...prev,
       queuedItems: [...prev.queuedItems, newItem],
@@ -101,31 +123,67 @@ export const FocusProtectionProvider = ({ children }: { children: ReactNode }) =
     }));
   }, []);
 
+  /**
+   * Global interruption rule:
+   * 
+   * Default: No interruptions during focus
+   * 
+   * May interrupt ONLY if:
+   * 1. User explicitly allows via interruptionPreference
+   * 2. OR urgency is 'critical' (always allowed)
+   * 
+   * Otherwise: Defer
+   */
   const shouldAllowInterruption = useCallback((urgency: 'critical' | 'time_sensitive' | 'informational'): boolean => {
     // If not in focus, always allow
     if (!state.isInFocus) return true;
 
+    // Critical items ALWAYS interrupt - safety net
+    if (urgency === 'critical') {
+      console.log('[FocusProtection] Critical urgency - allowing interruption');
+      return true;
+    }
+
     // Use assistant profile's interruption preference
     const interruptionPref = profile?.interruptionPreference || 'minimal';
 
-    // Interruption mapping based on preference:
-    // - 'minimal' → only 'critical' interrupts
+    // Default during focus: minimal interruptions
+    // - 'minimal' → only 'critical' interrupts (already handled above)
     // - 'time_sensitive' → 'critical' + 'time_sensitive' interrupt
-    // - 'balanced' → all levels can interrupt
+    // - 'balanced' → all levels can interrupt (not recommended during focus)
     switch (interruptionPref) {
       case 'minimal':
-        return urgency === 'critical';
+        // Only critical allowed (already handled)
+        return false;
       case 'time_sensitive':
-        return urgency === 'critical' || urgency === 'time_sensitive';
+        return urgency === 'time_sensitive';
       case 'balanced':
+        // User explicitly allows all interruptions
         return true;
       default:
-        // Default to minimal interruptions
-        return urgency === 'critical';
+        // Default to no interruptions during focus
+        return false;
     }
   }, [state.isInFocus, profile?.interruptionPreference]);
 
+  const logInterruption = useCallback((
+    urgency: 'critical' | 'time_sensitive' | 'informational',
+    allowed: boolean,
+    reason: string
+  ) => {
+    if (!state.isInFocus) return;
+
+    setState(prev => ({
+      ...prev,
+      interruptionLog: [
+        ...prev.interruptionLog,
+        { timestamp: new Date(), urgency, allowed, reason },
+      ],
+    }));
+  }, [state.isInFocus]);
+
   const getQueuedItems = useCallback(() => state.queuedItems, [state.queuedItems]);
+  const getInterruptionLog = useCallback(() => state.interruptionLog, [state.interruptionLog]);
 
   return (
     <FocusProtectionContext.Provider
@@ -137,6 +195,8 @@ export const FocusProtectionProvider = ({ children }: { children: ReactNode }) =
         markItemHandled,
         shouldAllowInterruption,
         getQueuedItems,
+        logInterruption,
+        getInterruptionLog,
       }}
     >
       {children}
