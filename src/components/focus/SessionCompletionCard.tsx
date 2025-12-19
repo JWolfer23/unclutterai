@@ -4,15 +4,38 @@ import { Textarea } from "@/components/ui/textarea";
 import { useFocusAnalytics } from "@/hooks/useFocusAnalytics";
 import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import { FocusTierBadge } from "./FocusTierBadge";
 import { LevelUpAnimation, InlineLevelGlow } from "./LevelUpAnimation";
 import { FocusSystemExplainerModal } from "./FocusSystemExplainerModal";
+import { useVoiceTTS } from "@/hooks/useVoiceTTS";
+import { useDriverMode } from "@/hooks/useDriverMode";
+import { useOnboardingMissions } from "@/hooks/useOnboardingMissions";
 import { 
   getLevelIdentity, 
   getLevelEncouragement, 
   getStreakEncouragement 
 } from "@/lib/focusMicroCopy";
-import { TRUST_MOMENTS } from "@/lib/assistantPersonality";
+
+// Trust-focused completion messages
+const COMPLETION_MESSAGES = {
+  // Default message - reinforces trust, not productivity
+  default: {
+    primary: "Focus complete.",
+    secondary: "Your attention was protected.",
+  },
+  // First session - extra reinforcement
+  first: {
+    primary: "Focus complete.",
+    secondary: "Your attention was protected.",
+    bonus: "+10 UCT first session bonus",
+  },
+};
+
+// Driver Mode voice confirmations
+const DRIVER_VOICE = {
+  completion: "Focus complete. Nothing important was missed.",
+};
 
 interface XPData {
   xp_earned: number;
@@ -55,6 +78,30 @@ export const SessionCompletionCard = ({
   const navigate = useNavigate();
   const { weeklyTier, focusLevel } = useFocusAnalytics();
   const { currentStreak } = useFocusStreaks();
+  const { speak } = useVoiceTTS();
+  const { isActive: isDriverMode } = useDriverMode();
+  const { missions } = useOnboardingMissions();
+  const hasSpokenRef = useRef(false);
+  const [isFirstSession, setIsFirstSession] = useState(false);
+
+  // Check if this is first focus session
+  useEffect(() => {
+    const focusMission = missions.find(m => m.id === 'first_focus');
+    // If mission just completed (within this session), it's first
+    const justCompleted = focusMission?.completedAt && 
+      new Date(focusMission.completedAt).getTime() > Date.now() - 60000; // Within last minute
+    setIsFirstSession(!!justCompleted);
+  }, [missions]);
+
+  // Speak completion in Driver Mode
+  useEffect(() => {
+    if (isDriverMode && !hasSpokenRef.current) {
+      hasSpokenRef.current = true;
+      setTimeout(() => {
+        speak(DRIVER_VOICE.completion);
+      }, 500);
+    }
+  }, [isDriverMode, speak]);
 
   const tierKey = weeklyTier.tier.toLowerCase();
   const tierStyle = TIER_STYLES[tierKey] || TIER_STYLES.none;
@@ -83,17 +130,32 @@ export const SessionCompletionCard = ({
     general: "Focus Mode",
   };
 
+  const completionMessage = isFirstSession ? COMPLETION_MESSAGES.first : COMPLETION_MESSAGES.default;
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 relative">
       {/* Level Up Animation */}
       <LevelUpAnimation show={leveledUp} newLevel={level} />
 
-      {/* Trust Moment #4: Focus Protection - most powerful moment */}
-      <div className="flex items-center justify-center gap-3 py-4">
-        <Shield className="w-5 h-5 text-emerald-400/70" />
-        <p className="text-lg text-white/80 font-light">
-          {TRUST_MOMENTS.focusProtection.primary}
+      {/* Trust-focused completion message */}
+      <div className="flex flex-col items-center justify-center gap-2 py-4">
+        <div className="flex items-center gap-3">
+          <Shield className="w-5 h-5 text-emerald-400/70" />
+          <p className="text-lg text-foreground/90 font-light">
+            {completionMessage.primary}
+          </p>
+        </div>
+        <p className="text-muted-foreground text-sm">
+          {completionMessage.secondary}
         </p>
+        {isFirstSession && (
+          <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 animate-in fade-in duration-500">
+            <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+            <span className="text-violet-300 text-xs">
+              +10 UCT first session bonus
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Reward Summary Card */}
