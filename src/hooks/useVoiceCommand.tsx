@@ -9,6 +9,7 @@ import {
   ParsedCommand, 
   CommandResult, 
   RESPONSE_TEMPLATES,
+  SUGGESTION_RESPONSE,
 } from '@/lib/voiceCommands';
 
 type VoiceStatus = 'idle' | 'listening' | 'processing' | 'speaking' | 'confirming';
@@ -100,13 +101,15 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
         case 'summarize_messages': {
           const unreadMessages = messages?.filter(m => !m.is_read) || [];
           const count = unreadMessages.length;
-          return {
-            success: true,
-            response: count > 0 
-              ? `You have ${count} unread messages. ${unreadMessages.slice(0, 3).map(m => m.sender_name).join(', ')} and others.`
-              : "No unread messages.",
-            data: { count }
-          };
+          if (count > 0) {
+            const senders = unreadMessages.slice(0, 3).map(m => m.sender_name).join(', ');
+            return {
+              success: true,
+              response: `You have ${count} unread message${count > 1 ? 's' : ''} from ${senders}${count > 3 ? ' and others' : ''}.`,
+              data: { count }
+            };
+          }
+          return { success: true, response: "No urgent items detected. Your inbox is clear." };
         }
 
         case 'read_priority': {
@@ -119,7 +122,7 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
               data: first
             };
           }
-          return { success: true, response: "No priority messages." };
+          return { success: true, response: "No urgent items detected. Nothing requires immediate attention." };
         }
 
         case 'archive': {
@@ -150,7 +153,7 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
 
         case 'whats_next': {
           navigate('/');
-          return { success: true, response: "Showing what's next." };
+          return { success: true, response: "Here's what to focus on." };
         }
 
         case 'run_morning_brief': {
@@ -236,7 +239,12 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
       setStatus('idle');
     } catch (error) {
       console.error('[VoiceCommand] Execution error:', error);
-      setLastResponse("Something went wrong.");
+      const errorResponse = SUGGESTION_RESPONSE;
+      setLastResponse(errorResponse);
+      
+      // Always speak feedback before returning to idle
+      setStatus('speaking');
+      await speak(errorResponse);
       setStatus('idle');
     } finally {
       isProcessingRef.current = false;
@@ -260,17 +268,23 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
       setStatus('idle');
     } catch (error) {
       console.error('[VoiceCommand] Confirm action error:', error);
+      const errorResponse = "Something went wrong. Try again.";
+      setLastResponse(errorResponse);
+      setStatus('speaking');
+      await speak(errorResponse);
       setStatus('idle');
     } finally {
       isProcessingRef.current = false;
     }
   };
 
-  const cancelAction = () => {
+  const cancelAction = async () => {
     setConfirmation(null);
     setPendingCommand(null);
+    setLastResponse("Cancelled.");
+    setStatus('speaking');
+    await speak("Cancelled.");
     setStatus('idle');
-    speak("Cancelled.");
   };
 
   // Start listening - called on press
@@ -315,18 +329,20 @@ export const useVoiceCommand = (): UseVoiceCommandReturn => {
       setTranscript(finalTranscript);
       // Execute the command with the final transcript
       await executeCommand(finalTranscript);
-    } else if (whisperError) {
-      // Show error and return to idle
-      console.log('[VoiceCommand] Whisper error:', whisperError);
-      setLastResponse("Didn't catch that. Try again.");
-      setStatus('idle');
     } else {
-      // No transcript, return to idle
-      console.log('[VoiceCommand] No transcript captured');
-      setLastResponse("Didn't catch that. Try again.");
+      // No transcript - provide helpful feedback with suggestions
+      console.log('[VoiceCommand] No transcript or error');
+      const helpfulResponse = whisperError 
+        ? SUGGESTION_RESPONSE
+        : SUGGESTION_RESPONSE;
+      setLastResponse(helpfulResponse);
+      
+      // Speak the suggestion then return to idle
+      setStatus('speaking');
+      await speak(helpfulResponse);
       setStatus('idle');
     }
-  }, [isRecording, stopRecording, executeCommand, whisperError]);
+  }, [isRecording, stopRecording, executeCommand, whisperError, speak]);
 
   // Derive effective status - account for transcribing state
   const effectiveStatus: VoiceStatus = 

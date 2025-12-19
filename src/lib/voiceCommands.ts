@@ -52,7 +52,7 @@ export const RESPONSE_TEMPLATES: Record<CommandAction, (context?: string) => str
   reply: (context) => context ? `Sending reply: ${context}` : "Reply sent.",
   archive: (context) => context ? `Archived ${context} messages.` : "Archived.",
   remind: (context) => context ? `Reminder set for ${context}.` : "Reminder set.",
-  whats_next: () => "Here's what's next.",
+  whats_next: () => "Here's what to focus on.",
   schedule: (context) => context ? `Scheduled for ${context}.` : "Scheduled.",
   create_task: (context) => context ? `Task created: ${context}` : "Task created.",
   what_can_wait: () => "These items can wait.",
@@ -66,8 +66,11 @@ export const RESPONSE_TEMPLATES: Record<CommandAction, (context?: string) => str
   explain_simply: () => "Here's a simpler explanation.",
   is_important: () => "Analyzing importance.",
   whats_the_risk: () => "Assessing risk.",
-  unknown: () => "I didn't understand that command.",
+  unknown: () => "Try: \"What's next?\" or \"Run morning brief\"",
 };
+
+// Suggestion response for unclear commands
+export const SUGGESTION_RESPONSE = "You can ask: \"What's next?\", \"Run morning brief\", or \"Create task\"";
 
 // Quick command suggestions
 export const QUICK_COMMANDS = [
