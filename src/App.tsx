@@ -3,7 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import Index from "./pages/Index";
 import EmailSetup from "./pages/EmailSetup";
 import CryptoIntegration from "./pages/CryptoIntegration";
@@ -32,11 +33,24 @@ import { useAuth } from "@/hooks/useAuth";
 import { SecurityProvider } from "@/components/SecurityProvider";
 import { AssistantProfileProvider } from "@/components/AssistantProfileProvider";
 import { FocusProtectionProvider } from "@/contexts/FocusProtectionContext";
+import { AssistantMemoryProvider, useAssistantMemory } from "@/contexts/AssistantMemoryContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
-const App = () => {
+// Component to track navigation for assistant memory continuity
+const NavigationTracker = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const { setLastVisitedScreen } = useAssistantMemory();
+  
+  useEffect(() => {
+    setLastVisitedScreen(location.pathname);
+  }, [location.pathname, setLastVisitedScreen]);
+  
+  return <>{children}</>;
+};
+
+const AppRoutes = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -44,52 +58,62 @@ const App = () => {
   }
 
   return (
+    <NavigationTracker>
+      <Routes>
+        <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
+        <Route path="/reset" element={<PasswordReset />} />
+        <Route path="/" element={user ? <Index /> : <Navigate to="/auth" replace />} />
+        <Route path="/email-setup" element={user ? <EmailSetup /> : <Navigate to="/auth" replace />} />
+        <Route path="/crypto-integration" element={user ? <CryptoIntegration /> : <Navigate to="/auth" replace />} />
+        
+        {/* Executive Mode Routes */}
+        <Route path="/morning-brief" element={user ? <MorningBrief /> : <Navigate to="/auth" replace />} />
+        <Route path="/voice" element={user ? <VoiceCommand /> : <Navigate to="/auth" replace />} />
+        <Route path="/open-loops" element={user ? <UnclutterMode /> : <Navigate to="/auth" replace />} />
+        <Route path="/focus" element={user ? <FocusMode /> : <Navigate to="/auth" replace />} />
+        
+        {/* Life OS Routes */}
+        <Route path="/communication" element={user ? <CommunicationMode /> : <Navigate to="/auth" replace />} />
+        <Route path="/intelligence" element={user ? <IntelligenceFeed /> : <Navigate to="/auth" replace />} />
+        <Route path="/health" element={user ? <HealthMode /> : <Navigate to="/auth" replace />} />
+        <Route path="/strategy" element={user ? <StrategyWealth /> : <Navigate to="/auth" replace />} />
+        
+        {/* System Routes */}
+        <Route path="/uct-tokens" element={user ? <UCTTokens /> : <Navigate to="/auth" replace />} />
+        <Route path="/customize" element={user ? <CustomizeAI /> : <Navigate to="/auth" replace />} />
+        <Route path="/pricing" element={user ? <Pricing /> : <Navigate to="/auth" replace />} />
+        <Route path="/community" element={user ? <CommunityRanking /> : <Navigate to="/auth" replace />} />
+        <Route path="/performance" element={user ? <PerformanceReport /> : <Navigate to="/auth" replace />} />
+        <Route path="/what-handled" element={user ? <WhatIHandled /> : <Navigate to="/auth" replace />} />
+        
+        {/* Legacy routes for backward compatibility */}
+        <Route path="/news" element={user ? <NewsMode /> : <Navigate to="/auth" replace />} />
+        <Route path="/learning" element={user ? <LearningMode /> : <Navigate to="/auth" replace />} />
+        <Route path="/career" element={user ? <CareerMode /> : <Navigate to="/auth" replace />} />
+        <Route path="/wealth" element={user ? <WealthMode /> : <Navigate to="/auth" replace />} />
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </NavigationTracker>
+  );
+};
+
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>
         <SecurityProvider>
           <AssistantProfileProvider>
             <FocusProtectionProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Routes>
-                  <Route path="/auth" element={user ? <Navigate to="/" replace /> : <AuthPage />} />
-                  <Route path="/reset" element={<PasswordReset />} />
-                  <Route path="/" element={user ? <Index /> : <Navigate to="/auth" replace />} />
-                  <Route path="/email-setup" element={user ? <EmailSetup /> : <Navigate to="/auth" replace />} />
-                  <Route path="/crypto-integration" element={user ? <CryptoIntegration /> : <Navigate to="/auth" replace />} />
-                  
-                  {/* Executive Mode Routes */}
-                  <Route path="/morning-brief" element={user ? <MorningBrief /> : <Navigate to="/auth" replace />} />
-                  <Route path="/voice" element={user ? <VoiceCommand /> : <Navigate to="/auth" replace />} />
-                  <Route path="/open-loops" element={user ? <UnclutterMode /> : <Navigate to="/auth" replace />} />
-                  <Route path="/focus" element={user ? <FocusMode /> : <Navigate to="/auth" replace />} />
-                  
-                  {/* Life OS Routes */}
-                  <Route path="/communication" element={user ? <CommunicationMode /> : <Navigate to="/auth" replace />} />
-                  <Route path="/intelligence" element={user ? <IntelligenceFeed /> : <Navigate to="/auth" replace />} />
-                  <Route path="/health" element={user ? <HealthMode /> : <Navigate to="/auth" replace />} />
-                  <Route path="/strategy" element={user ? <StrategyWealth /> : <Navigate to="/auth" replace />} />
-                  
-                  {/* System Routes */}
-                  <Route path="/uct-tokens" element={user ? <UCTTokens /> : <Navigate to="/auth" replace />} />
-                  <Route path="/customize" element={user ? <CustomizeAI /> : <Navigate to="/auth" replace />} />
-                  <Route path="/pricing" element={user ? <Pricing /> : <Navigate to="/auth" replace />} />
-                  <Route path="/community" element={user ? <CommunityRanking /> : <Navigate to="/auth" replace />} />
-                  <Route path="/performance" element={user ? <PerformanceReport /> : <Navigate to="/auth" replace />} />
-                  <Route path="/what-handled" element={user ? <WhatIHandled /> : <Navigate to="/auth" replace />} />
-                  
-                  {/* Legacy routes for backward compatibility */}
-                  <Route path="/news" element={user ? <NewsMode /> : <Navigate to="/auth" replace />} />
-                  <Route path="/learning" element={user ? <LearningMode /> : <Navigate to="/auth" replace />} />
-                  <Route path="/career" element={user ? <CareerMode /> : <Navigate to="/auth" replace />} />
-                  <Route path="/wealth" element={user ? <WealthMode /> : <Navigate to="/auth" replace />} />
-                  
-                  <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </TooltipProvider>
+              <AssistantMemoryProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <AppRoutes />
+                  </BrowserRouter>
+                </TooltipProvider>
+              </AssistantMemoryProvider>
             </FocusProtectionProvider>
           </AssistantProfileProvider>
         </SecurityProvider>
