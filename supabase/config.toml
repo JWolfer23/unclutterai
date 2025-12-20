@@ -107,3 +107,9 @@ verify_jwt = true
 
 [functions.speech-to-text]
 verify_jwt = true
+
+[functions.microsoft-oauth-start]
+verify_jwt = true
+
+[functions.microsoft-oauth-callback]
+verify_jwt = false
