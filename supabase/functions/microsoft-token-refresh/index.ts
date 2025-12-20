@@ -1,29 +1,64 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decode as hexDecode, encode as hexEncode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Simple XOR-based encryption (same as callback)
-const ENCRYPTION_KEY = Deno.env.get("TOKEN_ENCRYPTION_KEY") || "default-key-change-in-production";
+// AES-GCM encryption matching gmail-sync security pattern
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 
-function xorEncrypt(text: string, key: string): string {
-  let result = "";
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return btoa(result);
+async function decryptToken(encryptedHex: string, key: string): Promise<string> {
+  // Decode hex to bytes
+  const combined = hexDecode(encoder.encode(encryptedHex));
+
+  // Extract IV and encrypted data
+  const iv = combined.slice(0, 12);
+  const encrypted = combined.slice(12);
+
+  // Create key from secret
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(key.padEnd(32, '0').slice(0, 32)),
+    { name: 'AES-GCM' },
+    false,
+    ['decrypt']
+  );
+
+  // Decrypt
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    keyMaterial,
+    encrypted
+  );
+
+  return decoder.decode(decrypted);
 }
 
-function xorDecrypt(encoded: string, key: string): string {
-  const text = atob(encoded);
-  let result = "";
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return result;
+async function encryptToken(token: string, key: string): Promise<string> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(key.padEnd(32, '0').slice(0, 32)),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    keyMaterial,
+    encoder.encode(token)
+  );
+
+  const combined = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
+  combined.set(iv);
+  combined.set(new Uint8Array(encrypted), iv.length);
+
+  return decoder.decode(hexEncode(combined));
 }
 
 serve(async (req) => {
@@ -42,6 +77,12 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const encryptionKey = Deno.env.get("TOKEN_ENCRYPTION_KEY");
+
+    if (!encryptionKey) {
+      throw new Error("Encryption key not configured");
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get user from JWT
@@ -71,8 +112,8 @@ serve(async (req) => {
       throw new Error("Credential not found");
     }
 
-    // Decrypt the refresh token
-    const refreshToken = xorDecrypt(credential.refresh_token_encrypted, ENCRYPTION_KEY);
+    // Decrypt the refresh token using AES-GCM
+    const refreshToken = await decryptToken(credential.refresh_token_encrypted, encryptionKey);
 
     // Exchange refresh token for new access token
     const clientId = Deno.env.get("MICROSOFT_CLIENT_ID");
@@ -138,10 +179,10 @@ serve(async (req) => {
     // Calculate new expiration time
     const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000)).toISOString();
 
-    // Encrypt new tokens
-    const encryptedAccessToken = xorEncrypt(tokenData.access_token, ENCRYPTION_KEY);
+    // Encrypt new tokens using AES-GCM
+    const encryptedAccessToken = await encryptToken(tokenData.access_token, encryptionKey);
     const encryptedRefreshToken = tokenData.refresh_token 
-      ? xorEncrypt(tokenData.refresh_token, ENCRYPTION_KEY)
+      ? await encryptToken(tokenData.refresh_token, encryptionKey)
       : credential.refresh_token_encrypted; // Keep old refresh token if not returned
 
     // Update credential with new tokens
