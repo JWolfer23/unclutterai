@@ -264,6 +264,34 @@ export const useMicrosoftAuth = () => {
   const activeCredential = credentials.find(c => c.is_active);
   const inactiveCredential = credentials.find(c => !c.is_active);
 
+  // Sync emails from Microsoft
+  const syncEmails = useCallback(async (): Promise<{ success: boolean; synced?: number; error?: string }> => {
+    if (!user || !activeCredential) {
+      return { success: false, error: 'No active Microsoft connection' };
+    }
+
+    try {
+      const response = await supabase.functions.invoke('microsoft-sync');
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Sync failed');
+      }
+
+      const result = response.data;
+
+      if (result.needsReconnect) {
+        setNeedsReconnect(true);
+        await fetchCredentials();
+        return { success: false, error: result.error };
+      }
+
+      return { success: true, synced: result.synced };
+    } catch (err) {
+      console.error('Microsoft sync failed:', err);
+      return { success: false, error: err instanceof Error ? err.message : 'Sync failed' };
+    }
+  }, [user, activeCredential, fetchCredentials]);
+
   return {
     credentials,
     activeCredential,
@@ -277,6 +305,7 @@ export const useMicrosoftAuth = () => {
     disconnectMicrosoft,
     refreshToken,
     ensureValidToken,
+    syncEmails,
     refetch: fetchCredentials,
   };
 };

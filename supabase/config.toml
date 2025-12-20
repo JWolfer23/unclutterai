@@ -116,3 +116,6 @@ verify_jwt = false
 
 [functions.microsoft-token-refresh]
 verify_jwt = true
+
+[functions.microsoft-sync]
+verify_jwt = true
