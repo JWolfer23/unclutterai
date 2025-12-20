@@ -119,3 +119,6 @@ verify_jwt = true
 
 [functions.microsoft-sync]
 verify_jwt = true
+
+[functions.microsoft-calendar-sync]
+verify_jwt = true
