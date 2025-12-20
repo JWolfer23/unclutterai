@@ -11,6 +11,7 @@
 export type MissionId = 
   | 'assistant_setup'
   | 'connect_gmail'
+  | 'connect_microsoft'
   | 'first_unclutter'
   | 'first_focus';
 
@@ -35,8 +36,15 @@ export const ONBOARDING_MISSIONS: Mission[] = [
   },
   {
     id: 'connect_gmail',
-    title: 'Connect Messaging',
+    title: 'Connect Gmail',
     description: 'Link your Gmail account',
+    reward: 10,
+    icon: 'Mail',
+  },
+  {
+    id: 'connect_microsoft',
+    title: 'Connect Microsoft',
+    description: 'Link your Outlook account',
     reward: 10,
     icon: 'Mail',
   },

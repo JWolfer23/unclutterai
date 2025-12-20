@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { useOnboardingMissions } from '@/hooks/useOnboardingMissions';
 
 interface MicrosoftCredential {
   id: string;
@@ -23,11 +24,13 @@ interface RefreshResult {
 
 export const useMicrosoftAuth = () => {
   const { user } = useAuth();
+  const { checkAndCompleteMission } = useOnboardingMissions();
   const [credentials, setCredentials] = useState<MicrosoftCredential[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [needsReconnect, setNeedsReconnect] = useState(false);
+  const missionAwardedRef = useRef(false);
 
   // Fetch Microsoft credentials
   const fetchCredentials = useCallback(async () => {
@@ -148,10 +151,16 @@ export const useMicrosoftAuth = () => {
 
     if (microsoftConnected === 'true' && microsoftEmail) {
       setNeedsReconnect(false);
-      toast({
-        title: "Microsoft Connected",
-        description: `Successfully connected ${microsoftEmail}`,
-      });
+      
+      // Award UCT for first Microsoft connection
+      if (!missionAwardedRef.current) {
+        missionAwardedRef.current = true;
+        checkAndCompleteMission('connect_microsoft');
+        toast({
+          title: "Microsoft connected",
+          description: "Your assistant has more context now.",
+        });
+      }
       
       // Clean up URL params
       const newUrl = new URL(window.location.href);
