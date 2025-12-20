@@ -115,22 +115,23 @@ serve(async (req) => {
 
     console.log(`Scanning unread emails for user: ${user.id}`);
 
-    // Fetch unread, non-archived emails only
+    // Fetch unread, non-archived emails from ALL providers (Gmail, Outlook)
+    // Source-agnostic: we don't filter by channel_type
     const { data: messages, error: messagesError } = await supabase
       .from('messages')
-      .select('id, subject, sender_name, sender_email, content, received_at')
+      .select('id, subject, sender_name, sender_email, content, received_at, priority_score, channel_type')
       .eq('user_id', user.id)
       .eq('is_read', false)
       .eq('is_archived', false)
-      .order('received_at', { ascending: false })
-      .limit(30);
+      .eq('is_spam', false)
+      .limit(50);
 
     if (messagesError) {
       console.error('Error fetching messages:', messagesError);
       throw messagesError;
     }
 
-    console.log(`Found ${messages?.length || 0} unread messages`);
+    console.log(`Found ${messages?.length || 0} unread messages from all providers`);
 
     if (!messages || messages.length === 0) {
       return new Response(JSON.stringify({ loops: [] }), {
@@ -138,9 +139,24 @@ serve(async (req) => {
       });
     }
 
+    // Sort by urgency (priority_score descending) + received time (recent first)
+    // This creates a unified, source-agnostic ordering
+    const sortedMessages = [...messages].sort((a, b) => {
+      // Higher priority_score = more urgent (priority first)
+      const priorityDiff = (b.priority_score || 3) - (a.priority_score || 3);
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // Then by received time (most recent first)
+      return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
+    });
+
+    // Limit to 30 for processing
+    const messagesToProcess = sortedMessages.slice(0, 30);
+
     // Generate summaries for each message
+    // Note: We intentionally do NOT expose channel_type to the frontend
     const loops: Loop[] = await Promise.all(
-      messages.map(async (msg) => ({
+      messagesToProcess.map(async (msg) => ({
         id: `loop-${msg.id}`,
         messageId: msg.id,
         subject: msg.subject,
@@ -151,7 +167,7 @@ serve(async (req) => {
       }))
     );
 
-    console.log(`Generated ${loops.length} loop summaries`);
+    console.log(`Generated ${loops.length} loop summaries (source-agnostic)`);
 
     return new Response(JSON.stringify({ loops }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
