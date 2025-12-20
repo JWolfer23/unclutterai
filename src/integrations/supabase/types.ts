@@ -312,6 +312,60 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          created_at: string
+          end_time: string
+          external_event_id: string
+          id: string
+          is_all_day: boolean | null
+          is_cancelled: boolean | null
+          location: string | null
+          organizer_email: string | null
+          organizer_name: string | null
+          provider: string
+          show_as: string | null
+          start_time: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          external_event_id: string
+          id?: string
+          is_all_day?: boolean | null
+          is_cancelled?: boolean | null
+          location?: string | null
+          organizer_email?: string | null
+          organizer_name?: string | null
+          provider?: string
+          show_as?: string | null
+          start_time: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          external_event_id?: string
+          id?: string
+          is_all_day?: boolean | null
+          is_cancelled?: boolean | null
+          location?: string | null
+          organizer_email?: string | null
+          organizer_name?: string | null
+          provider?: string
+          show_as?: string | null
+          start_time?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_credentials: {
         Row: {
           access_token_encrypted: string
