@@ -1,22 +1,37 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
+import { encode as hexEncode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Simple XOR-based encryption for token storage
-function encryptToken(token: string, key: string): string {
-  const keyBytes = new TextEncoder().encode(key);
-  const tokenBytes = new TextEncoder().encode(token);
-  const encrypted = new Uint8Array(tokenBytes.length);
-  
-  for (let i = 0; i < tokenBytes.length; i++) {
-    encrypted[i] = tokenBytes[i] ^ keyBytes[i % keyBytes.length];
-  }
-  
-  return btoa(String.fromCharCode(...encrypted));
+// AES-GCM encryption matching gmail-sync security pattern
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+async function encryptToken(token: string, key: string): Promise<string> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(key.padEnd(32, '0').slice(0, 32)),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    keyMaterial,
+    encoder.encode(token)
+  );
+
+  const combined = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
+  combined.set(iv);
+  combined.set(new Uint8Array(encrypted), iv.length);
+
+  return decoder.decode(hexEncode(combined));
 }
 
 serve(async (req) => {
@@ -63,7 +78,14 @@ serve(async (req) => {
     const clientSecret = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const encryptionKey = Deno.env.get('TOKEN_ENCRYPTION_KEY') || 'default-key-change-me';
+    const encryptionKey = Deno.env.get('TOKEN_ENCRYPTION_KEY');
+
+    if (!encryptionKey) {
+      console.error('TOKEN_ENCRYPTION_KEY not configured');
+      const errorRedirect = new URL(redirect_url);
+      errorRedirect.searchParams.set('microsoft_error', 'configuration_error');
+      return Response.redirect(errorRedirect.toString(), 302);
+    }
 
     const redirectUri = `${supabaseUrl}/functions/v1/microsoft-oauth-callback`;
 
@@ -116,9 +138,9 @@ serve(async (req) => {
     // Store credentials in database using service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Encrypt tokens before storage
-    const encryptedAccessToken = encryptToken(tokens.access_token, encryptionKey);
-    const encryptedRefreshToken = encryptToken(tokens.refresh_token || '', encryptionKey);
+    // Encrypt tokens using AES-GCM before storage
+    const encryptedAccessToken = await encryptToken(tokens.access_token, encryptionKey);
+    const encryptedRefreshToken = await encryptToken(tokens.refresh_token || '', encryptionKey);
 
     // Calculate token expiry
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000)).toISOString();

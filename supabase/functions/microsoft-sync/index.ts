@@ -1,36 +1,93 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decode as hexDecode, encode as hexEncode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for CORS - matching gmail-sync security pattern
+const allowedOrigins = [
+  'https://c60e33de-49ec-4dd9-ac69-f86f4e5a2b40.lovableproject.com',
+  'https://lovable.dev',
+  /^https:\/\/.*\.lovable\.app$/,
+  /^https:\/\/.*\.lovableproject\.com$/,
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
 
-// XOR-based decryption (matching the OAuth callback encryption)
-const ENCRYPTION_KEY = Deno.env.get("TOKEN_ENCRYPTION_KEY") || "default-key-change-in-production";
-
-function xorDecrypt(encoded: string, key: string): string {
-  const text = atob(encoded);
-  let result = "";
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return result;
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  return allowedOrigins.some(allowed =>
+    typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+  );
 }
 
-function xorEncrypt(text: string, key: string): string {
-  let result = "";
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return btoa(result);
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = isAllowedOrigin(origin) ? origin! : '';
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
+
+// AES-GCM encryption matching gmail-sync security pattern
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+async function decryptToken(encryptedHex: string, key: string): Promise<string> {
+  // Decode hex to bytes
+  const combined = hexDecode(encoder.encode(encryptedHex));
+
+  // Extract IV and encrypted data
+  const iv = combined.slice(0, 12);
+  const encrypted = combined.slice(12);
+
+  // Create key from secret
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(key.padEnd(32, '0').slice(0, 32)),
+    { name: 'AES-GCM' },
+    false,
+    ['decrypt']
+  );
+
+  // Decrypt
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    keyMaterial,
+    encrypted
+  );
+
+  return decoder.decode(decrypted);
+}
+
+async function encryptToken(token: string, key: string): Promise<string> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(key.padEnd(32, '0').slice(0, 32)),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    keyMaterial,
+    encoder.encode(token)
+  );
+
+  const combined = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
+  combined.set(iv);
+  combined.set(new Uint8Array(encrypted), iv.length);
+
+  return decoder.decode(hexEncode(combined));
 }
 
 // Refresh Microsoft access token
 async function refreshMicrosoftToken(
   refreshToken: string,
   supabase: any,
-  credentialId: string
+  credentialId: string,
+  encryptionKey: string
 ): Promise<{ accessToken: string; expiresAt: string } | null> {
   const clientId = Deno.env.get("MICROSOFT_CLIENT_ID");
   const clientSecret = Deno.env.get("MICROSOFT_CLIENT_SECRET");
@@ -76,10 +133,10 @@ async function refreshMicrosoftToken(
 
   const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
-  // Store new tokens
-  const encryptedAccessToken = xorEncrypt(tokenData.access_token, ENCRYPTION_KEY);
+  // Store new tokens with AES-GCM encryption
+  const encryptedAccessToken = await encryptToken(tokenData.access_token, encryptionKey);
   const encryptedRefreshToken = tokenData.refresh_token
-    ? xorEncrypt(tokenData.refresh_token, ENCRYPTION_KEY)
+    ? await encryptToken(tokenData.refresh_token, encryptionKey)
     : null;
 
   const updateData: Record<string, any> = {
@@ -151,9 +208,20 @@ Respond with ONLY a single digit 1-5.`;
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Reject requests from non-allowed origins
+  if (!isAllowedOrigin(origin)) {
+    return new Response(
+      JSON.stringify({ error: "Forbidden" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   try {
@@ -170,6 +238,15 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const encryptionKey = Deno.env.get("TOKEN_ENCRYPTION_KEY");
+
+    if (!encryptionKey) {
+      return new Response(
+        JSON.stringify({ error: "Configuration error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get user from JWT
@@ -203,16 +280,16 @@ serve(async (req) => {
 
     console.log("microsoft-sync: Found credentials for:", credentials.email_address);
 
-    // Decrypt tokens
-    let accessToken = xorDecrypt(credentials.access_token_encrypted, ENCRYPTION_KEY);
-    const refreshToken = xorDecrypt(credentials.refresh_token_encrypted, ENCRYPTION_KEY);
+    // Decrypt tokens using AES-GCM
+    let accessToken = await decryptToken(credentials.access_token_encrypted, encryptionKey);
+    const refreshToken = await decryptToken(credentials.refresh_token_encrypted, encryptionKey);
 
     // Check if token is expired (with 5 minute buffer)
     const tokenExpiry = credentials.token_expires_at ? new Date(credentials.token_expires_at) : new Date(0);
     const bufferTime = 5 * 60 * 1000; // 5 minutes
 
     if (tokenExpiry.getTime() - bufferTime < Date.now()) {
-      const refreshResult = await refreshMicrosoftToken(refreshToken, supabase, credentials.id);
+      const refreshResult = await refreshMicrosoftToken(refreshToken, supabase, credentials.id, encryptionKey);
 
       if (!refreshResult) {
         return new Response(
