@@ -10,7 +10,15 @@ interface MicrosoftCredential {
   is_active: boolean;
   last_sync_at: string | null;
   sync_error: string | null;
+  token_expires_at: string | null;
   created_at: string;
+}
+
+interface RefreshResult {
+  success: boolean;
+  revoked?: boolean;
+  error?: string;
+  expiresAt?: string;
 }
 
 export const useMicrosoftAuth = () => {
@@ -18,6 +26,8 @@ export const useMicrosoftAuth = () => {
   const [credentials, setCredentials] = useState<MicrosoftCredential[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [needsReconnect, setNeedsReconnect] = useState(false);
 
   // Fetch Microsoft credentials
   const fetchCredentials = useCallback(async () => {
@@ -30,7 +40,7 @@ export const useMicrosoftAuth = () => {
     try {
       const { data, error } = await supabase
         .from('email_credentials')
-        .select('id, provider, email_address, is_active, last_sync_at, sync_error, created_at')
+        .select('id, provider, email_address, is_active, last_sync_at, sync_error, token_expires_at, created_at')
         .eq('user_id', user.id)
         .eq('provider', 'microsoft');
 
@@ -39,13 +49,94 @@ export const useMicrosoftAuth = () => {
         return;
       }
 
-      setCredentials(data || []);
+      const creds = data || [];
+      setCredentials(creds);
+      
+      // Check if any credential needs reconnection
+      const hasInactiveCredential = creds.some(c => !c.is_active && c.sync_error);
+      setNeedsReconnect(hasInactiveCredential);
     } catch (err) {
       console.error('Failed to fetch Microsoft credentials:', err);
     } finally {
       setIsLoading(false);
     }
   }, [user]);
+
+  // Check if token is expired or about to expire (within 5 minutes)
+  const isTokenExpired = useCallback((credential: MicrosoftCredential): boolean => {
+    if (!credential.token_expires_at) return true;
+    const expiresAt = new Date(credential.token_expires_at);
+    const now = new Date();
+    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+    return expiresAt <= fiveMinutesFromNow;
+  }, []);
+
+  // Refresh token for a specific credential
+  const refreshToken = useCallback(async (credentialId: string): Promise<RefreshResult> => {
+    if (!user) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    setIsRefreshing(true);
+    try {
+      const response = await supabase.functions.invoke('microsoft-token-refresh', {
+        body: { credentialId },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to refresh token');
+      }
+
+      const result = response.data as RefreshResult;
+
+      if (result.revoked) {
+        setNeedsReconnect(true);
+        toast({
+          title: "Microsoft Account Disconnected",
+          description: "Your Microsoft account access has been revoked. Please reconnect.",
+          variant: "destructive",
+        });
+        // Refresh credentials to get updated state
+        await fetchCredentials();
+        return result;
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || 'Token refresh failed');
+      }
+
+      // Refresh credentials to get updated expiration
+      await fetchCredentials();
+      return result;
+    } catch (err) {
+      console.error('Failed to refresh Microsoft token:', err);
+      return { 
+        success: false, 
+        error: err instanceof Error ? err.message : 'Token refresh failed' 
+      };
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [user, fetchCredentials]);
+
+  // Auto-refresh tokens that are about to expire
+  const ensureValidToken = useCallback(async (credentialId: string): Promise<boolean> => {
+    const credential = credentials.find(c => c.id === credentialId);
+    if (!credential) return false;
+
+    if (!credential.is_active) {
+      setNeedsReconnect(true);
+      return false;
+    }
+
+    if (isTokenExpired(credential)) {
+      console.log('Token expired or expiring soon, refreshing...');
+      const result = await refreshToken(credentialId);
+      return result.success;
+    }
+
+    return true;
+  }, [credentials, isTokenExpired, refreshToken]);
 
   // Handle OAuth redirect results
   useEffect(() => {
@@ -56,6 +147,7 @@ export const useMicrosoftAuth = () => {
     const microsoftErrorDescription = urlParams.get('microsoft_error_description');
 
     if (microsoftConnected === 'true' && microsoftEmail) {
+      setNeedsReconnect(false);
       toast({
         title: "Microsoft Connected",
         description: `Successfully connected ${microsoftEmail}`,
@@ -155,6 +247,7 @@ export const useMicrosoftAuth = () => {
         description: "Your Microsoft account has been disconnected",
       });
 
+      setNeedsReconnect(false);
       // Refresh credentials
       fetchCredentials();
     } catch (err) {
@@ -167,13 +260,23 @@ export const useMicrosoftAuth = () => {
     }
   };
 
+  // Get active credential
+  const activeCredential = credentials.find(c => c.is_active);
+  const inactiveCredential = credentials.find(c => !c.is_active);
+
   return {
     credentials,
+    activeCredential,
+    inactiveCredential,
     isLoading,
     isConnecting,
-    isConnected: credentials.length > 0,
+    isRefreshing,
+    isConnected: credentials.some(c => c.is_active),
+    needsReconnect,
     connectMicrosoft,
     disconnectMicrosoft,
+    refreshToken,
+    ensureValidToken,
     refetch: fetchCredentials,
   };
 };
