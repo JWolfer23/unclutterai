@@ -4,6 +4,7 @@ import { useFocusStreaks } from "@/hooks/useFocusStreaks";
 import { useFocusSessions } from "@/hooks/useFocusSessions";
 import { useTasks } from "@/hooks/useTasks";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 const MorningBriefCard = () => {
   const { currentStreak, isLoading: streakLoading } = useFocusStreaks();
@@ -168,26 +169,23 @@ const MorningBriefCard = () => {
     const text = buildBriefText();
     console.log('TTS request sent');
 
-    fetch(
-      `https://aihlehujbzkkugzmcobn.supabase.co/functions/v1/text-to-speech`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpaGxlaHVqYnpra3Vnem1jb2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2Mjc5MzMsImV4cCI6MjA2NzIwMzkzM30.ynMPVsQsz9W-SuyZmP84spoRsxp5GBWRbGvOpNFx7KI',
-        },
-        body: JSON.stringify({ text }),
-      }
-    )
-      .then((response) => {
-        // Handle 204 or non-ok responses silently
-        if (response.status === 204 || !response.ok) {
+    supabase.functions.invoke('text-to-speech', {
+      body: { text },
+    })
+      .then(({ data, error }) => {
+        if (error || !data) {
           stopAudio();
-          return null;
+          return;
         }
-        return response.blob();
-      })
-      .then((audioBlob) => {
+        
+        // Handle the audio blob response
+        let audioBlob: Blob | null = null;
+        if (data instanceof Blob) {
+          audioBlob = data;
+        } else if (data instanceof ArrayBuffer) {
+          audioBlob = new Blob([data], { type: 'audio/mpeg' });
+        }
+        
         if (!audioBlob || audioBlob.size === 0) {
           stopAudio();
           return;

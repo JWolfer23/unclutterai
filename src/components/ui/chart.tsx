@@ -65,6 +65,32 @@ const ChartContainer = React.forwardRef<
 })
 ChartContainer.displayName = "Chart"
 
+// Strict color sanitization to prevent CSS injection attacks
+const sanitizeColor = (color: string): string | null => {
+  if (typeof color !== 'string') return null
+  
+  const trimmed = color.trim()
+  
+  // Block dangerous CSS keywords/patterns (case-insensitive)
+  const dangerousPatterns = /(expression|javascript|behavior|@import|url\s*\(|;|}|{|\\)/i
+  if (dangerousPatterns.test(trimmed)) {
+    return null
+  }
+  
+  // Only allow validated CSS color formats:
+  // - Hex colors: #fff, #ffffff, #ffffffff
+  // - HSL/HSLA: hsl(0, 0%, 0%) or hsla(0, 0%, 0%, 0.5) or hsl(0 0% 0%)
+  // - RGB/RGBA: rgb(0, 0, 0) or rgba(0, 0, 0, 0.5) or rgb(0 0 0)
+  // - Simple CSS color names (letters only, no spaces)
+  const safeColorRegex = /^(?:#[0-9a-fA-F]{3,8}|(?:hsl|rgb)a?\(\s*[\d\s,.%/]+\s*\)|[a-zA-Z]+)$/
+  
+  if (!safeColorRegex.test(trimmed)) {
+    return null
+  }
+  
+  return trimmed
+}
+
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
     ([_, config]) => config.theme || config.color
@@ -76,32 +102,32 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 
   // Validate and sanitize config data to prevent XSS
   const sanitizedColorConfig = colorConfig.filter(([key, itemConfig]) => {
-    // Validate key contains only safe characters
+    // Validate key contains only safe characters (alphanumeric, underscore, hyphen)
     if (!/^[a-zA-Z0-9_-]+$/.test(key)) return false
     
-    // Validate color values
+    // Validate color values using strict sanitization
     const color = itemConfig.theme || itemConfig.color
     if (typeof color === 'string') {
-      // Only allow hex colors, hsl(), rgb(), and CSS color names
-      return /^(#[0-9a-fA-F]{3,8}|hsl\([^)]+\)|rgb\([^)]+\)|[a-zA-Z]+)$/.test(color)
+      return sanitizeColor(color) !== null
     } else if (typeof color === 'object' && color) {
-      // Validate theme object colors
+      // Validate all theme colors
       return Object.values(color).every(c => 
-        typeof c === 'string' && /^(#[0-9a-fA-F]{3,8}|hsl\([^)]+\)|rgb\([^)]+\)|[a-zA-Z]+)$/.test(c)
+        typeof c === 'string' && sanitizeColor(c) !== null
       )
     }
     return false
   })
 
-  // Generate CSS using CSS custom properties instead of dangerouslySetInnerHTML
+  // Generate CSS custom properties - using sanitized values only
   const cssRules = Object.entries(THEMES)
     .map(([theme, prefix]) => {
       const themeRules = sanitizedColorConfig
         .map(([key, itemConfig]) => {
-          const color =
+          const rawColor =
             itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
             itemConfig.color
-          return color ? `  --color-${key}: ${color};` : null
+          const safeColor = typeof rawColor === 'string' ? sanitizeColor(rawColor) : null
+          return safeColor ? `  --color-${key}: ${safeColor};` : null
         })
         .filter(Boolean)
         .join("\n")
