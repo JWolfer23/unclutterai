@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +11,12 @@ import {
   FileText,
   Bell,
   ListChecks,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useMicrosoftAuth } from "@/hooks/useMicrosoftAuth";
+import { useGmailAuth } from "@/hooks/useGmailAuth";
 
 interface EmailProvider {
   id: string;
@@ -43,7 +46,7 @@ const emailProviders: EmailProvider[] = [
     name: 'Microsoft Outlook',
     icon: '/lovable-uploads/2d80a266-2f5d-4b3a-99a3-c21f144f2c8f.png',
     color: 'bg-blue-600',
-    description: 'Connect your Microsoft account'
+    description: 'Connect your Microsoft 365 account'
   }
 ];
 
@@ -55,13 +58,29 @@ interface EmailConnectionStepProps {
 
 const EmailConnectionStep = ({ onConnect, onSkip, connectedProviders }: EmailConnectionStepProps) => {
   const [connecting, setConnecting] = useState<string | null>(null);
+  const { 
+    isConnected: isMicrosoftConnected, 
+    isConnecting: isMicrosoftConnecting,
+    connectMicrosoft,
+    activeCredential: microsoftCredential
+  } = useMicrosoftAuth();
+
+  // Derive connected providers from actual auth state
+  const actualConnectedProviders = [
+    ...connectedProviders.filter(p => p !== 'outlook'),
+    ...(isMicrosoftConnected ? ['outlook'] : [])
+  ];
 
   const handleConnect = async (providerId: string) => {
+    // Handle Microsoft Outlook OAuth
+    if (providerId === 'outlook') {
+      await connectMicrosoft();
+      return;
+    }
+
+    // For other providers, use simulated connection
     setConnecting(providerId);
-    
-    // Simulate connection process
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
     onConnect(providerId);
     setConnecting(null);
     
@@ -69,6 +88,16 @@ const EmailConnectionStep = ({ onConnect, onSkip, connectedProviders }: EmailCon
       title: "🎉 Connected!",
       description: `Successfully connected ${emailProviders.find(p => p.id === providerId)?.name}`,
     });
+  };
+
+  const isProviderConnecting = (providerId: string) => {
+    if (providerId === 'outlook') return isMicrosoftConnecting;
+    return connecting === providerId;
+  };
+
+  const isProviderConnected = (providerId: string) => {
+    if (providerId === 'outlook') return isMicrosoftConnected;
+    return connectedProviders.includes(providerId);
   };
 
   const benefits = [
@@ -134,20 +163,32 @@ const EmailConnectionStep = ({ onConnect, onSkip, connectedProviders }: EmailCon
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  {connectedProviders.includes(provider.id) ? (
+                  {isProviderConnected(provider.id) ? (
                     <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
                       <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Connected
+                      {provider.id === 'outlook' && microsoftCredential?.email_address 
+                        ? `Connected (${microsoftCredential.email_address})`
+                        : 'Connected'
+                      }
                     </Badge>
                   ) : (
                     <Button
                       onClick={() => handleConnect(provider.id)}
-                      disabled={connecting === provider.id}
-                      className={`${provider.color} hover:opacity-90`}
+                      disabled={isProviderConnecting(provider.id)}
+                      className={`${provider.color} hover:opacity-90 text-white`}
                       size="sm"
                     >
-                      {connecting === provider.id ? "Connecting..." : "Connect"}
-                      <ArrowRight className="w-4 h-4 ml-2" />
+                      {isProviderConnecting(provider.id) ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          Connect
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>
@@ -194,7 +235,7 @@ const EmailConnectionStep = ({ onConnect, onSkip, connectedProviders }: EmailCon
           <div className="text-center">
             <p className="text-lg font-semibold text-gray-800 mb-2">🎯 Skip the chaos. Sync your inboxes now.</p>
             <Badge variant="secondary">
-              {connectedProviders.length} of {emailProviders.length} connected
+              {actualConnectedProviders.length} of {emailProviders.length} connected
             </Badge>
           </div>
         </div>
