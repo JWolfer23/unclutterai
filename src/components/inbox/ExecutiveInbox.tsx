@@ -1,15 +1,53 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   Mail, 
   RefreshCw, 
   Loader2,
   Sparkles,
-  CheckCircle,
   AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { useExecutiveInbox, InboxMessage } from "@/hooks/useExecutiveInbox";
+
+// Deterministic subtext based on current hour (stable within the hour)
+const getEmptyStateSubtext = (): string => {
+  const hour = new Date().getHours();
+  const subtexts = [
+    "Your assistant is monitoring everything.",
+    "You're clear. We'll interrupt only if it matters.",
+    "All loops are closed."
+  ];
+  return subtexts[hour % 3];
+};
+
+// Calm empty state component
+const InboxEmptyState = () => {
+  const subtext = useMemo(() => getEmptyStateSubtext(), []);
+  
+  return (
+    <div className="relative flex flex-col items-center justify-center py-20 px-8">
+      {/* Soft ambient glow background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent rounded-3xl" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/10 rounded-full blur-3xl opacity-50" />
+      
+      {/* Content */}
+      <div className="relative z-10 text-center max-w-sm">
+        <h2 className="text-xl font-medium text-foreground mb-3">
+          Nothing needs your attention.
+        </h2>
+        <p className="text-muted-foreground text-sm leading-relaxed">
+          {subtext}
+        </p>
+        
+        {/* Muted timestamp */}
+        <p className="text-xs text-muted-foreground/50 mt-8">
+          Last checked: just now
+        </p>
+      </div>
+    </div>
+  );
+};
 
 interface ExecutiveInboxProps {
   onMessageSelect?: (message: InboxMessage) => void;
@@ -84,24 +122,7 @@ export function ExecutiveInbox({ onMessageSelect, showHeader = true }: Executive
   }
 
   if (messages.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
-        <p className="text-foreground font-medium mb-2">Inbox Clear</p>
-        <p className="text-sm text-muted-foreground">
-          No messages need your attention
-        </p>
-        <Button 
-          onClick={syncAll} 
-          disabled={isSyncing}
-          variant="outline"
-          className="mt-4"
-        >
-          {isSyncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          Check for new messages
-        </Button>
-      </div>
-    );
+    return <InboxEmptyState />;
   }
 
   return (
