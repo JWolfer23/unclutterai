@@ -883,6 +883,7 @@ export type Database = {
       }
       messages: {
         Row: {
+          account_id: string | null
           ai_summary: string | null
           auto_archived_at: string | null
           channel_type: string | null
@@ -913,6 +914,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          account_id?: string | null
           ai_summary?: string | null
           auto_archived_at?: string | null
           channel_type?: string | null
@@ -943,6 +945,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          account_id?: string | null
           ai_summary?: string | null
           auto_archived_at?: string | null
           channel_type?: string | null
@@ -972,7 +975,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "messages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "email_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       news_prompts: {
         Row: {

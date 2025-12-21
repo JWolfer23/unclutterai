@@ -321,11 +321,12 @@ serve(async (req) => {
       // Score the message with AI
       const priorityScore = await scoreMessage({ subject, from: senderName, snippet });
 
-      // Store in database
+      // Store in database with account_id for multi-inbox support
       const { error: insertError } = await supabase
         .from('messages')
         .insert({
           user_id: user.id,
+          account_id: credentials.id, // Link to specific email credential
           external_message_id: msg.id,
           thread_id: fullMsg.threadId,
           channel_type: 'gmail',

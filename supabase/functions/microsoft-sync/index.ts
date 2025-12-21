@@ -377,9 +377,10 @@ serve(async (req) => {
       // Score the message with AI
       const priorityScore = await scoreMessage({ subject, from: senderName, snippet });
 
-      // Normalize to internal message format (same as Gmail)
+      // Normalize to internal message format (same as Gmail) with account_id for multi-inbox support
       const normalizedMessage = {
         user_id: user.id,
+        account_id: credentials.id, // Link to specific email credential
         external_message_id: msg.id,
         thread_id: msg.conversationId, // Microsoft uses conversationId for threading
         channel_type: "outlook",
