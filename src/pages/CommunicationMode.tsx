@@ -25,6 +25,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useGmailAuth } from "@/hooks/useGmailAuth";
+import { useMicrosoftAuth } from "@/hooks/useMicrosoftAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useActionPlan } from "@/hooks/useActionPlan";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,16 @@ const CommunicationMode = () => {
     syncNow,
     reAnalyze 
   } = useGmailAuth();
+
+  const {
+    isConnected: isMicrosoftConnected,
+    activeCredential: microsoftCredential,
+    isConnecting: microsoftConnecting,
+    isRefreshing: microsoftSyncing,
+    connectMicrosoft,
+    disconnectMicrosoft,
+    syncEmails: syncMicrosoftEmails
+  } = useMicrosoftAuth();
   
   const { messages, isLoading: messagesLoading } = useMessages();
   const { 
@@ -572,64 +583,127 @@ const CommunicationMode = () => {
                 <div className="p-6 rounded-xl bg-slate-900/40 border border-slate-700/50">
                   <h4 className="text-white font-medium mb-4">Email Connections</h4>
                   
-                  {isConnected && activeCredential ? (
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-yellow-500 flex items-center justify-center">
-                          <Mail className="h-5 w-5 text-white" />
+                  <div className="space-y-3">
+                    {/* Gmail */}
+                    {isConnected && activeCredential ? (
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-yellow-500 flex items-center justify-center">
+                            <Mail className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <div className="text-white font-medium">Gmail</div>
+                            <div className="text-xs text-emerald-400">{activeCredential.email_address}</div>
+                            {activeCredential.last_sync_at && (
+                              <div className="text-xs text-slate-400">
+                                Last sync: {formatDistanceToNow(new Date(activeCredential.last_sync_at), { addSuffix: true })}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-white font-medium">Gmail</div>
-                          <div className="text-xs text-emerald-400">{activeCredential.email_address}</div>
-                          {activeCredential.last_sync_at && (
-                            <div className="text-xs text-slate-400">
-                              Last sync: {formatDistanceToNow(new Date(activeCredential.last_sync_at), { addSuffix: true })}
-                            </div>
-                          )}
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={syncNow}
+                            disabled={syncing}
+                            variant="outline"
+                            size="sm"
+                            className="border-emerald-500/50 text-emerald-300"
+                          >
+                            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            onClick={() => disconnectGmail(activeCredential.id)}
+                            variant="outline"
+                            size="sm"
+                            className="border-red-500/50 text-red-300 hover:bg-red-500/20"
+                          >
+                            <Unlink className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                    ) : (
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-yellow-500 flex items-center justify-center">
+                            <Mail className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <div className="text-white font-medium">Gmail</div>
+                            <div className="text-xs text-slate-400">Not connected</div>
+                          </div>
+                        </div>
                         <Button
-                          onClick={syncNow}
-                          disabled={syncing}
-                          variant="outline"
+                          onClick={connectGmail}
+                          disabled={gmailLoading}
                           size="sm"
-                          className="border-emerald-500/50 text-emerald-300"
+                          className="bg-gradient-to-r from-red-500 to-yellow-500"
                         >
-                          {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          {gmailLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                          Connect
                         </Button>
+                      </div>
+                    )}
+
+                    {/* Microsoft Outlook */}
+                    {isMicrosoftConnected && microsoftCredential ? (
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+                            <Mail className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <div className="text-white font-medium">Microsoft Outlook</div>
+                            <div className="text-xs text-emerald-400">{microsoftCredential.email_address}</div>
+                            {microsoftCredential.last_sync_at && (
+                              <div className="text-xs text-slate-400">
+                                Last sync: {formatDistanceToNow(new Date(microsoftCredential.last_sync_at), { addSuffix: true })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={() => syncMicrosoftEmails()}
+                            disabled={microsoftSyncing}
+                            variant="outline"
+                            size="sm"
+                            className="border-emerald-500/50 text-emerald-300"
+                          >
+                            {microsoftSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            onClick={() => disconnectMicrosoft(microsoftCredential.id)}
+                            variant="outline"
+                            size="sm"
+                            className="border-red-500/50 text-red-300 hover:bg-red-500/20"
+                          >
+                            <Unlink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+                            <Mail className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <div className="text-white font-medium">Microsoft Outlook</div>
+                            <div className="text-xs text-slate-400">Not connected</div>
+                          </div>
+                        </div>
                         <Button
-                          onClick={() => disconnectGmail(activeCredential.id)}
-                          variant="outline"
+                          onClick={connectMicrosoft}
+                          disabled={microsoftConnecting}
                           size="sm"
-                          className="border-red-500/50 text-red-300 hover:bg-red-500/20"
+                          className="bg-gradient-to-r from-blue-500 to-blue-700"
                         >
-                          <Unlink className="h-4 w-4" />
+                          {microsoftConnecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                          Connect
                         </Button>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-yellow-500 flex items-center justify-center">
-                          <Mail className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <div className="text-white font-medium">Gmail</div>
-                          <div className="text-xs text-slate-400">Not connected</div>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={connectGmail}
-                        disabled={gmailLoading}
-                        size="sm"
-                        className="bg-gradient-to-r from-red-500 to-yellow-500"
-                      >
-                        {gmailLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                        Connect
-                      </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 {/* Auto-Reply Rules */}
