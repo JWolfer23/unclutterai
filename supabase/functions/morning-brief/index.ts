@@ -93,6 +93,50 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .maybeSingle();
 
+    // Fetch calendar events for today (from Outlook)
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const { data: calendarEvents } = await supabaseAdmin
+      .from("calendar_events")
+      .select("id, title, start_time, end_time, show_as, location, is_all_day, provider")
+      .eq("user_id", user.id)
+      .eq("is_cancelled", false)
+      .gte("start_time", startOfToday.toISOString())
+      .lte("start_time", endOfToday.toISOString())
+      .order("start_time", { ascending: true });
+
+    // Build calendar context
+    const outlookCalendarEvents = calendarEvents?.filter(e => 
+      e.provider === 'outlook_calendar' || e.provider === 'outlook'
+    ) || [];
+    
+    const busyMeetings = outlookCalendarEvents.filter(e => 
+      e.show_as === 'busy' || e.show_as === 'tentative'
+    );
+
+    const totalMeetingMinutes = busyMeetings.reduce((acc, event) => {
+      const start = new Date(event.start_time);
+      const end = new Date(event.end_time);
+      return acc + (end.getTime() - start.getTime()) / (1000 * 60);
+    }, 0);
+
+    const calendarContext = {
+      totalMeetings: outlookCalendarEvents.length,
+      busyMeetings: busyMeetings.length,
+      totalMeetingMinutes,
+      meetings: outlookCalendarEvents.slice(0, 5).map(e => ({
+        title: e.title,
+        startTime: e.start_time,
+        endTime: e.end_time,
+        showAs: e.show_as,
+        location: e.location
+      })),
+      source: 'outlook_calendar'
+    };
+
     // Fetch user's news prompt for intelligence
     const { data: newsPrompt } = await supabaseAdmin
       .from("news_prompts")
@@ -113,7 +157,12 @@ serve(async (req) => {
     }
 
     const recoveryNeeded = currentStreak === 0 && focusToday === 0;
-    const focusWindowMinutes = energyLevel === "high" ? 90 : energyLevel === "medium" ? 60 : 45;
+    
+    // Adjust focus window based on meeting load
+    let focusWindowMinutes = energyLevel === "high" ? 90 : energyLevel === "medium" ? 60 : 45;
+    if (busyMeetings.length > 4) {
+      focusWindowMinutes = Math.min(focusWindowMinutes, 30); // Heavy meeting day
+    }
 
     // Build context for AI
     const messagesContext = messages?.map((m) => ({
@@ -140,7 +189,8 @@ serve(async (req) => {
         tasksContext,
         energyLevel,
         focusWindowMinutes,
-        recoveryNeeded
+        recoveryNeeded,
+        calendarContext
       )), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -171,14 +221,21 @@ Rules:
 - Maximum 3 priorities, sorted by impact
 - Priorities should combine messages and tasks
 - insight must be a single sentence (not an array)
+- Consider calendar meetings when suggesting first action timing
 - Be concise and actionable`;
+
+    const calendarSummary = calendarContext.busyMeetings > 0 
+      ? `Today's calendar: ${calendarContext.busyMeetings} meetings (${Math.round(calendarContext.totalMeetingMinutes)} min total). Next meetings: ${calendarContext.meetings.slice(0, 3).map(m => `"${m.title}" at ${new Date(m.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`).join(', ')}`
+      : 'No meetings scheduled for today';
 
     const userPrompt = `User context:
 - Messages (last 24h, unread, high priority): ${JSON.stringify(messagesContext)}
 - Pending Tasks: ${JSON.stringify(tasksContext)}
+- Calendar (from outlook_calendar): ${calendarSummary}
 - User's news interests: ${newsPrompt?.prompt_text || "General business and technology"}
 - Current energy state: ${energyLevel}
 - Focus streak: ${currentStreak} days
+- Available focus window: ${focusWindowMinutes} minutes
 
 Generate the morning brief JSON.`;
 
@@ -246,6 +303,13 @@ Generate the morning brief JSON.`;
         focusWindowMinutes,
         recoveryNeeded,
       },
+      calendar: {
+        totalMeetings: calendarContext.totalMeetings,
+        busyMeetings: calendarContext.busyMeetings,
+        totalMeetingMinutes: calendarContext.totalMeetingMinutes,
+        meetings: calendarContext.meetings,
+        source: calendarContext.source
+      },
       firstAction: aiParsed.firstAction || {
         title: "Review your priorities",
         estimatedMinutes: 10,
@@ -272,7 +336,14 @@ function generateFallbackBrief(
   tasks: any[],
   energyLevel: string,
   focusWindowMinutes: number,
-  recoveryNeeded: boolean
+  recoveryNeeded: boolean,
+  calendarContext?: {
+    totalMeetings: number;
+    busyMeetings: number;
+    totalMeetingMinutes: number;
+    meetings: any[];
+    source: string;
+  }
 ) {
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? "Good Morning" : currentHour < 17 ? "Good Afternoon" : "Good Evening";
@@ -320,6 +391,13 @@ function generateFallbackBrief(
       level: energyLevel,
       focusWindowMinutes,
       recoveryNeeded,
+    },
+    calendar: calendarContext || {
+      totalMeetings: 0,
+      busyMeetings: 0,
+      totalMeetingMinutes: 0,
+      meetings: [],
+      source: 'outlook_calendar'
     },
     firstAction: {
       title: priorities[0]?.title || "Review your inbox",
