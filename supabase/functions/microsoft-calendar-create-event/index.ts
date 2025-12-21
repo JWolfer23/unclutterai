@@ -7,7 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// AES-GCM encryption (matching microsoft-sync)
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -33,13 +32,34 @@ async function decryptToken(encryptedHex: string, key: string): Promise<string> 
   return decoder.decode(decrypted);
 }
 
-// Refresh Microsoft access token
+async function encryptToken(token: string, key: string): Promise<string> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(key.padEnd(32, '0').slice(0, 32)),
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    keyMaterial,
+    encoder.encode(token)
+  );
+
+  const combined = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
+  combined.set(iv);
+  combined.set(new Uint8Array(encrypted), iv.length);
+  return decoder.decode(hexEncode(combined));
+}
+
 async function refreshMicrosoftToken(
   refreshToken: string,
   supabase: any,
   credentialId: string,
   encryptionKey: string
-): Promise<{ accessToken: string; expiresAt: string } | null> {
+): Promise<{ accessToken: string } | null> {
   const clientId = Deno.env.get("MICROSOFT_CLIENT_ID");
   const clientSecret = Deno.env.get("MICROSOFT_CLIENT_SECRET");
 
@@ -47,8 +67,6 @@ async function refreshMicrosoftToken(
     console.error("Microsoft OAuth not configured");
     return null;
   }
-
-  console.log("microsoft-calendar-sync: Refreshing expired token...");
 
   const tokenResponse = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
     method: "POST",
@@ -65,7 +83,7 @@ async function refreshMicrosoftToken(
   const tokenData = await tokenResponse.json();
 
   if (!tokenResponse.ok || tokenData.error) {
-    console.error("microsoft-calendar-sync: Token refresh failed:", tokenData.error);
+    console.error("Token refresh failed:", tokenData.error);
 
     if (tokenData.error === "invalid_grant" || tokenData.error === "interaction_required") {
       await supabase
@@ -82,32 +100,9 @@ async function refreshMicrosoftToken(
   }
 
   const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
-
-  // Encrypt new tokens using AES-GCM
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(encryptionKey.padEnd(32, '0').slice(0, 32)),
-    { name: 'AES-GCM' },
-    false,
-    ['encrypt']
-  );
-
-  async function encryptToken(token: string): Promise<string> {
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
-      keyMaterial,
-      encoder.encode(token)
-    );
-    const combined = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
-    combined.set(iv);
-    combined.set(new Uint8Array(encrypted), iv.length);
-    return decoder.decode(hexEncode(combined));
-  }
-
-  const encryptedAccessToken = await encryptToken(tokenData.access_token);
+  const encryptedAccessToken = await encryptToken(tokenData.access_token, encryptionKey);
   const encryptedRefreshToken = tokenData.refresh_token
-    ? await encryptToken(tokenData.refresh_token)
+    ? await encryptToken(tokenData.refresh_token, encryptionKey)
     : null;
 
   const updateData: Record<string, any> = {
@@ -123,24 +118,32 @@ async function refreshMicrosoftToken(
 
   await supabase.from("email_credentials").update(updateData).eq("id", credentialId);
 
-  return { accessToken: tokenData.access_token, expiresAt };
+  return { accessToken: tokenData.access_token };
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log("microsoft-calendar-sync: Starting calendar sync");
+    console.log("microsoft-calendar-create-event: Creating focus block");
 
-    // Verify user authentication
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Missing authorization header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { title, startTime, endTime, description } = body;
+
+    if (!title || !startTime || !endTime) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: title, startTime, endTime" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -157,7 +160,6 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user from JWT
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
@@ -168,9 +170,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("microsoft-calendar-sync: User authenticated:", user.id);
-
-    // Get user's Microsoft credentials
+    // Get Microsoft credentials
     const { data: credentials, error: credError } = await supabase
       .from("email_credentials")
       .select("*")
@@ -186,58 +186,61 @@ serve(async (req) => {
       );
     }
 
-    console.log("microsoft-calendar-sync: Found credentials for:", credentials.email_address);
-
-    // Decrypt tokens using AES-GCM
     let accessToken = await decryptToken(credentials.access_token_encrypted, encryptionKey);
     const refreshToken = await decryptToken(credentials.refresh_token_encrypted, encryptionKey);
 
-    // Check if token is expired (with 5 minute buffer)
+    // Check token expiry
     const tokenExpiry = credentials.token_expires_at ? new Date(credentials.token_expires_at) : new Date(0);
     const bufferTime = 5 * 60 * 1000;
 
     if (tokenExpiry.getTime() - bufferTime < Date.now()) {
       const refreshResult = await refreshMicrosoftToken(refreshToken, supabase, credentials.id, encryptionKey);
-
       if (!refreshResult) {
         return new Response(
-          JSON.stringify({ error: "Token refresh failed, please reconnect Microsoft", needsReconnect: true }),
+          JSON.stringify({ error: "Token refresh failed", needsReconnect: true }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
       accessToken = refreshResult.accessToken;
     }
 
-    // Calculate date range: today to 7 days from now
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfWeek = new Date(startOfToday);
-    endOfWeek.setDate(endOfWeek.getDate() + 7);
-    endOfWeek.setHours(23, 59, 59, 999);
-
-    // Fetch calendar events from Microsoft Graph
-    console.log("microsoft-calendar-sync: Fetching events from", startOfToday.toISOString(), "to", endOfWeek.toISOString());
-
-    const graphUrl = new URL("https://graph.microsoft.com/v1.0/me/calendarview");
-    graphUrl.searchParams.set("startDateTime", startOfToday.toISOString());
-    graphUrl.searchParams.set("endDateTime", endOfWeek.toISOString());
-    graphUrl.searchParams.set("$select", "id,subject,start,end,isAllDay,showAs,location,organizer,isCancelled");
-    graphUrl.searchParams.set("$orderby", "start/dateTime asc");
-    graphUrl.searchParams.set("$top", "100");
-
-    const eventsResponse = await fetch(graphUrl.toString(), {
-      headers: { 
-        Authorization: `Bearer ${accessToken}`,
-        Prefer: 'outlook.timezone="UTC"'
+    // Create event in Microsoft Calendar
+    const eventPayload = {
+      subject: title,
+      body: {
+        contentType: "text",
+        content: description || "Focus block created by UnclutterAI"
       },
+      start: {
+        dateTime: new Date(startTime).toISOString().slice(0, -1), // Remove Z for Graph API
+        timeZone: "UTC"
+      },
+      end: {
+        dateTime: new Date(endTime).toISOString().slice(0, -1),
+        timeZone: "UTC"
+      },
+      showAs: "busy",
+      isReminderOn: true,
+      reminderMinutesBeforeStart: 5,
+      categories: ["Focus Block"]
+    };
+
+    console.log("Creating event:", JSON.stringify(eventPayload));
+
+    const createResponse = await fetch("https://graph.microsoft.com/v1.0/me/events", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(eventPayload)
     });
 
-    if (!eventsResponse.ok) {
-      const errorText = await eventsResponse.text();
-      console.error("microsoft-calendar-sync: Microsoft Graph API error:", eventsResponse.status, errorText);
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      console.error("Failed to create event:", createResponse.status, errorText);
 
-      if (eventsResponse.status === 401) {
+      if (createResponse.status === 401) {
         await supabase
           .from("email_credentials")
           .update({
@@ -248,111 +251,52 @@ serve(async (req) => {
           .eq("id", credentials.id);
 
         return new Response(
-          JSON.stringify({ error: "Microsoft access denied, please reconnect", needsReconnect: true }),
+          JSON.stringify({ error: "Microsoft access denied", needsReconnect: true }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       return new Response(
-        JSON.stringify({ error: "Failed to fetch calendar events" }),
+        JSON.stringify({ error: "Failed to create calendar event" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const eventsData = await eventsResponse.json();
-    const events = eventsData.value || [];
+    const createdEvent = await createResponse.json();
 
-    console.log("microsoft-calendar-sync: Found", events.length, "calendar events");
-
-    // Delete old events for this user/provider before inserting fresh data
-    await supabase
+    // Store in local calendar_events table
+    const { error: insertError } = await supabase
       .from("calendar_events")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("provider", "outlook_calendar");
-
-    // Process and store events
-    let syncedCount = 0;
-    const eventsToInsert = [];
-
-    for (const event of events) {
-      // Extract event data
-      const startTime = event.start?.dateTime 
-        ? new Date(event.start.dateTime + (event.start.timeZone === 'UTC' ? 'Z' : '')).toISOString()
-        : null;
-      const endTime = event.end?.dateTime 
-        ? new Date(event.end.dateTime + (event.end.timeZone === 'UTC' ? 'Z' : '')).toISOString()
-        : null;
-
-      if (!startTime || !endTime) {
-        console.log("microsoft-calendar-sync: Skipping event without valid times:", event.id);
-        continue;
-      }
-
-      // Map Microsoft showAs to our format
-      const showAs = event.showAs || 'busy';
-
-      eventsToInsert.push({
+      .insert({
         user_id: user.id,
-        external_event_id: event.id,
+        external_event_id: createdEvent.id,
         provider: "outlook_calendar",
-        title: event.subject || "(No Title)",
-        start_time: startTime,
-        end_time: endTime,
-        is_all_day: event.isAllDay || false,
-        show_as: showAs,
-        location: event.location?.displayName || null,
-        organizer_name: event.organizer?.emailAddress?.name || null,
-        organizer_email: event.organizer?.emailAddress?.address || null,
-        is_cancelled: event.isCancelled || false,
+        title: title,
+        start_time: new Date(startTime).toISOString(),
+        end_time: new Date(endTime).toISOString(),
+        is_all_day: false,
+        show_as: "busy",
+        is_cancelled: false
       });
+
+    if (insertError) {
+      console.error("Failed to store event locally:", insertError);
     }
 
-    // Bulk insert events
-    if (eventsToInsert.length > 0) {
-      const { error: insertError } = await supabase
-        .from("calendar_events")
-        .insert(eventsToInsert);
-
-      if (insertError) {
-        console.error("microsoft-calendar-sync: Insert error:", insertError);
-      } else {
-        syncedCount = eventsToInsert.length;
-      }
-    }
-
-    console.log("microsoft-calendar-sync: Synced", syncedCount, "calendar events");
-
-    // Calculate today's events for immediate context
-    const todayEnd = new Date(startOfToday);
-    todayEnd.setHours(23, 59, 59, 999);
-    
-    const todayEvents = eventsToInsert.filter(e => {
-      const eventStart = new Date(e.start_time);
-      return eventStart >= startOfToday && eventStart <= todayEnd && !e.is_cancelled;
-    });
-
-    const busyTodayEvents = todayEvents.filter(e => e.show_as === 'busy' || e.show_as === 'tentative');
+    console.log("Focus block created successfully:", createdEvent.id);
 
     return new Response(
       JSON.stringify({
         success: true,
-        synced: syncedCount,
-        todayEventCount: todayEvents.length,
-        hasMeetingsToday: busyTodayEvents.length > 0,
-        todayMeetings: todayEvents.map(e => ({
-          title: e.title,
-          startTime: e.start_time,
-          endTime: e.end_time,
-          showAs: e.show_as,
-        })),
+        eventId: createdEvent.id,
+        webLink: createdEvent.webLink
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("microsoft-calendar-sync error:", error);
+    console.error("microsoft-calendar-create-event error:", error);
     return new Response(
-      JSON.stringify({ error: "Calendar sync failed", details: error.message }),
+      JSON.stringify({ error: "Failed to create event", details: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

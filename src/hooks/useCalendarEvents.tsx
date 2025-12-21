@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
 
 interface CalendarEvent {
   id: string;
@@ -32,12 +33,21 @@ interface CalendarSyncResult {
   needsReconnect?: boolean;
 }
 
+interface CreateEventResult {
+  success: boolean;
+  eventId?: string;
+  webLink?: string;
+  error?: string;
+  needsReconnect?: boolean;
+}
+
 export const useCalendarEvents = () => {
   const { user } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [todayEvents, setTodayEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [hasMeetingsToday, setHasMeetingsToday] = useState(false);
 
   // Fetch cached calendar events from database
@@ -55,7 +65,7 @@ export const useCalendarEvents = () => {
       const endOfWeek = new Date(startOfToday);
       endOfWeek.setDate(endOfWeek.getDate() + 7);
 
-      // Fetch events for the next 7 days
+      // Fetch events for the next 7 days (supports both outlook and outlook_calendar)
       const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
@@ -130,6 +140,57 @@ export const useCalendarEvents = () => {
     }
   }, [user, fetchEvents]);
 
+  // Create a focus block in the calendar
+  const createFocusBlock = useCallback(async (
+    title: string,
+    startTime: Date,
+    endTime: Date,
+    description?: string
+  ): Promise<CreateEventResult> => {
+    if (!user) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    setIsCreating(true);
+    try {
+      const response = await supabase.functions.invoke('microsoft-calendar-create-event', {
+        body: {
+          title,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          description
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to create focus block');
+      }
+
+      const result = response.data as CreateEventResult;
+
+      if (result.success) {
+        toast({
+          title: "Focus block created",
+          description: `"${title}" added to your Outlook calendar`,
+        });
+        // Refresh local events
+        await fetchEvents();
+      }
+
+      return result;
+    } catch (err) {
+      console.error('Failed to create focus block:', err);
+      toast({
+        title: "Failed to create focus block",
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: "destructive"
+      });
+      return { success: false, error: err instanceof Error ? err.message : 'Failed' };
+    } finally {
+      setIsCreating(false);
+    }
+  }, [user, fetchEvents]);
+
   // Check if a time range overlaps with any busy events
   const hasConflict = useCallback((startTime: Date, endTime: Date): boolean => {
     return events.some(event => {
@@ -194,18 +255,86 @@ export const useCalendarEvents = () => {
     return Math.floor(diffMs / (1000 * 60));
   }, [getNextMeeting]);
 
+  // Get calendar context for Morning Brief
+  const getCalendarContext = useCallback(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(startOfToday);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const todaysMeetings = events.filter(event => {
+      const eventStart = new Date(event.start_time);
+      return eventStart >= startOfToday && eventStart <= todayEnd && !event.is_cancelled;
+    });
+
+    const busyBlocks = todaysMeetings.filter(e => e.show_as === 'busy' || e.show_as === 'tentative');
+    
+    // Calculate total busy time today
+    const totalBusyMinutes = busyBlocks.reduce((acc, event) => {
+      const start = new Date(event.start_time);
+      const end = new Date(event.end_time);
+      return acc + (end.getTime() - start.getTime()) / (1000 * 60);
+    }, 0);
+
+    // Find free time slots
+    const freeSlots: { start: Date; end: Date; durationMinutes: number }[] = [];
+    const workdayStart = new Date(startOfToday);
+    workdayStart.setHours(9, 0, 0, 0);
+    const workdayEnd = new Date(startOfToday);
+    workdayEnd.setHours(18, 0, 0, 0);
+
+    // Simple free slot calculation between meetings
+    let lastEnd = workdayStart;
+    const sortedBusy = busyBlocks.sort((a, b) => 
+      new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+    );
+
+    for (const event of sortedBusy) {
+      const eventStart = new Date(event.start_time);
+      if (eventStart > lastEnd) {
+        const slotEnd = eventStart < workdayEnd ? eventStart : workdayEnd;
+        const durationMinutes = (slotEnd.getTime() - lastEnd.getTime()) / (1000 * 60);
+        if (durationMinutes >= 30) { // Only count slots >= 30 min
+          freeSlots.push({ start: lastEnd, end: slotEnd, durationMinutes });
+        }
+      }
+      lastEnd = new Date(event.end_time);
+    }
+
+    // Check for free time after last meeting
+    if (lastEnd < workdayEnd) {
+      const durationMinutes = (workdayEnd.getTime() - lastEnd.getTime()) / (1000 * 60);
+      if (durationMinutes >= 30) {
+        freeSlots.push({ start: lastEnd, end: workdayEnd, durationMinutes });
+      }
+    }
+
+    return {
+      totalMeetings: todaysMeetings.length,
+      busyMeetings: busyBlocks.length,
+      totalBusyMinutes,
+      freeSlots,
+      nextMeeting: getNextMeeting(),
+      minutesUntilNextMeeting: getMinutesUntilNextMeeting(),
+      source: 'outlook_calendar'
+    };
+  }, [events, getNextMeeting, getMinutesUntilNextMeeting]);
+
   return {
     events,
     todayEvents,
     isLoading,
     isSyncing,
+    isCreating,
     hasMeetingsToday,
     syncCalendar,
+    createFocusBlock,
     hasConflict,
     getConflictingEvents,
     getUpcomingEvents,
     getNextMeeting,
     getMinutesUntilNextMeeting,
+    getCalendarContext,
     refetch: fetchEvents,
   };
 };
