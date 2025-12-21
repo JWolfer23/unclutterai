@@ -1635,7 +1635,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      uct_pricing_public: {
+        Row: {
+          calculated_at: string | null
+          created_at: string | null
+          id: string | null
+          price: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       complete_onboarding_mission: {
