@@ -1,7 +1,6 @@
-import { Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useBetaUCT } from "@/hooks/useBetaUCT";
 import { useVoiceTTS } from "@/hooks/useVoiceTTS";
 import { useOnboardingMissions } from "@/hooks/useOnboardingMissions";
@@ -12,34 +11,37 @@ interface UnclutterClosureProps {
   onExit: () => void;
 }
 
-// Spoken confirmation - calm, final
-const COMPLETION_VOICE = "All loops resolved. Nothing is waiting on you.";
-
-// Reinforcement copy - earned, not promotional
-const REINFORCEMENT_COPY = {
-  primary: "Most people never reach inbox zero.",
-  secondary: "You did — calmly.",
+// Deterministic subtext based on current hour (stable within the hour)
+const getCompletionSubtext = (): string => {
+  const hour = new Date().getHours();
+  const subtexts = [
+    "Nothing is waiting on you.",
+    "Your inbox is clear — for now.",
+    "You're caught up."
+  ];
+  return subtexts[hour % 3];
 };
+
+// Assistant speaks once, then silence
+const ASSISTANT_LINE = "You're clear. I'll keep watch.";
 
 const UnclutterClosure = ({ loopsResolved, onExit }: UnclutterClosureProps) => {
   const navigate = useNavigate();
   const { addUCT } = useBetaUCT();
   const { speak } = useVoiceTTS();
   const { missions, checkAndCompleteMission } = useOnboardingMissions();
-  const [uctAwarded, setUctAwarded] = useState(false);
-  const [showReward, setShowReward] = useState(false);
-  const [isFirstCompletion, setIsFirstCompletion] = useState(false);
   const hasSpokenRef = useRef(false);
+  const hasAwardedRef = useRef(false);
 
-  // Check if this is first unclutter completion and award bonus
+  // Deterministic subtext
+  const subtext = useMemo(() => getCompletionSubtext(), []);
+
+  // Handle first completion mission (silent)
   useEffect(() => {
     const handleFirstCompletion = async () => {
-      // Check if first_unclutter mission is not yet completed
       const unclutterMission = missions.find(m => m.id === 'first_unclutter');
       const isFirst = !unclutterMission?.completedAt;
-      setIsFirstCompletion(isFirst);
-
-      // Award first completion bonus (+10 UCT via mission system)
+      
       if (isFirst) {
         try {
           await checkAndCompleteMission('first_unclutter');
@@ -52,101 +54,83 @@ const UnclutterClosure = ({ loopsResolved, onExit }: UnclutterClosureProps) => {
     handleFirstCompletion();
   }, [missions, checkAndCompleteMission]);
 
-  // Award regular completion bonus UCT once
+  // Award completion UCT silently
   useEffect(() => {
     const awardCompletionBonus = async () => {
-      if (!uctAwarded && loopsResolved > 0) {
+      if (!hasAwardedRef.current && loopsResolved > 0) {
+        hasAwardedRef.current = true;
         try {
-          const bonusReward = UCT_REWARDS.unclutter_complete;
-          await addUCT(bonusReward, 'unclutter_complete');
-          setUctAwarded(true);
-          // Delay showing reward for smooth animation
-          setTimeout(() => setShowReward(true), 300);
+          await addUCT(UCT_REWARDS.unclutter_complete, 'unclutter_complete');
         } catch (e) {
           console.error('Failed to award completion UCT:', e);
         }
       }
     };
     awardCompletionBonus();
-  }, [addUCT, loopsResolved, uctAwarded]);
+  }, [addUCT, loopsResolved]);
 
-  // Speak completion confirmation once
+  // Speak once, then silence
   useEffect(() => {
     if (!hasSpokenRef.current) {
       hasSpokenRef.current = true;
-      // Small delay for the moment to land visually first
       setTimeout(() => {
-        speak(COMPLETION_VOICE);
-      }, 500);
+        speak(ASSISTANT_LINE);
+      }, 600);
     }
   }, [speak]);
 
-  const handleAcknowledge = () => {
+  const handleBeginFocus = () => {
+    navigate('/focus');
+  };
+
+  const handleTakeBreak = () => {
     navigate('/');
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
-      {/* Calm success icon with subtle glow */}
-      <div className="relative mb-10">
-        <div className="absolute inset-0 w-24 h-24 rounded-full bg-emerald-500/10 blur-xl animate-pulse" />
-        <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/20 flex items-center justify-center">
-          <Check className="h-12 w-12 text-emerald-400" strokeWidth={1.5} />
-        </div>
-      </div>
+    <div className="relative flex flex-col items-center justify-center min-h-[70vh] text-center px-6 animate-fade-in">
+      {/* Soft ambient glow background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 via-transparent to-transparent rounded-3xl pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-emerald-500/8 rounded-full blur-3xl opacity-40 pointer-events-none" />
       
-      {/* Primary message - calm and final */}
-      <h2 className="text-2xl font-light text-foreground mb-3 tracking-wide">
-        All loops resolved.
-      </h2>
-      <p className="text-muted-foreground text-lg mb-6">
-        Nothing is waiting on you.
-      </p>
-
-      {/* Reinforcement copy - earned feeling */}
-      <div className="mb-8 animate-in fade-in slide-in-from-bottom-1 duration-700 delay-500">
-        <p className="text-muted-foreground/60 text-sm mb-1">
-          {REINFORCEMENT_COPY.primary}
+      {/* Content */}
+      <div className="relative z-10 max-w-md">
+        {/* Primary message */}
+        <h2 className="text-2xl font-light text-foreground mb-4 tracking-wide">
+          All loops resolved.
+        </h2>
+        <p className="text-muted-foreground text-lg mb-8">
+          {subtext}
         </p>
-        <p className="text-foreground/80 text-sm font-medium">
-          {REINFORCEMENT_COPY.secondary}
+
+        {/* Assistant line - single, calm */}
+        <p className="text-muted-foreground/60 text-sm italic mb-12">
+          "{ASSISTANT_LINE}"
+        </p>
+
+        {/* Two soft action buttons - user-led only */}
+        <div className="flex items-center justify-center gap-4 mb-10">
+          <Button
+            onClick={handleBeginFocus}
+            variant="ghost"
+            className="h-12 px-6 rounded-2xl bg-secondary/50 hover:bg-secondary/80 border border-border/50 text-foreground/80 hover:text-foreground font-normal transition-all duration-300"
+          >
+            Begin focus
+          </Button>
+          <Button
+            onClick={handleTakeBreak}
+            variant="ghost"
+            className="h-12 px-6 rounded-2xl bg-secondary/50 hover:bg-secondary/80 border border-border/50 text-foreground/80 hover:text-foreground font-normal transition-all duration-300"
+          >
+            Take a break
+          </Button>
+        </div>
+
+        {/* Optional context line - muted */}
+        <p className="text-xs text-muted-foreground/40">
+          Gmail and Outlook are up to date.
         </p>
       </div>
-
-      {/* UCT reward display */}
-      {showReward && loopsResolved > 0 && (
-        <div className="flex flex-col items-center gap-2 mb-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20">
-            <Sparkles className="h-4 w-4 text-cyan-400" />
-            <span className="text-cyan-300 text-sm">
-              +{UCT_REWARDS.unclutter_complete} UCT completion bonus
-            </span>
-          </div>
-          {isFirstCompletion && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 animate-in fade-in duration-300 delay-200">
-              <Sparkles className="h-4 w-4 text-violet-400" />
-              <span className="text-violet-300 text-sm">
-                +10 UCT first completion
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Stats summary */}
-      {loopsResolved > 0 && !showReward && (
-        <p className="text-muted-foreground/50 text-sm mb-10">
-          {loopsResolved} item{loopsResolved !== 1 ? 's' : ''} resolved this session
-        </p>
-      )}
-
-      {/* Single acknowledgment button - explicit, no auto-dismiss */}
-      <Button
-        onClick={handleAcknowledge}
-        className="h-14 px-10 rounded-2xl bg-secondary hover:bg-secondary/80 border border-border text-foreground font-medium transition-all duration-300"
-      >
-        Done
-      </Button>
     </div>
   );
 };
