@@ -2,10 +2,40 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode as hexEncode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Allowed origins for CORS - restrict to known domains
+const allowedOrigins = [
+  /^https:\/\/.*\.lovableproject\.com$/,
+  /^https:\/\/.*\.lovable\.app$/,
+  'https://lovable.dev',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
+// Validate origin against allowed list
+function getValidatedOrigin(origin: string | null): string {
+  if (!origin) return '';
+  
+  for (const allowed of allowedOrigins) {
+    if (typeof allowed === 'string') {
+      if (origin === allowed) return origin;
+    } else if (allowed instanceof RegExp) {
+      if (allowed.test(origin)) return origin;
+    }
+  }
+  
+  return '';
+}
+
+// Build CORS headers with validated origin
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin');
+  const validatedOrigin = getValidatedOrigin(origin);
+  
+  return {
+    'Access-Control-Allow-Origin': validatedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+}
 
 // The app URL to redirect back to after OAuth
 // TODO: Change to production URL before release
@@ -44,6 +74,8 @@ async function encryptToken(token: string, key: string): Promise<string> {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
