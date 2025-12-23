@@ -3,12 +3,20 @@ import { useFocusProtectionContext, QueuedItem, FocusSummary } from '@/contexts/
 export type { QueuedItem, FocusSummary };
 
 /**
- * Hook for accessing focus protection state and actions.
+ * Hook for accessing Focus Protection System.
  * 
- * Global interruption rules:
- * - Default: No interruptions during focus
- * - May interrupt ONLY if user explicitly allows OR urgency is critical
- * - Otherwise: Defer and log for post-focus summary
+ * Focus Mode is a PROTECTION SYSTEM, not a timer.
+ * 
+ * During focus:
+ * - Suppress all assistant interruptions by default
+ * - Defer inbox scanning silently
+ * - Do not surface notifications unless user explicitly allows
+ * 
+ * At focus end:
+ * - Generate Focus Catch-Up Summary
+ * - Show what arrived, what was deferred, what needs attention
+ * - Include reassurance: "Nothing important was missed."
+ * - Award UCT for completed sessions
  */
 export const useFocusProtection = () => {
   const {
@@ -18,6 +26,7 @@ export const useFocusProtection = () => {
     queueItem,
     markItemHandled,
     shouldAllowInterruption,
+    deferInboxScan,
     getQueuedItems,
     logInterruption,
     getInterruptionLog,
@@ -28,9 +37,16 @@ export const useFocusProtection = () => {
     isInFocus: state.isInFocus,
     sessionId: state.sessionId,
     startTime: state.startTime,
+    
+    // Protection flags
     suppressNotifications: state.suppressNotifications,
+    suppressAssistantInterruptions: state.suppressAssistantInterruptions,
+    deferInboxScanning: state.deferInboxScanning,
+    
+    // Counts
     queuedItemsCount: state.queuedItems.length,
     interruptionLogCount: state.interruptionLog.length,
+    deferredInboxScans: state.deferredInboxScans,
 
     // Actions
     enterFocus,
@@ -38,6 +54,7 @@ export const useFocusProtection = () => {
     queueItem,
     markItemHandled,
     shouldAllowInterruption,
+    deferInboxScan,
     getQueuedItems,
     logInterruption,
     getInterruptionLog,

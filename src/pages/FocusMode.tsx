@@ -145,8 +145,8 @@ const FocusMode = () => {
     setIsActive(false);
     setIsPaused(false);
 
-    // Exit focus protection and get summary of queued items
-    const summary = exitFocus();
+    // Exit focus protection and get summary with UCT earned
+    const summary = exitFocus(uctReward);
     setFocusSummary(summary);
 
     // Process background messages and show autonomous reveal
@@ -212,8 +212,8 @@ const FocusMode = () => {
       }
     }
 
-    // Exit focus protection and get summary of queued items
-    const summary = exitFocus();
+    // Exit focus protection and get summary with UCT earned
+    const summary = exitFocus(uctReward);
     setFocusSummary(summary);
 
     // Process background messages and show autonomous reveal

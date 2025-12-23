@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, ChevronDown, ChevronUp, Mail, Archive, AlertCircle, Shield, History, Clock, Inbox } from 'lucide-react';
+import { Shield, Inbox, Clock, AlertCircle, ChevronDown, ChevronUp, Check, Archive, Mail, History, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { FocusBackgroundState } from '@/hooks/useFocusBackground';
@@ -33,10 +33,13 @@ export const AutonomousReveal = ({
   // Combine background state with focus summary for complete picture
   const totalItemsReceived = (focusSummary?.itemsReceived || 0) + messagesArrived;
   const totalItemsHandled = (focusSummary?.itemsHandled || 0) + messagesAutoHandled;
-  const totalDeferred = focusSummary?.queuedItems?.filter(i => !i.handled).length || 0;
-  const totalNeedingAttention = totalDeferred + messagesNeedingReview.length;
+  const totalDeferred = focusSummary?.itemsDeferred || 0;
+  const totalNeedingAttention = (focusSummary?.itemsNeedingAttention || 0) + messagesNeedingReview.length;
+  const inboxScansDeferred = focusSummary?.inboxScansDeferred || 0;
+  const interruptionsBlocked = focusSummary?.interruptionsBlocked || 0;
+  const uctEarned = focusSummary?.uctEarned || 0;
   
-  const deferredItems = focusSummary?.queuedItems?.filter(i => !i.handled) || [];
+  const deferredItems = focusSummary?.queuedItems?.filter(i => !i.handled && i.type !== 'inbox_scan') || [];
   
   const hasHandledMessages = totalItemsHandled > 0;
   const hasNeedingReview = totalNeedingAttention > 0;
@@ -69,9 +72,9 @@ export const AutonomousReveal = ({
           </div>
         </div>
 
-        {/* Summary: What arrived, What was deferred, What needs attention */}
+        {/* Focus Catch-Up Summary: What arrived, What was deferred, What needs attention */}
         <div className={`transition-all duration-700 ${showStats ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
-          {totalItemsReceived > 0 ? (
+          {totalItemsReceived > 0 || inboxScansDeferred > 0 || interruptionsBlocked > 0 ? (
             <div className="grid grid-cols-3 gap-4 mb-8">
               {/* What arrived */}
               <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10">
@@ -87,7 +90,7 @@ export const AutonomousReveal = ({
                 <div className="flex justify-center mb-2">
                   <Clock className="w-5 h-5 text-blue-400" />
                 </div>
-                <div className="text-2xl font-light text-blue-400">{totalDeferred}</div>
+                <div className="text-2xl font-light text-blue-400">{totalDeferred + inboxScansDeferred}</div>
                 <div className="text-xs text-slate-500 mt-1">deferred</div>
               </div>
               
@@ -108,19 +111,30 @@ export const AutonomousReveal = ({
         </div>
 
         {/* CRITICAL REASSURANCE - "Nothing important was missed." */}
-        <div className={`text-center mb-8 transition-all duration-700 ${showReassurance ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
-          <p className="text-2xl text-emerald-400 font-light tracking-wide">
+        <div className={`text-center mb-6 transition-all duration-700 ${showReassurance ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
+          <p className="text-2xl text-emerald-400 font-light tracking-wide mb-2">
             {TRUST_MOMENTS.focusProtection.primary}
           </p>
-          {totalItemsReceived > 0 && (
-            <p className="text-sm text-slate-500 mt-2">
-              {hasHandledMessages 
-                ? `${totalItemsHandled} handled silently. ${totalDeferred > 0 ? `${totalDeferred} deferred for later.` : ''}`
-                : 'All items deferred until you were ready.'
-              }
-            </p>
-          )}
+          
+          {/* Protection summary - reinforces trust, not productivity */}
+          <p className="text-sm text-slate-500">
+            {interruptionsBlocked > 0 
+              ? `${interruptionsBlocked} interruption${interruptionsBlocked !== 1 ? 's' : ''} blocked.`
+              : 'Your attention was protected.'
+            }
+            {inboxScansDeferred > 0 && ` ${inboxScansDeferred} scan${inboxScansDeferred !== 1 ? 's' : ''} deferred.`}
+          </p>
         </div>
+
+        {/* UCT Reward - trust-focused, not productivity-focused */}
+        {uctEarned > 0 && (
+          <div className={`flex items-center justify-center gap-2 mb-8 transition-all duration-700 ${showReassurance ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-400/10 border border-yellow-400/20">
+              <Coins className="w-4 h-4 text-yellow-400" />
+              <span className="text-sm font-medium text-yellow-400">+{uctEarned.toFixed(2)} UCT earned</span>
+            </div>
+          </div>
+        )}
 
         {/* Expandable Details */}
         <div className={`transition-all duration-500 ${showDetails ? 'opacity-100' : 'opacity-0'}`}>
