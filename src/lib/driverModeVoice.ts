@@ -15,8 +15,8 @@
 // ENTRY & GREETING
 // =============================================================================
 
-/** Spoken once when Driver Mode opens */
-export const DM_ENTER_1 = "You're in Driver Mode. I'll handle prioritization.";
+/** Spoken once when Driver Mode opens - single sentence, command-first */
+export const DM_ENTER_1 = "I'll handle prioritization.";
 
 // =============================================================================
 // NEXT BEST ACTION (NBA) - Always exactly ONE action
