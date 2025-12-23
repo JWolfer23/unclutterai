@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
 import { useAssistantProfile } from './useAssistantProfile';
@@ -15,6 +15,25 @@ export interface Loop {
   senderEmail: string;
   summary: string;
   receivedAt: string;
+}
+
+// Background batch intelligence - not exposed to UI
+interface LoopAnalysis {
+  messageId: string;
+  suggestedAction: LoopAction;
+  confidence: number;
+  reasoning: string;
+  draftReply?: string;
+  relatedLoopIds?: string[];
+  pattern?: string;
+  research?: string;
+}
+
+interface BatchIntelligence {
+  analyses: Map<string, LoopAnalysis>;
+  patterns: Array<{ id: string; type: string; description: string; messageIds: string[] }>;
+  groups: Array<{ id: string; reason: string; messageIds: string[]; suggestedBatchAction?: LoopAction }>;
+  isReady: boolean;
 }
 
 export type UnclutterPhase = 'idle' | 'scanning' | 'resolving' | 'complete';
@@ -36,6 +55,15 @@ export const useUnclutter = () => {
   const [aiDraft, setAiDraft] = useState<string | null>(null);
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
 
+  // Batch intelligence - runs in background, never exposed to UI
+  const batchIntelRef = useRef<BatchIntelligence>({
+    analyses: new Map(),
+    patterns: [],
+    groups: [],
+    isReady: false
+  });
+  const batchAnalysisPromiseRef = useRef<Promise<void> | null>(null);
+
   const { toast } = useToast();
   const { canAutoHandle, requiresConfirmation } = useAssistantProfile();
   const { addUCT, data: uctData } = useBetaUCT();
@@ -45,12 +73,49 @@ export const useUnclutter = () => {
   const currentLoop = loops[currentIndex] || null;
   const totalLoops = loops.length;
 
+  // Background batch analysis - runs silently after scan
+  const runBatchAnalysis = useCallback(async (messageIds: string[]) => {
+    if (messageIds.length === 0) return;
+
+    try {
+      console.log('[Batch Intel] Starting background analysis...');
+      const { data, error } = await supabase.functions.invoke('unclutter-batch-analyze', {
+        body: { messageIds }
+      });
+
+      if (error) {
+        console.error('[Batch Intel] Analysis failed:', error);
+        return;
+      }
+
+      // Store analyses in map for quick lookup
+      const analysesMap = new Map<string, LoopAnalysis>();
+      (data?.analyses || []).forEach((analysis: LoopAnalysis) => {
+        analysesMap.set(analysis.messageId, analysis);
+      });
+
+      batchIntelRef.current = {
+        analyses: analysesMap,
+        patterns: data?.patterns || [],
+        groups: data?.groups || [],
+        isReady: true
+      };
+
+      console.log(`[Batch Intel] Ready: ${analysesMap.size} analyses, ${data?.patterns?.length || 0} patterns`);
+    } catch (error) {
+      console.error('[Batch Intel] Background analysis error:', error);
+    }
+  }, []);
+
   // Start scan - fetch unread emails
   const startScan = useCallback(async () => {
     setPhase('scanning');
     setIsLoading(true);
     setLoopsResolved(0);
     setCurrentIndex(0);
+    
+    // Reset batch intelligence
+    batchIntelRef.current = { analyses: new Map(), patterns: [], groups: [], isReady: false };
 
     try {
       const { data, error } = await supabase.functions.invoke('unclutter-scan');
@@ -64,6 +129,10 @@ export const useUnclutter = () => {
         setPhase('complete');
       } else {
         setPhase('resolving');
+        
+        // Start batch analysis in background - user sees first loop immediately
+        const messageIds = fetchedLoops.map((l: Loop) => l.messageId);
+        batchAnalysisPromiseRef.current = runBatchAnalysis(messageIds);
       }
     } catch (error) {
       console.error('Error scanning:', error);
@@ -76,7 +145,7 @@ export const useUnclutter = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, runBatchAnalysis]);
 
   // Advance to next loop or complete
   const advance = useCallback(() => {
@@ -90,6 +159,12 @@ export const useUnclutter = () => {
     }
   }, [currentIndex, loops.length, checkAndCompleteMission]);
 
+  // Get AI suggestion for current loop (from batch intel, not exposed to UI)
+  const getAISuggestion = useCallback((): LoopAnalysis | null => {
+    if (!currentLoop || !batchIntelRef.current.isReady) return null;
+    return batchIntelRef.current.analyses.get(currentLoop.messageId) || null;
+  }, [currentLoop]);
+
   // Resolve current loop with an action and award UCT - persists outcome to database
   const resolve = useCallback(async (action: LoopAction) => {
     if (!currentLoop) return;
@@ -99,6 +174,12 @@ export const useUnclutter = () => {
       if (!user) throw new Error('Not authenticated');
 
       let uctReward = UCT_REWARDS.loop_resolved; // Base reward
+      
+      // Bonus if user followed AI suggestion (hidden mechanic)
+      const suggestion = getAISuggestion();
+      if (suggestion && suggestion.suggestedAction === action && suggestion.confidence > 0.7) {
+        uctReward += 0.5; // Small bonus for alignment
+      }
 
       // Persist the outcome to database by updating message metadata
       const updatePayload: Record<string, unknown> = {
@@ -111,7 +192,6 @@ export const useUnclutter = () => {
 
       // Handle specific actions
       if (action === 'done') {
-        // Mark as done/completed - no further action needed
         await supabase
           .from('messages')
           .update(updatePayload)
@@ -135,7 +215,6 @@ export const useUnclutter = () => {
           .eq('id', currentLoop.messageId);
         
         uctReward += UCT_REWARDS.loop_task_created;
-        // Note: task creation handled via createTaskFromLoop
 
       } else if (action === 'delegate') {
         await supabase
@@ -150,7 +229,6 @@ export const useUnclutter = () => {
           })
           .eq('id', currentLoop.messageId);
         
-        // Create a task for delegation tracking
         await supabase.from('tasks').insert({
           user_id: user.id,
           title: `Delegate: ${currentLoop.subject}`,
@@ -226,13 +304,18 @@ export const useUnclutter = () => {
         variant: "destructive"
       });
     }
-  }, [currentLoop, advance, toast, addUCT, logAction]);
+  }, [currentLoop, advance, toast, addUCT, logAction, getAISuggestion]);
 
-  // Skip is removed - users must resolve each item to proceed
-
-  // Generate AI draft for reply
+  // Generate AI draft for reply - uses batch intel if available
   const generateDraft = useCallback(async () => {
     if (!currentLoop) return null;
+
+    // Check if we have a pre-generated draft from batch analysis
+    const suggestion = getAISuggestion();
+    if (suggestion?.draftReply) {
+      setAiDraft(suggestion.draftReply);
+      return suggestion.draftReply;
+    }
 
     setIsGeneratingDraft(true);
     try {
@@ -262,7 +345,7 @@ export const useUnclutter = () => {
     } finally {
       setIsGeneratingDraft(false);
     }
-  }, [currentLoop, toast]);
+  }, [currentLoop, toast, getAISuggestion]);
 
   // Create task from loop
   const createTaskFromLoop = useCallback(async (dueDate?: Date) => {
@@ -283,7 +366,6 @@ export const useUnclutter = () => {
 
       if (taskError) throw taskError;
 
-      // Log task creation
       await logAction({
         actionType: 'task_created',
         targetType: 'task',
@@ -310,12 +392,10 @@ export const useUnclutter = () => {
 
   // Check if action requires confirmation - UCT level can reduce confirmations
   const needsConfirmation = useCallback((action: LoopAction): boolean => {
-    // UCT level overrides for schedule
     if (action === 'schedule' && uctData?.skipScheduleConfirm) {
       return false;
     }
     
-    // Fall back to profile settings
     if (action === 'schedule') {
       return requiresConfirmation('schedule_meetings');
     }
@@ -332,9 +412,12 @@ export const useUnclutter = () => {
     setCurrentIndex(0);
     setLoopsResolved(0);
     setAiDraft(null);
+    batchIntelRef.current = { analyses: new Map(), patterns: [], groups: [], isReady: false };
+    batchAnalysisPromiseRef.current = null;
   }, []);
 
   return {
+    // Public API - simple, sequential UX
     phase,
     currentLoop,
     currentIndex,
@@ -350,5 +433,7 @@ export const useUnclutter = () => {
     createTaskFromLoop,
     needsConfirmation,
     reset
+    // Note: Batch intelligence is intentionally NOT exposed
+    // The UI remains simple: one loop at a time, five outcomes
   };
 };
