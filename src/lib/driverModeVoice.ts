@@ -56,17 +56,17 @@ export const CONF_FOCUS_START = "Starting focus now.";
 export const CONF_FOCUS_END = "Focus complete. Nothing important was missed.";
 
 // =============================================================================
-// ERRORS (ERR) - Beta-friendly, never blame user
+// ERRORS & FALLBACKS (ERR) - Never trap the user
 // =============================================================================
 
-/** When voice capability is limited */
-export const ERR_VOICE_LIMITED = "Voice not available right now.";
-
-/** Generic retry suggestion */
-export const ERR_TRY_AGAIN = "Let's try that again.";
+/** When voice capability is limited - show tap fallback immediately */
+export const ERR_VOICE_LIMITED = "Voice is limited in the browser. Tap to continue.";
 
 /** When feature/action is not available */
 export const ERR_NOT_AVAILABLE = "Not available yet.";
+
+// REMOVED: ERR_TRY_AGAIN - NEVER loop "didn't catch that"
+// Instead, fall back to tap-based commands immediately
 
 // =============================================================================
 // ADDITIONAL CONFIRMATIONS
