@@ -10,38 +10,41 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AssistantChatPanel, ExecutionLockedTooltip } from "@/components/assistant";
 import { AssistantReadOnlyProvider } from "@/contexts/AssistantReadOnlyContext";
 import OSView from "@/components/OSView";
-import { type NextBestAction } from "@/hooks/useNextBestAction";
+import { useGlobalPriority } from "@/contexts/GlobalPriorityContext";
 import { NextBestActionCard } from "@/components/dashboard";
 import { OSHomeGrid, type HighlightedTile, type FocusLockMode } from "@/components/os/OSHomeGrid";
 import { MissionProgressCard } from "@/components/onboarding/MissionProgressCard";
 import { useOnboardingMissions } from "@/hooks/useOnboardingMissions";
 import { differenceInDays } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
+import type { PriorityAction } from "@/lib/priorityEngine";
 
-// Map NextBestAction type to OSHomeGrid highlight key
-const getHighlightedTile = (actionType: NextBestAction['type']): HighlightedTile => {
-  switch (actionType) {
-    case 'CLOSE_LOOPS': return 'OPEN_LOOPS';
-    case 'URGENT_REPLIES': return 'COMMUNICATIONS';
-    case 'START_FOCUS': return 'FOCUS';
+// Map priority action to OSHomeGrid highlight key
+const getHighlightedTile = (action?: PriorityAction): HighlightedTile => {
+  switch (action) {
+    case 'close_loops': return 'OPEN_LOOPS';
+    case 'handle_urgent': return 'COMMUNICATIONS';
+    case 'resolve_conflict': return 'COMMUNICATIONS';
+    case 'start_focus':
+    case 'continue_focus': return 'FOCUS';
     default: return null;
   }
 };
 
 // Determine focus lock mode (soft-disables tiles when action is urgent)
-const getFocusLockMode = (actionType: NextBestAction['type']): FocusLockMode => {
-  if (actionType === 'CLOSE_LOOPS') return 'CLOSE_LOOPS';
-  if (actionType === 'URGENT_REPLIES') return 'URGENT_REPLIES';
+const getFocusLockMode = (action?: PriorityAction): FocusLockMode => {
+  if (action === 'close_loops') return 'CLOSE_LOOPS';
+  if (action === 'handle_urgent' || action === 'resolve_conflict') return 'URGENT_REPLIES';
   return null;
 };
 
 interface DashboardProps {
   assistantName: string;
   subscriptionTier: string;
-  nextBestAction: NextBestAction;
 }
 
-const Dashboard = ({ assistantName, subscriptionTier, nextBestAction }: DashboardProps) => {
+const Dashboard = ({ assistantName, subscriptionTier }: DashboardProps) => {
+  const { output } = useGlobalPriority();
   const { focusSessions, missedMessages, generateRecoveryData } = useFocusRecovery();
   const [showOSView, setShowOSView] = useState(false);
   const { user } = useAuth();
@@ -81,15 +84,15 @@ const Dashboard = ({ assistantName, subscriptionTier, nextBestAction }: Dashboar
         />
         <main className="container mx-auto px-4 py-6 space-y-6">
           {/* Next Best Action - prominent position */}
-          <NextBestActionCard action={nextBestAction} />
+          <NextBestActionCard />
 
           {/* Mission Progress - visible during first week or until complete */}
           {showMissionCard && <MissionProgressCard />}
 
           {/* OS Home Grid - navigation tiles */}
           <OSHomeGrid 
-            highlightedTile={getHighlightedTile(nextBestAction.type)} 
-            focusLockMode={getFocusLockMode(nextBestAction.type)}
+            highlightedTile={getHighlightedTile(output.recommendation?.action)} 
+            focusLockMode={getFocusLockMode(output.recommendation?.action)}
           />
 
           {/* Secondary content: stats, history, panels */}

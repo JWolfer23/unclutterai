@@ -120,7 +120,6 @@ const Index = () => {
       <Dashboard 
         assistantName={assistantName} 
         subscriptionTier={subscriptionTier}
-        nextBestAction={nextBestAction}
       />
     );
   }

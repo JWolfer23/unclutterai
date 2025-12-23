@@ -105,7 +105,7 @@ export const GUIDE_LOOPS = "I'll guide you through your open items.";
  * Get NBA speech based on action type
  */
 export function getNBASpeech(
-  type: 'CLOSE_LOOPS' | 'URGENT_REPLIES' | 'START_FOCUS',
+  type: 'CLOSE_LOOPS' | 'URGENT_REPLIES' | 'START_FOCUS' | 'CONTINUE_FOCUS' | 'RESOLVE_CONFLICT' | 'ALL_CLEAR',
   count?: number
 ): string {
   switch (type) {
@@ -114,7 +114,12 @@ export function getNBASpeech(
     case 'URGENT_REPLIES':
       return NBA_URGENT_COMMS(count || 1);
     case 'START_FOCUS':
+    case 'CONTINUE_FOCUS':
       return NBA_FOCUS;
+    case 'RESOLVE_CONFLICT':
+      return NBA_URGENT_COMMS(count || 1);
+    case 'ALL_CLEAR':
+      return NBA_NOTHING;
     default:
       return NBA_NOTHING;
   }
