@@ -34,17 +34,16 @@ export function useMissionTriggers() {
       await checkAndCompleteMission('assistant_setup');
     }
 
-    // Check if Gmail is connected (connect_gmail mission)
+    // Check if any email is connected (connect_messaging mission - Gmail or Microsoft)
     const { data: credentialData } = await supabase
       .from('email_credentials')
       .select('id')
       .eq('user_id', user.id)
-      .eq('provider', 'gmail')
       .eq('is_active', true)
       .maybeSingle();
     
     if (credentialData) {
-      await checkAndCompleteMission('connect_gmail');
+      await checkAndCompleteMission('connect_messaging');
     }
 
     // Check if any unclutter session was completed (first_unclutter mission)
@@ -81,8 +80,8 @@ export function useMissionTriggers() {
     await checkAndCompleteMission('assistant_setup');
   }, [checkAndCompleteMission]);
 
-  const triggerGmailConnected = useCallback(async () => {
-    await checkAndCompleteMission('connect_gmail');
+  const triggerMessagingConnected = useCallback(async () => {
+    await checkAndCompleteMission('connect_messaging');
   }, [checkAndCompleteMission]);
 
   const triggerFirstUnclutter = useCallback(async () => {
@@ -95,7 +94,7 @@ export function useMissionTriggers() {
 
   return {
     triggerAssistantSetup,
-    triggerGmailConnected,
+    triggerMessagingConnected,
     triggerFirstUnclutter,
     triggerFirstFocus,
     missions,
