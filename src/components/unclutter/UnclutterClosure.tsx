@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { useBetaUCT } from "@/hooks/useBetaUCT";
 import { useVoiceTTS } from "@/hooks/useVoiceTTS";
 import { useOnboardingMissions } from "@/hooks/useOnboardingMissions";
@@ -32,42 +32,50 @@ const UnclutterClosure = ({ loopsResolved, onExit }: UnclutterClosureProps) => {
   const { missions, checkAndCompleteMission } = useOnboardingMissions();
   const hasSpokenRef = useRef(false);
   const hasAwardedRef = useRef(false);
+  const [wasFirstCompletion, setWasFirstCompletion] = useState(false);
+  const [totalEarned, setTotalEarned] = useState(0);
 
   // Deterministic subtext
   const subtext = useMemo(() => getCompletionSubtext(), []);
 
-  // Handle first completion mission (silent)
+  // Handle first completion mission and award UCT
   useEffect(() => {
-    const handleFirstCompletion = async () => {
+    const handleCompletionRewards = async () => {
+      if (hasAwardedRef.current) return;
+      hasAwardedRef.current = true;
+
+      let earned = 0;
+      
+      // Check if this is first unclutter completion
       const unclutterMission = missions.find(m => m.id === 'first_unclutter');
       const isFirst = !unclutterMission?.completedAt;
       
       if (isFirst) {
+        setWasFirstCompletion(true);
         try {
+          // First completion bonus is handled by the mission system (+10 UCT)
           await checkAndCompleteMission('first_unclutter');
+          earned += 10; // Mission reward
         } catch (e) {
           console.error('Failed to complete first_unclutter mission:', e);
         }
       }
-    };
 
-    handleFirstCompletion();
-  }, [missions, checkAndCompleteMission]);
-
-  // Award completion UCT silently
-  useEffect(() => {
-    const awardCompletionBonus = async () => {
-      if (!hasAwardedRef.current && loopsResolved > 0) {
-        hasAwardedRef.current = true;
+      // Award session completion bonus (for all completions)
+      if (loopsResolved > 0) {
         try {
           await addUCT(UCT_REWARDS.unclutter_complete, 'unclutter_complete');
+          earned += UCT_REWARDS.unclutter_complete;
         } catch (e) {
           console.error('Failed to award completion UCT:', e);
         }
       }
+
+      setTotalEarned(earned);
     };
-    awardCompletionBonus();
-  }, [addUCT, loopsResolved]);
+
+    handleCompletionRewards();
+  }, [missions, checkAndCompleteMission, addUCT, loopsResolved]);
 
   // Speak once, then silence
   useEffect(() => {
@@ -125,6 +133,13 @@ const UnclutterClosure = ({ loopsResolved, onExit }: UnclutterClosureProps) => {
             Take a break
           </Button>
         </div>
+
+        {/* Subtle UCT message - only shown after completion */}
+        {totalEarned > 0 && (
+          <p className="text-xs text-emerald-400/60 mb-4 animate-fade-in">
+            Clarity earns rewards.
+          </p>
+        )}
 
         {/* Optional context line - muted */}
         <p className="text-xs text-muted-foreground/40">

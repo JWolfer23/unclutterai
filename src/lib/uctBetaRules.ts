@@ -46,13 +46,15 @@ export const UCT_REWARDS = {
   focus_session_long: 1.0,    // 30-59 minutes
   focus_session_deep: 2.0,    // 60+ minutes
   
-  // Unclutter/Loop resolution
-  loop_resolved: 0.05,        // Base per loop
-  loop_archive: 0.02,         // Quick archive bonus
-  loop_reply_sent: 0.10,      // Action taken
-  loop_task_created: 0.08,    // Task conversion
-  loop_speed_bonus: 0.03,     // If resolved quickly
-  unclutter_complete: 0.5,    // Session completion bonus
+  // Unclutter/Loop resolution - clarity earns rewards
+  loop_resolved: 0.1,         // Base per loop (increased)
+  loop_archive: 0.05,         // Quick archive bonus
+  loop_reply_sent: 0.15,      // Action taken - done
+  loop_task_created: 0.12,    // Task conversion - schedule/delegate
+  loop_speed_bonus: 0.05,     // If resolved quickly
+  loop_ignore: 0.03,          // Conscious ignore decision
+  unclutter_complete: 1.0,    // Session completion bonus (doubled)
+  unclutter_first_complete: 10, // First-ever completion (via mission)
   
   // Streaks
   streak_3_day: 1,

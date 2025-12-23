@@ -282,6 +282,8 @@ export const useUnclutter = () => {
           isUndoable: false,
           source: 'unclutter',
         });
+        // Conscious ignore still earns clarity reward
+        uctReward += UCT_REWARDS.loop_ignore || 0;
       }
 
       setLoopsResolved(prev => prev + 1);
