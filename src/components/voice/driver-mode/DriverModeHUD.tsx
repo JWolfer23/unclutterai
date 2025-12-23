@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { X, Volume2, VolumeX } from 'lucide-react';
+import { X, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 import { DriverCommandButton } from './DriverCommandButton';
 import { useDriverMode } from '@/hooks/useDriverMode';
 import { useGlobalPriority } from '@/contexts/GlobalPriorityContext';
 import { useEyesFreeVoice } from '@/hooks/useEyesFreeVoice';
+import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useNavigate } from 'react-router-dom';
 import { 
   DRIVER_COMMANDS, 
@@ -11,7 +12,7 @@ import {
   DRIVER_CONFIRMATIONS,
   type DriverCommandId,
 } from '@/lib/driverModeCommands';
-import { getMessageSummary, NBA_NOTHING } from '@/lib/driverModeVoice';
+import { getMessageSummary, NBA_NOTHING, ERR_VOICE_LIMITED } from '@/lib/driverModeVoice';
 import { useMessages } from '@/hooks/useMessages';
 
 interface DriverModeHUDProps {
@@ -43,7 +44,30 @@ export const DriverModeHUD: React.FC<DriverModeHUDProps> = ({ onExit }) => {
 
   const [activeCommand, setActiveCommand] = useState<DriverCommandId | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [showVoiceFallback, setShowVoiceFallback] = useState(false);
   const hasSpokenGreeting = useRef(false);
+  const voiceFailCount = useRef(0);
+
+  // Voice input - for optional voice commands
+  const handleVoiceError = useCallback(() => {
+    voiceFailCount.current += 1;
+    // After ANY voice failure, show tap fallback immediately
+    // NEVER loop "didn't catch that" - just fall back to tap
+    setShowVoiceFallback(true);
+  }, []);
+
+  const { 
+    isSupported: voiceSupported,
+  } = useVoiceInput({
+    onError: handleVoiceError,
+  });
+
+  // Check voice support immediately and show fallback if needed
+  useEffect(() => {
+    if (!voiceSupported) {
+      setShowVoiceFallback(true);
+    }
+  }, [voiceSupported]);
 
   // Activate driver mode on mount
   useEffect(() => {
@@ -221,6 +245,16 @@ export const DriverModeHUD: React.FC<DriverModeHUDProps> = ({ onExit }) => {
 
       {/* Main content - centered, minimal */}
       <div className="h-full flex flex-col items-center justify-center px-6 pb-8">
+        {/* Voice fallback message - shown when voice is limited */}
+        {showVoiceFallback && (
+          <div className="mb-8 flex items-center gap-2 px-4 py-3 bg-white/5 rounded-lg animate-fade-in">
+            <AlertCircle className="w-4 h-4 text-white/40" />
+            <p className="text-sm text-white/60">
+              {ERR_VOICE_LIMITED}
+            </p>
+          </div>
+        )}
+
         {/* Voice activity indicator - replaces all status text */}
         <div className="mb-16 h-20 flex items-center justify-center">
           {isSpeaking && (
@@ -236,7 +270,7 @@ export const DriverModeHUD: React.FC<DriverModeHUDProps> = ({ onExit }) => {
           )}
         </div>
 
-        {/* Command buttons - 2x2 grid, large tap targets, no labels during speech */}
+        {/* Command buttons - 2x2 grid, large tap targets - ALWAYS visible and usable */}
         <div className="w-full max-w-sm grid grid-cols-2 gap-5">
           {DRIVER_COMMANDS.map((cmd) => (
             <DriverCommandButton

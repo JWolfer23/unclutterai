@@ -66,7 +66,6 @@ const OPEN_ENDED_PATTERNS = [
 import { 
   NBA_NOTHING, 
   CONF_ALL_CLEAR, 
-  ERR_TRY_AGAIN,
   ERR_NOT_AVAILABLE,
 } from './driverModeVoice';
 
