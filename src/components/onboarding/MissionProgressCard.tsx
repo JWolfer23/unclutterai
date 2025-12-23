@@ -1,23 +1,20 @@
 import React, { useState } from 'react';
-import { Check, Circle, Sparkles, Zap } from 'lucide-react';
+import { Check, Circle, Sparkles, Zap, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useOnboardingMissions } from '@/hooks/useOnboardingMissions';
 import { useAssistantProfile } from '@/hooks/useAssistantProfile';
-import { TOTAL_ONBOARDING_UCT } from '@/lib/onboardingMissions';
+import { 
+  TOTAL_ONBOARDING_UCT, 
+  PRO_UNLOCK_UCT, 
+  EARN_FIRST_MESSAGE,
+  EARN_COMPLETE_MESSAGE,
+} from '@/lib/onboardingMissions';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
-// Display labels for the 4 missions
-const MISSION_LABELS: Record<string, string> = {
-  assistant_setup: 'Complete assistant setup',
-  connect_gmail: 'Connect messaging (Gmail)',
-  first_unclutter: 'Complete first Unclutter session',
-  first_focus: 'Start first Focus session',
-};
-
-const TARGET_UCT = TOTAL_ONBOARDING_UCT; // 40
+const TARGET_UCT = PRO_UNLOCK_UCT; // 40
 
 interface MissionItemProps {
   label: string;
@@ -79,14 +76,14 @@ const CompletionState: React.FC<{ onEnterOperatorMode: () => void; isActivating:
     <div className="flex flex-col items-center text-center py-4 space-y-4">
       {/* Success icon */}
       <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-        <Sparkles className="w-6 h-6 text-primary" />
+        <Target className="w-6 h-6 text-primary" />
       </div>
       
       {/* Title */}
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold text-foreground">40 UCT earned</h3>
+        <h3 className="text-lg font-semibold text-foreground">{TARGET_UCT} UCT earned</h3>
         <p className="text-sm text-muted-foreground">
-          You've unlocked your first month of Pro.
+          {EARN_COMPLETE_MESSAGE}
         </p>
       </div>
       
@@ -174,14 +171,19 @@ export const MissionProgressCard: React.FC = () => {
   return (
     <Card className="bg-card/40 backdrop-blur-md border-border/30">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-foreground/90 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary/70" />
-            EARN YOUR FIRST 40 UCT
-          </CardTitle>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {completedCount}/{totalCount} complete
-          </span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-foreground/90 flex items-center gap-2">
+              <Target className="w-4 h-4 text-primary/70" />
+              Onboarding Missions
+            </CardTitle>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {completedCount}/{totalCount}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {EARN_FIRST_MESSAGE}
+          </p>
         </div>
       </CardHeader>
       
@@ -205,7 +207,7 @@ export const MissionProgressCard: React.FC = () => {
           {missions.map(mission => (
             <MissionItem
               key={mission.id}
-              label={MISSION_LABELS[mission.id] || mission.title}
+              label={mission.title}
               reward={mission.reward}
               isComplete={mission.completed}
             />

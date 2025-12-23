@@ -152,10 +152,10 @@ export const useMicrosoftAuth = () => {
     if (microsoftConnected === 'true' && microsoftEmail) {
       setNeedsReconnect(false);
       
-      // Award UCT for first Microsoft connection
+      // Award UCT for first messaging connection (unified for Gmail/Microsoft)
       if (!missionAwardedRef.current) {
         missionAwardedRef.current = true;
-        checkAndCompleteMission('connect_microsoft');
+        checkAndCompleteMission('connect_messaging');
         toast({
           title: "Microsoft connected",
           description: "Your assistant has more context now.",

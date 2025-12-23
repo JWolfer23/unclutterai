@@ -96,8 +96,8 @@ export function useGmailAuth() {
         const email = searchParams.get('email');
         toast.success(`Gmail connected: ${email || 'successfully'}`);
         fetchCredentials();
-        // Trigger connect gmail mission
-        checkAndCompleteMission('connect_gmail');
+        // Trigger connect messaging mission (unified for Gmail/Microsoft)
+        checkAndCompleteMission('connect_messaging');
         // Auto-trigger initial sync after connection
         setTimeout(() => syncNow(), 1000);
       } else if (oauthStatus === 'error') {
