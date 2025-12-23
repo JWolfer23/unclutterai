@@ -10,6 +10,7 @@ import { useOpenLoops } from '@/hooks/useOpenLoops';
 import { useMessages } from '@/hooks/useMessages';
 import { useFocusStats } from '@/hooks/useFocusStats';
 import { useAssistantProfile } from '@/hooks/useAssistantProfile';
+import { useFocusProtectionContext } from '@/contexts/FocusProtectionContext';
 
 interface GlobalPriorityContextType {
   // Core output from priority engine
@@ -26,6 +27,10 @@ interface GlobalPriorityContextType {
   // Quick access to state
   isAllClear: boolean;
   reassurance: string;
+  
+  // Focus protection integration
+  isInFocus: boolean;
+  shouldSuppressInterruption: boolean;
   
   // Raw counts (for internal use only, never expose to user)
   _internal: {
@@ -48,6 +53,17 @@ export function GlobalPriorityProvider({ children }: GlobalPriorityProviderProps
   const { messages } = useMessages();
   const { todayMinutes, recentSessions } = useFocusStats();
   const { profile } = useAssistantProfile();
+  
+  // Focus protection integration
+  let focusProtection: { state: { isInFocus: boolean; suppressAssistantInterruptions: boolean } } | null = null;
+  try {
+    focusProtection = useFocusProtectionContext();
+  } catch {
+    // Not within FocusProtectionProvider - use defaults
+  }
+  
+  const isInFocus = focusProtection?.state?.isInFocus ?? false;
+  const shouldSuppressInterruption = isInFocus && (focusProtection?.state?.suppressAssistantInterruptions ?? true);
 
   // Compute counts with safe defaults
   const openLoopsCount = inventory?.total_count ?? 0;
@@ -92,6 +108,8 @@ export function GlobalPriorityProvider({ children }: GlobalPriorityProviderProps
     nextAction,
     isAllClear: output.isAllClear,
     reassurance: output.reassurance,
+    isInFocus,
+    shouldSuppressInterruption,
     _internal: {
       openLoopsCount,
       urgentCount,
@@ -132,6 +150,8 @@ export function useGlobalPriority(): GlobalPriorityContextType {
       },
       isAllClear: true,
       reassurance: "Nothing urgent needs your attention.",
+      isInFocus: false,
+      shouldSuppressInterruption: false,
       _internal: {
         openLoopsCount: 0,
         urgentCount: 0,
