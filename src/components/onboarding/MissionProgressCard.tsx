@@ -1,18 +1,14 @@
-import React, { useState } from 'react';
-import { Check, Circle, Sparkles, Zap, Target } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { Check, Circle, Zap, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useOnboardingMissions } from '@/hooks/useOnboardingMissions';
-import { useAssistantProfile } from '@/hooks/useAssistantProfile';
+import { useBetaProUnlock } from '@/hooks/useBetaProUnlock';
 import { 
-  TOTAL_ONBOARDING_UCT, 
   PRO_UNLOCK_UCT, 
   EARN_FIRST_MESSAGE,
-  EARN_COMPLETE_MESSAGE,
 } from '@/lib/onboardingMissions';
 import { cn } from '@/lib/utils';
-import { toast } from '@/hooks/use-toast';
 
 const TARGET_UCT = PRO_UNLOCK_UCT; // 40
 
@@ -67,102 +63,58 @@ const MissionItem: React.FC<MissionItemProps> = ({ label, reward, isComplete }) 
   );
 };
 
-// Completion state component
-const CompletionState: React.FC<{ onEnterOperatorMode: () => void; isActivating: boolean }> = ({ 
-  onEnterOperatorMode, 
-  isActivating 
-}) => {
+// Completion state component - Pro unlocked
+const CompletionState: React.FC<{ isOperator: boolean }> = ({ isOperator }) => {
   return (
     <div className="flex flex-col items-center text-center py-4 space-y-4">
       {/* Success icon */}
       <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-        <Target className="w-6 h-6 text-primary" />
+        <Zap className="w-6 h-6 text-primary" />
       </div>
       
       {/* Title */}
-      <div className="space-y-1">
-        <h3 className="text-lg font-semibold text-foreground">{TARGET_UCT} UCT earned</h3>
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold text-foreground">
+          You've unlocked your first month of Pro.
+        </h3>
         <p className="text-sm text-muted-foreground">
-          {EARN_COMPLETE_MESSAGE}
+          This is how Operator Mode feels.
         </p>
       </div>
       
-      {/* CTA Button */}
-      <Button 
-        onClick={onEnterOperatorMode}
-        disabled={isActivating}
-        className="gap-2"
-      >
-        <Zap className="w-4 h-4" />
-        {isActivating ? 'Activating...' : 'Enter Operator Mode'}
-      </Button>
+      {/* Operator badge */}
+      {isOperator && (
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+          <Zap className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-medium text-primary">Operator Mode Active</span>
+        </div>
+      )}
     </div>
   );
 };
 
 export const MissionProgressCard: React.FC = () => {
-  const { missions, totalUctEarned, completedCount, totalCount } = useOnboardingMissions();
-  const { profile, updateProfile } = useAssistantProfile();
-  const [isActivating, setIsActivating] = useState(false);
+  const { missions, totalUctEarned, completedCount, totalCount, hasUnlockedPro } = useOnboardingMissions();
+  const { checkAndUnlockPro, isOperator } = useBetaProUnlock();
+  const hasTriggeredUnlock = useRef(false);
   
   const progressPercent = (totalUctEarned / TARGET_UCT) * 100;
   const allComplete = completedCount >= totalCount && totalCount > 0;
-  const isAlreadyOperator = profile?.role === 'operator';
 
-  // Handle entering Operator Mode
-  const handleEnterOperatorMode = async () => {
-    if (isAlreadyOperator) {
-      toast({
-        title: "Already in Operator Mode",
-        description: "Your assistant is already operating autonomously.",
-      });
-      return;
+  // Auto-trigger Pro unlock when user earns 40 UCT
+  useEffect(() => {
+    if (hasUnlockedPro && !hasTriggeredUnlock.current) {
+      hasTriggeredUnlock.current = true;
+      checkAndUnlockPro(totalUctEarned);
     }
-
-    setIsActivating(true);
-    try {
-      await updateProfile({
-        role: 'operator',
-        authority_level: 1,
-        decision_style: 'suggest',
-        allowed_actions: {
-          draft_replies: true,
-          schedule_items: true,
-          archive_items: true,
-          auto_handle_low_risk: false,
-        },
-        trust_boundaries: {
-          send_messages: false, // No confirmation needed
-          schedule_meetings: false, // No confirmation needed
-          delete_content: true, // Still requires confirmation
-        },
-      });
-      
-      toast({
-        title: "Operator Mode activated",
-        description: "Your assistant can now take action on your behalf.",
-      });
-    } catch (error) {
-      console.error('Failed to activate Operator Mode:', error);
-      toast({
-        title: "Couldn't activate",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsActivating(false);
-    }
-  };
+  }, [hasUnlockedPro, totalUctEarned, checkAndUnlockPro]);
 
   // Show completion state when all missions done
   if (allComplete) {
     return (
       <Card className="bg-card/40 backdrop-blur-md border-border/30 border-primary/20">
         <CardContent className="pt-6">
-          <CompletionState 
-            onEnterOperatorMode={handleEnterOperatorMode} 
-            isActivating={isActivating}
-          />
+          <CompletionState isOperator={isOperator} />
         </CardContent>
       </Card>
     );

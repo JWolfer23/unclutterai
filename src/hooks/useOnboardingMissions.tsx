@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from './use-toast';
 import { 
   ONBOARDING_MISSIONS, 
+  PRO_UNLOCK_UCT,
   type MissionId, 
   type Mission,
 } from '@/lib/onboardingMissions';
@@ -26,6 +27,7 @@ interface UseOnboardingMissionsReturn {
   completeMission: (missionId: MissionId) => Promise<boolean>;
   isCompleting: boolean;
   checkAndCompleteMission: (missionId: MissionId) => Promise<void>;
+  hasUnlockedPro: boolean;
 }
 
 export function useOnboardingMissions(): UseOnboardingMissionsReturn {
@@ -124,6 +126,7 @@ export function useOnboardingMissions(): UseOnboardingMissionsReturn {
   const completedCount = missions.filter(m => m.completed).length;
   const totalUctEarned = progress.reduce((sum, p) => sum + (p.uct_awarded || 0), 0);
   const totalUctAvailable = ONBOARDING_MISSIONS.reduce((sum, m) => sum + m.reward, 0);
+  const hasUnlockedPro = totalUctEarned >= PRO_UNLOCK_UCT;
 
   return {
     missions,
@@ -135,5 +138,6 @@ export function useOnboardingMissions(): UseOnboardingMissionsReturn {
     completeMission,
     isCompleting: completeMutation.isPending,
     checkAndCompleteMission,
+    hasUnlockedPro,
   };
 }
