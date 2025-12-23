@@ -122,3 +122,9 @@ verify_jwt = true
 
 [functions.microsoft-calendar-sync]
 verify_jwt = true
+
+[functions.microsoft-calendar-create-event]
+verify_jwt = true
+
+[functions.unclutter-batch-analyze]
+verify_jwt = true
