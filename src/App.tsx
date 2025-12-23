@@ -34,6 +34,7 @@ import { SecurityProvider } from "@/components/SecurityProvider";
 import { AssistantProfileProvider } from "@/components/AssistantProfileProvider";
 import { FocusProtectionProvider } from "@/contexts/FocusProtectionContext";
 import { AssistantMemoryProvider, useAssistantMemory } from "@/contexts/AssistantMemoryContext";
+import { GlobalPriorityProvider } from "@/contexts/GlobalPriorityContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { UCTMilestoneProvider } from "@/components/UCTMilestoneProvider";
 
@@ -107,15 +108,17 @@ const App = () => {
           <AssistantProfileProvider>
             <FocusProtectionProvider>
               <AssistantMemoryProvider>
-                <UCTMilestoneProvider>
-                  <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <BrowserRouter>
-                      <AppRoutes />
-                    </BrowserRouter>
-                  </TooltipProvider>
-                </UCTMilestoneProvider>
+                <GlobalPriorityProvider>
+                  <UCTMilestoneProvider>
+                    <TooltipProvider>
+                      <Toaster />
+                      <Sonner />
+                      <BrowserRouter>
+                        <AppRoutes />
+                      </BrowserRouter>
+                    </TooltipProvider>
+                  </UCTMilestoneProvider>
+                </GlobalPriorityProvider>
               </AssistantMemoryProvider>
             </FocusProtectionProvider>
           </AssistantProfileProvider>
