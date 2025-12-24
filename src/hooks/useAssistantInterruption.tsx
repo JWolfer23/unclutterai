@@ -2,6 +2,11 @@ import { useCallback } from 'react';
 import { useFocusProtectionContext } from '@/contexts/FocusProtectionContext';
 import { useAssistantProfile } from '@/hooks/useAssistantProfile';
 import { toast as originalToast } from '@/hooks/use-toast';
+import { 
+  applyCognitiveLoadGuardrail,
+  resolveUncertainty,
+  REASSURANCE_PHRASES 
+} from '@/lib/cognitiveLoadGuardrail';
 
 type UrgencyLevel = 'critical' | 'time_sensitive' | 'informational';
 
@@ -93,8 +98,9 @@ export const useAssistantInterruption = () => {
   }, [checkInterruption, queueItem]);
 
   /**
-   * Show a notification respecting global interruption rules.
+   * Show a notification respecting global interruption rules AND cognitive load guardrail.
    * If blocked, the notification is silently queued.
+   * Messages are validated to never ask unnecessary questions or present multiple options.
    */
   const notify = useCallback((options: {
     title: string;
@@ -112,13 +118,30 @@ export const useAssistantInterruption = () => {
     });
 
     if (allowed) {
-      originalToast({
-        title: options.title,
-        description: options.description,
-        variant: options.variant,
-      });
+      // Apply cognitive load guardrail to the notification content
+      const guardrailResult = applyCognitiveLoadGuardrail(
+        options.description || options.title,
+        {
+          hasUrgentItems: urgency === 'critical',
+          hasUserRequest: false,
+          isInFocusMode: state.isInFocus,
+          hasActionableItem: true,
+          autoFix: true,
+        }
+      );
+
+      // Only show if guardrail allows and didn't suppress
+      if (!guardrailResult.wasSilent && guardrailResult.output) {
+        originalToast({
+          title: options.title,
+          description: guardrailResult.output !== options.description 
+            ? guardrailResult.output 
+            : options.description,
+          variant: options.variant,
+        });
+      }
     }
-  }, [requestInterruption]);
+  }, [requestInterruption, state.isInFocus]);
 
   /**
    * Force a critical notification that bypasses all rules.
@@ -163,6 +186,18 @@ export const useAssistantInterruption = () => {
     };
   }, [state, profile]);
 
+  /**
+   * Handle uncertainty by converting to reassurance instead of questions
+   * This enforces the cognitive load rule: "If uncertainty remains, respond with reassurance, not questions"
+   */
+  const handleUncertainty = useCallback((
+    topic: string,
+    confidenceLevel: number,
+    hasPartialInfo: boolean = false
+  ): string => {
+    return resolveUncertainty({ topic, confidenceLevel, hasPartialInfo });
+  }, []);
+
   return {
     // Core functions
     checkInterruption,
@@ -171,6 +206,10 @@ export const useAssistantInterruption = () => {
     // Notification helpers
     notify,
     criticalNotify,
+    
+    // Cognitive load helpers
+    handleUncertainty,
+    REASSURANCE_PHRASES,
     
     // State
     isInFocus: state.isInFocus,
