@@ -37,9 +37,8 @@ function getCorsHeaders(req: Request): Record<string, string> {
   };
 }
 
-// The app URL to redirect back to after OAuth
-// TODO: Change to production URL before release
-const APP_URL = 'https://id-preview--fbb9180c-f7fc-4517-adb8-3ac85ee01f78.lovable.app';
+// The app URL to redirect back to after OAuth - configured via environment variable
+const APP_URL = Deno.env.get('FRONTEND_URL') || Deno.env.get('APP_URL') || 'https://aihlehujbzkkugzmcobn.lovable.app';
 
 // Simple encryption using Web Crypto API
 async function encryptToken(token: string, key: string): Promise<string> {
