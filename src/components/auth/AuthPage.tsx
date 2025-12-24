@@ -319,8 +319,8 @@ const AuthPage = () => {
         <div className="backdrop-blur-2xl bg-[#12121F]/95 border border-white/[0.1] rounded-3xl shadow-2xl shadow-[#6366F1]/10">
           <CardHeader className="text-center space-y-6 pt-12 pb-2">
             {/* Logo */}
-            <div className="w-48 h-48 mx-auto flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-[2rem] shadow-lg">
-              <img src={logoTransparent} alt="UnclutterAI" className="w-32 h-32 object-contain" />
+            <div className="w-24 h-24 mx-auto flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-3xl shadow-lg">
+              <img src={logoTransparent} alt="UnclutterAI" className="w-16 h-16 object-contain" />
             </div>
 
             {/* Title & Subtitle */}
