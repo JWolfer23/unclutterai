@@ -186,8 +186,11 @@ const AuthPage = () => {
               </button>
 
               {/* Logo */}
-              <div className="w-20 h-20 mx-auto flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-2xl shadow-lg">
-                <img src={logoTransparent} alt="UnclutterAI" className="w-14 h-14 object-contain" />
+              <div 
+                className="w-20 h-20 mx-auto flex items-center justify-center overflow-visible bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-2xl"
+                style={{ boxShadow: '0 0 40px rgba(168, 85, 247, 0.35), 0 0 80px rgba(99, 102, 241, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
+              >
+                <img src={logoTransparent} alt="UnclutterAI" className="w-28 h-28 object-contain" />
               </div>
 
               {/* Title */}
@@ -319,8 +322,11 @@ const AuthPage = () => {
         <div className="backdrop-blur-2xl bg-[#12121F]/95 border border-white/[0.1] rounded-3xl shadow-2xl shadow-[#6366F1]/10">
           <CardHeader className="text-center space-y-6 pt-12 pb-2">
             {/* Logo */}
-            <div className="w-24 h-24 mx-auto flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-3xl shadow-lg">
-              <img src={logoTransparent} alt="UnclutterAI" className="w-16 h-16 object-contain" />
+            <div 
+              className="w-24 h-24 mx-auto flex items-center justify-center overflow-visible bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-3xl"
+              style={{ boxShadow: '0 0 40px rgba(168, 85, 247, 0.35), 0 0 80px rgba(99, 102, 241, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
+            >
+              <img src={logoTransparent} alt="UnclutterAI" className="w-32 h-32 object-contain" />
             </div>
 
             {/* Title & Subtitle */}
