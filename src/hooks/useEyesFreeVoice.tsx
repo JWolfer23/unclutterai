@@ -15,6 +15,11 @@ import {
   EYES_FREE_PHRASES,
 } from '@/lib/eyesFreeMode';
 import { BETA_VOICE, getSpokenError } from '@/lib/betaMessaging';
+import { 
+  applyCognitiveLoadGuardrail,
+  resolveUncertainty,
+  REASSURANCE_PHRASES 
+} from '@/lib/cognitiveLoadGuardrail';
 
 export interface UseEyesFreeVoiceReturn {
   // Core speak functions that enforce rules
@@ -66,12 +71,37 @@ export function useEyesFreeVoice(): UseEyesFreeVoiceReturn {
 
   /**
    * Core speak function that validates and sanitizes output
+   * Now integrates cognitive load guardrail for global rules enforcement
    */
-  const speak = useCallback(async (text: string) => {
-    // Check if we should be silent
+  const speak = useCallback(async (text: string, context?: {
+    hasUrgentItems?: boolean;
+    hasUserRequest?: boolean;
+    hasActionableItem?: boolean;
+  }) => {
+    // Apply cognitive load guardrail first - this enforces global rules
+    const guardrailResult = applyCognitiveLoadGuardrail(text, {
+      hasUrgentItems: context?.hasUrgentItems ?? false,
+      hasUserRequest: context?.hasUserRequest ?? true, // If speak is called, assume user requested
+      isInFocusMode: isInFocus,
+      hasActionableItem: context?.hasActionableItem ?? true,
+      autoFix: true,
+    });
+
+    // If guardrail says be silent, respect that
+    if (guardrailResult.wasSilent || !guardrailResult.output) {
+      console.log('[EyesFree] Guardrail enforced silence');
+      return;
+    }
+
+    // Log any violations that were auto-fixed
+    if (guardrailResult.violations.length > 0) {
+      console.warn('[EyesFree] Cognitive load violations fixed:', guardrailResult.violations);
+    }
+
+    // Check if we should be silent based on eyes-free rules
     if (shouldBeSilent({
-      hasUrgentItems: false,
-      hasUserRequest: true, // If speak is called, assume user requested
+      hasUrgentItems: context?.hasUrgentItems ?? false,
+      hasUserRequest: context?.hasUserRequest ?? true,
       isInFocusMode: isInFocus,
       lastSpokenMs: lastSpokenRef.current,
     })) {
@@ -79,20 +109,20 @@ export function useEyesFreeVoice(): UseEyesFreeVoiceReturn {
       return;
     }
 
-    // Validate the output
-    const validation = validateVoiceOutput(text);
+    // Validate against eyes-free voice rules
+    const validation = validateVoiceOutput(guardrailResult.output);
     
-    let finalText = text;
+    let finalText = guardrailResult.output;
     if (!validation.isValid) {
       console.warn('[EyesFree] Voice output violations:', validation.violations);
       // Attempt to sanitize
-      finalText = sanitizeVoiceOutput(text);
+      finalText = sanitizeVoiceOutput(guardrailResult.output);
       
       // Re-validate
       const revalidation = validateVoiceOutput(finalText);
       if (!revalidation.isValid) {
-        console.error('[EyesFree] Could not sanitize voice output, falling back to silence');
-        return;
+        // Fall back to reassurance instead of silence
+        finalText = REASSURANCE_PHRASES.handled;
       }
     }
 
