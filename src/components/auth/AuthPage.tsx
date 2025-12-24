@@ -190,7 +190,7 @@ const AuthPage = () => {
                 className="w-20 h-20 mx-auto flex items-center justify-center overflow-visible bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-2xl"
                 style={{ boxShadow: '0 0 40px rgba(168, 85, 247, 0.35), 0 0 80px rgba(99, 102, 241, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
               >
-                <img src={logoTransparent} alt="UnclutterAI" className="w-28 h-28 object-contain" />
+                <img src={logoTransparent} alt="UnclutterAI" className="w-36 h-36 object-contain" />
               </div>
 
               {/* Title */}
@@ -326,7 +326,7 @@ const AuthPage = () => {
               className="w-24 h-24 mx-auto flex items-center justify-center overflow-visible bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-3xl"
               style={{ boxShadow: '0 0 40px rgba(168, 85, 247, 0.35), 0 0 80px rgba(99, 102, 241, 0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
             >
-              <img src={logoTransparent} alt="UnclutterAI" className="w-32 h-32 object-contain" />
+              <img src={logoTransparent} alt="UnclutterAI" className="w-40 h-40 object-contain" />
             </div>
 
             {/* Title & Subtitle */}
