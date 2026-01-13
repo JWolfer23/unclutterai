@@ -30,10 +30,13 @@ export function MorningModeOverlay({
   const greeting = getGreeting();
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6 overflow-hidden">
+    <div 
+      className="fixed inset-0 z-50 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center overflow-y-auto px-6 py-12"
+      style={{ paddingTop: 'max(3rem, env(safe-area-inset-top))' }}
+    >
       {/* No dismiss button - user must choose an action */}
 
-      <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 my-auto">
         {/* Greeting */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-light text-white tracking-tight">
