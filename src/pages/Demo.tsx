@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Mail, MessageSquare, Phone, Circle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Mail, MessageSquare, Phone, Circle, Sparkles, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * Cohesive Presentation Demo for UnclutterAI
  * Supports Scenes 2-5 of product video for Google Startup Grant review.
- * Static, calm, production-grade. No interactivity.
+ * Static, calm, production-grade. Mobile-first, single-column.
  */
 
-type DemoScene = "intro" | "inbox" | "intelligence" | "tasks";
+type DemoScene = "static" | "summarized" | "actions";
 
 interface DemoMessage {
   id: string;
@@ -25,7 +26,6 @@ interface DemoTask {
   id: string;
   action: string;
   source: string;
-  messageId: string;
   priority: "high" | "medium";
 }
 
@@ -40,10 +40,10 @@ const DEMO_MESSAGES: DemoMessage[] = [
 ];
 
 const DEMO_TASKS: DemoTask[] = [
-  { id: "t1", action: "Approve contract", source: "Sarah Chen", messageId: "1", priority: "high" },
-  { id: "t2", action: "Unblock deployment", source: "DevOps Team", messageId: "2", priority: "high" },
-  { id: "t3", action: "Review proposal", source: "Michael Torres", messageId: "3", priority: "medium" },
-  { id: "t4", action: "Provide roadmap feedback", source: "Product Team", messageId: "4", priority: "medium" },
+  { id: "t1", action: "Approve contract", source: "Sarah Chen", priority: "high" },
+  { id: "t2", action: "Unblock deployment", source: "DevOps Team", priority: "high" },
+  { id: "t3", action: "Review proposal", source: "Michael Torres", priority: "medium" },
+  { id: "t4", action: "Provide roadmap feedback", source: "Product Team", priority: "medium" },
 ];
 
 const sourceIcons = {
@@ -61,48 +61,93 @@ const sourceLabels = {
 const priorityColors = {
   high: "bg-amber-600",
   medium: "bg-blue-500",
-  fyi: "bg-transparent",
+  fyi: "bg-muted/30",
 };
 
 // Components
 
 function DemoHeader({ scene }: { scene: DemoScene }) {
   return (
-    <header className="border-b border-border/30 px-8 py-6 bg-background/50 backdrop-blur-sm">
-      <div className="max-w-5xl mx-auto flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-            Unified Inbox
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {scene === "intro" 
-              ? "Monitoring 3 channels" 
-              : "7 messages across 3 channels"}
-          </p>
+    <header className="border-b border-border/20 px-4 sm:px-8 py-5 bg-background/50 backdrop-blur-sm">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+              Unified Inbox
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              7 messages across 3 channels
+            </p>
+          </div>
+          <Badge 
+            variant="outline" 
+            className="text-xs border-border/40 text-muted-foreground shrink-0"
+          >
+            4 actions identified
+          </Badge>
         </div>
-        <Badge 
-          variant="outline" 
-          className={cn(
-            "text-xs border-border/50 transition-all duration-500",
-            scene === "tasks" ? "text-primary border-primary/30" : "text-muted-foreground"
-          )}
-        >
-          {scene === "tasks" ? "4 actions identified" : "All synced"}
-        </Badge>
       </div>
     </header>
   );
 }
 
-function AILabel({ label, visible, delay }: { label: string; visible: boolean; delay: number }) {
+function DemoActions({ scene, onSummarize }: { scene: DemoScene; onSummarize: () => void }) {
+  return (
+    <div className="px-4 sm:px-8 py-4 border-b border-border/10">
+      <div className="max-w-3xl mx-auto flex gap-3">
+        <Button 
+          variant="outline" 
+          size="sm"
+          className={cn(
+            "gap-2 text-sm font-medium border-border/30 bg-card/30 hover:bg-card/50 hover:border-primary/30 transition-all duration-300",
+            scene !== "static" && "border-primary/40 text-primary"
+          )}
+          onClick={onSummarize}
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          Summarize
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="gap-2 text-sm font-medium border-border/30 bg-card/30 hover:bg-card/50 hover:border-primary/30 transition-all duration-300"
+        >
+          <Layers className="h-3.5 w-3.5" />
+          Batch Respond
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AISummaryPanel({ visible }: { visible: boolean }) {
   return (
     <div 
       className={cn(
-        "flex items-center gap-2 mt-1.5 transition-all duration-500",
-        visible ? "opacity-100" : "opacity-0"
+        "px-4 sm:px-8 py-0 overflow-hidden transition-all duration-500 ease-out",
+        visible ? "max-h-40 py-4 opacity-100" : "max-h-0 opacity-0"
       )}
-      style={{ transitionDelay: visible ? `${delay}ms` : "0ms" }}
     >
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-card/40 border border-border/20 rounded-xl p-4 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Circle className="h-1.5 w-1.5 fill-primary text-primary" />
+            <span className="text-xs font-medium text-primary uppercase tracking-wider">AI Summary</span>
+          </div>
+          <div className="space-y-1.5 text-sm text-foreground/80">
+            <p>• 2 decisions required</p>
+            <p>• 1 deployment blocked</p>
+            <p>• 1 review requested</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AILabel({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 mt-1.5">
       <Circle className="h-1.5 w-1.5 fill-primary text-primary" />
       <span className="text-xs font-medium text-primary">{label}</span>
     </div>
@@ -111,64 +156,43 @@ function AILabel({ label, visible, delay }: { label: string; visible: boolean; d
 
 interface DemoMessageRowProps {
   message: DemoMessage;
-  scene: DemoScene;
-  messageIndex: number;
-  globalIndex: number;
+  isDimmed?: boolean;
 }
 
-function DemoMessageRow({ message, scene, messageIndex, globalIndex }: DemoMessageRowProps) {
+function DemoMessageRow({ message, isDimmed }: DemoMessageRowProps) {
   const SourceIcon = sourceIcons[message.source];
-  
-  // Visibility based on scene
-  const isVisible = scene !== "intro";
-  const showPriorityBar = scene === "intelligence" || scene === "tasks";
-  const showAILabel = scene === "intelligence" || scene === "tasks";
-  const isDimmed = (scene === "intelligence" || scene === "tasks") && message.priority === "fyi";
-  
-  // Stagger delays
-  const messageDelay = messageIndex * 300;
-  const labelDelay = globalIndex * 150;
   
   return (
     <div 
       className={cn(
-        "flex items-start gap-4 py-5 px-6 bg-card/30 rounded-2xl border border-border/20 transition-all duration-500 ease-out",
-        isDimmed && "opacity-50",
-        !isVisible && "opacity-0 translate-y-2"
+        "flex items-start gap-3 sm:gap-4 py-4 sm:py-5 px-4 sm:px-5 bg-card/20 rounded-xl border border-border/10 transition-all duration-300",
+        isDimmed && "opacity-50"
       )}
-      style={{ 
-        transitionDelay: isVisible && scene === "inbox" ? `${messageDelay}ms` : "0ms" 
-      }}
     >
       {/* Priority indicator */}
       <div 
         className={cn(
-          "w-1 h-12 rounded-full transition-all duration-300 mt-1",
-          showPriorityBar ? priorityColors[message.priority] : "bg-transparent"
+          "w-1 h-10 sm:h-12 rounded-full mt-0.5 shrink-0",
+          priorityColors[message.priority]
         )}
-        style={{ transitionDelay: showPriorityBar ? "200ms" : "0ms" }}
       />
       
       {/* Content */}
       <div className="flex-1 min-w-0 space-y-0.5">
-        <p className="font-semibold text-foreground text-base tracking-tight">
+        <p className="font-semibold text-foreground text-sm sm:text-base tracking-tight truncate">
           {message.sender}
         </p>
-        <p className="text-muted-foreground text-sm leading-relaxed">
+        <p className="text-muted-foreground text-sm leading-relaxed line-clamp-2">
           {message.intent}
         </p>
-        <AILabel 
-          label={message.aiLabel} 
-          visible={showAILabel} 
-          delay={labelDelay}
-        />
+        <AILabel label={message.aiLabel} />
       </div>
       
       {/* Meta */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground/60 pt-1">
+      <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground/60 shrink-0">
         <div className="flex items-center gap-1.5">
-          <SourceIcon className="h-3.5 w-3.5" />
-          <span>{sourceLabels[message.source]}</span>
+          <SourceIcon className="h-3 w-3" />
+          <span className="hidden sm:inline">{sourceLabels[message.source]}</span>
         </div>
         <span>{message.time}</span>
       </div>
@@ -179,34 +203,23 @@ function DemoMessageRow({ message, scene, messageIndex, globalIndex }: DemoMessa
 interface DemoSectionProps {
   label: string;
   messages: DemoMessage[];
-  scene: DemoScene;
-  startIndex: number;
+  dimmed?: boolean;
 }
 
-function DemoSection({ label, messages, scene, startIndex }: DemoSectionProps) {
+function DemoSection({ label, messages, dimmed }: DemoSectionProps) {
   if (messages.length === 0) return null;
   
-  const isVisible = scene !== "intro";
-  
   return (
-    <div 
-      className={cn(
-        "space-y-3 transition-all duration-500",
-        !isVisible && "opacity-0"
-      )}
-      style={{ transitionDelay: isVisible ? `${startIndex * 300}ms` : "0ms" }}
-    >
-      <h3 className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider pl-2">
+    <div className="space-y-3">
+      <h3 className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider px-1">
         {label}
       </h3>
       <div className="space-y-2">
-        {messages.map((message, idx) => (
+        {messages.map((message) => (
           <DemoMessageRow 
             key={message.id} 
             message={message}
-            scene={scene}
-            messageIndex={startIndex + idx}
-            globalIndex={startIndex + idx}
+            isDimmed={dimmed}
           />
         ))}
       </div>
@@ -218,14 +231,14 @@ function DemoTaskRow({ task, index, visible }: { task: DemoTask; index: number; 
   return (
     <div 
       className={cn(
-        "flex items-start gap-3 py-4 px-4 bg-card/20 rounded-xl border border-border/20 transition-all duration-500",
-        visible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"
+        "flex items-center gap-3 py-3 sm:py-4 px-4 bg-card/20 rounded-xl border border-border/10 transition-all duration-500",
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
       )}
-      style={{ transitionDelay: visible ? `${600 + index * 200}ms` : "0ms" }}
+      style={{ transitionDelay: visible ? `${index * 100}ms` : "0ms" }}
     >
       {/* Priority bar */}
       <div className={cn(
-        "w-1 h-10 rounded-full mt-0.5",
+        "w-1 h-8 rounded-full shrink-0",
         task.priority === "high" ? "bg-amber-600" : "bg-blue-500"
       )} />
       
@@ -235,22 +248,23 @@ function DemoTaskRow({ task, index, visible }: { task: DemoTask; index: number; 
           from {task.source}
         </p>
       </div>
+      
+      {/* Visual checkbox placeholder */}
+      <div className="w-5 h-5 rounded border border-border/30 shrink-0" />
     </div>
   );
 }
 
-function DemoTaskPanel({ scene }: { scene: DemoScene }) {
-  const isVisible = scene === "tasks";
-  
+function DemoActionsSection({ visible }: { visible: boolean }) {
   return (
     <div 
       className={cn(
-        "w-72 shrink-0 transition-all duration-600 ease-out",
-        isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8 pointer-events-none"
+        "transition-all duration-500 ease-out",
+        visible ? "opacity-100" : "opacity-0"
       )}
     >
-      <div className="bg-card/20 rounded-2xl border border-border/20 p-5 backdrop-blur-sm">
-        <h2 className="text-sm font-semibold text-foreground mb-4 tracking-tight">
+      <div className="border-t border-border/10 pt-6 mt-6">
+        <h2 className="text-base font-semibold text-foreground mb-4 tracking-tight">
           Your Next Actions
         </h2>
         <div className="space-y-2">
@@ -259,7 +273,7 @@ function DemoTaskPanel({ scene }: { scene: DemoScene }) {
               key={task.id} 
               task={task} 
               index={idx}
-              visible={isVisible}
+              visible={visible}
             />
           ))}
         </div>
@@ -269,17 +283,22 @@ function DemoTaskPanel({ scene }: { scene: DemoScene }) {
 }
 
 export default function Demo() {
-  const [scene, setScene] = useState<DemoScene>("intro");
+  const [scene, setScene] = useState<DemoScene>("static");
   
-  // Automatic scene progression
+  // Automatic scene progression for video recording
   useEffect(() => {
     const timers = [
-      setTimeout(() => setScene("inbox"), 2000),        // Scene 3: Messages appear
-      setTimeout(() => setScene("intelligence"), 7000), // Scene 4: AI labels appear
-      setTimeout(() => setScene("tasks"), 13000),       // Scene 5: Task panel slides in
+      setTimeout(() => setScene("summarized"), 3000),  // Show summary
+      setTimeout(() => setScene("actions"), 6000),     // Show actions
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
+  
+  const handleSummarize = () => {
+    if (scene === "static") {
+      setScene("summarized");
+    }
+  };
   
   const priorityGroups = {
     high: { label: "Requires Action", messages: DEMO_MESSAGES.filter(m => m.priority === "high") },
@@ -287,38 +306,31 @@ export default function Demo() {
     fyi: { label: "FYI", messages: DEMO_MESSAGES.filter(m => m.priority === "fyi") },
   };
   
-  // Calculate start indices for staggered animations
-  const highStartIndex = 0;
-  const mediumStartIndex = priorityGroups.high.messages.length;
-  const fyiStartIndex = mediumStartIndex + priorityGroups.medium.messages.length;
+  const showSummary = scene === "summarized" || scene === "actions";
+  const showActions = scene === "actions";
   
   return (
-    <div className="min-h-screen bg-[#0b0b0d]">
+    <div className="min-h-screen bg-[#0a0a0c]">
       <DemoHeader scene={scene} />
+      <DemoActions scene={scene} onSummarize={handleSummarize} />
+      <AISummaryPanel visible={showSummary} />
       
-      <main className="px-8 py-8">
-        <div className="max-w-5xl mx-auto flex gap-8">
+      <main className="px-4 sm:px-8 py-6 sm:py-8">
+        <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
           {/* Message List */}
-          <div className="flex-1 space-y-8">
-            <DemoSection 
-              {...priorityGroups.high} 
-              scene={scene} 
-              startIndex={highStartIndex}
-            />
-            <DemoSection 
-              {...priorityGroups.medium} 
-              scene={scene} 
-              startIndex={mediumStartIndex}
-            />
-            <DemoSection 
-              {...priorityGroups.fyi} 
-              scene={scene} 
-              startIndex={fyiStartIndex}
-            />
-          </div>
+          <DemoSection 
+            {...priorityGroups.high}
+          />
+          <DemoSection 
+            {...priorityGroups.medium}
+          />
+          <DemoSection 
+            {...priorityGroups.fyi}
+            dimmed={showActions}
+          />
           
-          {/* Task Panel (Scene 5) */}
-          <DemoTaskPanel scene={scene} />
+          {/* Next Actions (full-width, below inbox) */}
+          <DemoActionsSection visible={showActions} />
         </div>
       </main>
     </div>
