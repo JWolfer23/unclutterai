@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, MessageSquare, Phone, Circle, Sparkles, Layers } from "lucide-react";
+import { Mail, MessageSquare, Phone, Circle, Sparkles, Layers, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Cohesive Presentation Demo for UnclutterAI
- * Supports Scenes 2-5 of product video for Google Startup Grant review.
- * Static, calm, production-grade. Mobile-first, single-column.
+ * Focus Mode Demo for UnclutterAI
+ * Optimized for product demo video capture.
+ * FYI items de-emphasized, action items prominent.
  */
 
-type DemoScene = "static" | "summarized" | "actions";
+type DemoScene = "loading" | "focus";
 
 interface DemoMessage {
   id: string;
@@ -52,38 +52,34 @@ const sourceIcons = {
   whatsapp: Phone,
 };
 
-const sourceLabels = {
-  email: "Email",
-  slack: "Slack",
-  whatsapp: "WhatsApp",
-};
-
 const priorityColors = {
   high: "bg-amber-600",
   medium: "bg-blue-500",
-  fyi: "bg-muted/30",
+  fyi: "bg-muted/20",
 };
 
-// Components
-
-function DemoHeader({ scene }: { scene: DemoScene }) {
+// Header Component
+function DemoHeader() {
   return (
-    <header className="border-b border-border/20 px-4 sm:px-8 py-5 bg-background/50 backdrop-blur-sm">
-      <div className="max-w-3xl mx-auto">
+    <header className="border-b border-border/20 px-4 sm:px-6 py-5 bg-background/50 backdrop-blur-sm">
+      <div className="max-w-2xl mx-auto">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
-              Unified Inbox
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-foreground tracking-tight">
+                Unified Inbox
+              </h1>
+              <Eye className="h-4 w-4 text-primary opacity-60" />
+            </div>
             <p className="text-sm text-muted-foreground">
-              7 messages across 3 channels
+              4 items need attention
             </p>
           </div>
           <Badge 
             variant="outline" 
-            className="text-xs border-border/40 text-muted-foreground shrink-0"
+            className="text-xs border-primary/30 text-primary/80 shrink-0"
           >
-            4 actions identified
+            Focus active
           </Badge>
         </div>
       </div>
@@ -91,60 +87,7 @@ function DemoHeader({ scene }: { scene: DemoScene }) {
   );
 }
 
-function DemoActions({ scene, onSummarize }: { scene: DemoScene; onSummarize: () => void }) {
-  return (
-    <div className="px-4 sm:px-8 py-4 border-b border-border/10">
-      <div className="max-w-3xl mx-auto flex gap-3">
-        <Button 
-          variant="outline" 
-          size="sm"
-          className={cn(
-            "gap-2 text-sm font-medium border-border/30 bg-card/30 hover:bg-card/50 hover:border-primary/30 transition-all duration-300",
-            scene !== "static" && "border-primary/40 text-primary"
-          )}
-          onClick={onSummarize}
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          Summarize
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="gap-2 text-sm font-medium border-border/30 bg-card/30 hover:bg-card/50 hover:border-primary/30 transition-all duration-300"
-        >
-          <Layers className="h-3.5 w-3.5" />
-          Batch Respond
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function AISummaryPanel({ visible }: { visible: boolean }) {
-  return (
-    <div 
-      className={cn(
-        "px-4 sm:px-8 py-0 overflow-hidden transition-all duration-500 ease-out",
-        visible ? "max-h-40 py-4 opacity-100" : "max-h-0 opacity-0"
-      )}
-    >
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-card/40 border border-border/20 rounded-xl p-4 backdrop-blur-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <Circle className="h-1.5 w-1.5 fill-primary text-primary" />
-            <span className="text-xs font-medium text-primary uppercase tracking-wider">AI Summary</span>
-          </div>
-          <div className="space-y-1.5 text-sm text-foreground/80">
-            <p>• 2 decisions required</p>
-            <p>• 1 deployment blocked</p>
-            <p>• 1 review requested</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+// AI Label Component
 function AILabel({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2 mt-1.5">
@@ -154,64 +97,82 @@ function AILabel({ label }: { label: string }) {
   );
 }
 
+// Message Row Component
 interface DemoMessageRowProps {
   message: DemoMessage;
-  isDimmed?: boolean;
+  isFocusDimmed?: boolean;
+  isVisible: boolean;
 }
 
-function DemoMessageRow({ message, isDimmed }: DemoMessageRowProps) {
+function DemoMessageRow({ message, isFocusDimmed, isVisible }: DemoMessageRowProps) {
   const SourceIcon = sourceIcons[message.source];
   
   return (
     <div 
       className={cn(
-        "flex items-start gap-3 sm:gap-4 py-4 sm:py-5 px-4 sm:px-5 bg-card/20 rounded-xl border border-border/10 transition-all duration-300",
-        isDimmed && "opacity-50"
+        "flex items-start gap-3 py-4 px-4 bg-card/20 rounded-xl border border-border/10 transition-all duration-500 ease-out",
+        isFocusDimmed && "opacity-40 blur-[0.5px]",
+        !isVisible && "opacity-0"
       )}
     >
       {/* Priority indicator */}
       <div 
         className={cn(
-          "w-1 h-10 sm:h-12 rounded-full mt-0.5 shrink-0",
-          priorityColors[message.priority]
+          "w-1 h-10 rounded-full mt-0.5 shrink-0 transition-opacity duration-500",
+          priorityColors[message.priority],
+          isFocusDimmed && "opacity-50"
         )}
       />
       
       {/* Content */}
       <div className="flex-1 min-w-0 space-y-0.5">
-        <p className="font-semibold text-foreground text-sm sm:text-base tracking-tight truncate">
+        <p className={cn(
+          "font-semibold text-foreground text-sm tracking-tight truncate transition-opacity duration-500",
+          isFocusDimmed && "text-muted-foreground"
+        )}>
           {message.sender}
         </p>
-        <p className="text-muted-foreground text-sm leading-relaxed line-clamp-2">
+        <p className={cn(
+          "text-muted-foreground text-sm leading-relaxed line-clamp-2 transition-opacity duration-500",
+          isFocusDimmed && "text-muted-foreground/60"
+        )}>
           {message.intent}
         </p>
-        <AILabel label={message.aiLabel} />
+        {!isFocusDimmed && <AILabel label={message.aiLabel} />}
       </div>
       
       {/* Meta */}
-      <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground/60 shrink-0">
-        <div className="flex items-center gap-1.5">
-          <SourceIcon className="h-3 w-3" />
-          <span className="hidden sm:inline">{sourceLabels[message.source]}</span>
-        </div>
+      <div className={cn(
+        "flex flex-col items-end gap-1 text-xs text-muted-foreground/60 shrink-0 transition-opacity duration-500",
+        isFocusDimmed && "opacity-50"
+      )}>
+        <SourceIcon className="h-3 w-3" />
         <span>{message.time}</span>
       </div>
     </div>
   );
 }
 
+// Message Section Component
 interface DemoSectionProps {
   label: string;
   messages: DemoMessage[];
-  dimmed?: boolean;
+  isFocusDimmed?: boolean;
+  isVisible: boolean;
 }
 
-function DemoSection({ label, messages, dimmed }: DemoSectionProps) {
+function DemoSection({ label, messages, isFocusDimmed, isVisible }: DemoSectionProps) {
   if (messages.length === 0) return null;
   
   return (
-    <div className="space-y-3">
-      <h3 className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider px-1">
+    <div className={cn(
+      "space-y-3 transition-all duration-500 ease-out",
+      isFocusDimmed && "opacity-60"
+    )}>
+      <h3 className={cn(
+        "text-xs font-medium uppercase tracking-wider px-1 transition-colors duration-500",
+        isFocusDimmed ? "text-muted-foreground/40" : "text-muted-foreground/70"
+      )}>
         {label}
       </h3>
       <div className="space-y-2">
@@ -219,7 +180,8 @@ function DemoSection({ label, messages, dimmed }: DemoSectionProps) {
           <DemoMessageRow 
             key={message.id} 
             message={message}
-            isDimmed={dimmed}
+            isFocusDimmed={isFocusDimmed}
+            isVisible={isVisible}
           />
         ))}
       </div>
@@ -227,14 +189,15 @@ function DemoSection({ label, messages, dimmed }: DemoSectionProps) {
   );
 }
 
+// Task Row Component
 function DemoTaskRow({ task, index, visible }: { task: DemoTask; index: number; visible: boolean }) {
   return (
     <div 
       className={cn(
-        "flex items-center gap-3 py-3 sm:py-4 px-4 bg-card/20 rounded-xl border border-border/10 transition-all duration-500",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+        "flex items-center gap-3 py-3 px-4 bg-card/30 rounded-xl border border-border/20 transition-all duration-500",
+        visible ? "opacity-100" : "opacity-0"
       )}
-      style={{ transitionDelay: visible ? `${index * 100}ms` : "0ms" }}
+      style={{ transitionDelay: visible ? `${index * 80}ms` : "0ms" }}
     >
       {/* Priority bar */}
       <div className={cn(
@@ -249,20 +212,19 @@ function DemoTaskRow({ task, index, visible }: { task: DemoTask; index: number; 
         </p>
       </div>
       
-      {/* Visual checkbox placeholder */}
-      <div className="w-5 h-5 rounded border border-border/30 shrink-0" />
+      {/* Checkbox placeholder */}
+      <div className="w-5 h-5 rounded border border-primary/30 shrink-0" />
     </div>
   );
 }
 
+// Actions Section Component
 function DemoActionsSection({ visible }: { visible: boolean }) {
   return (
-    <div 
-      className={cn(
-        "transition-all duration-500 ease-out",
-        visible ? "opacity-100" : "opacity-0"
-      )}
-    >
+    <div className={cn(
+      "transition-all duration-500 ease-out",
+      visible ? "opacity-100" : "opacity-0"
+    )}>
       <div className="border-t border-border/10 pt-6 mt-6">
         <h2 className="text-base font-semibold text-foreground mb-4 tracking-tight">
           Your Next Actions
@@ -283,22 +245,15 @@ function DemoActionsSection({ visible }: { visible: boolean }) {
 }
 
 export default function Demo() {
-  const [scene, setScene] = useState<DemoScene>("static");
+  const [scene, setScene] = useState<DemoScene>("loading");
   
-  // Automatic scene progression for video recording
+  // Transition to focus mode after brief loading
   useEffect(() => {
-    const timers = [
-      setTimeout(() => setScene("summarized"), 3000),  // Show summary
-      setTimeout(() => setScene("actions"), 6000),     // Show actions
-    ];
-    return () => timers.forEach(clearTimeout);
+    const timer = setTimeout(() => setScene("focus"), 400);
+    return () => clearTimeout(timer);
   }, []);
   
-  const handleSummarize = () => {
-    if (scene === "static") {
-      setScene("summarized");
-    }
-  };
+  const isFocusActive = scene === "focus";
   
   const priorityGroups = {
     high: { label: "Requires Action", messages: DEMO_MESSAGES.filter(m => m.priority === "high") },
@@ -306,31 +261,35 @@ export default function Demo() {
     fyi: { label: "FYI", messages: DEMO_MESSAGES.filter(m => m.priority === "fyi") },
   };
   
-  const showSummary = scene === "summarized" || scene === "actions";
-  const showActions = scene === "actions";
-  
   return (
     <div className="min-h-screen bg-[#0a0a0c]">
-      <DemoHeader scene={scene} />
-      <DemoActions scene={scene} onSummarize={handleSummarize} />
-      <AISummaryPanel visible={showSummary} />
+      <DemoHeader />
       
-      <main className="px-4 sm:px-8 py-6 sm:py-8">
-        <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8">
-          {/* Message List */}
+      <main className="px-4 py-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          {/* Requires Action - Always prominent */}
           <DemoSection 
             {...priorityGroups.high}
-          />
-          <DemoSection 
-            {...priorityGroups.medium}
-          />
-          <DemoSection 
-            {...priorityGroups.fyi}
-            dimmed={showActions}
+            isFocusDimmed={false}
+            isVisible={true}
           />
           
-          {/* Next Actions (full-width, below inbox) */}
-          <DemoActionsSection visible={showActions} />
+          {/* For Review - Always prominent */}
+          <DemoSection 
+            {...priorityGroups.medium}
+            isFocusDimmed={false}
+            isVisible={true}
+          />
+          
+          {/* FYI - De-emphasized in focus mode */}
+          <DemoSection 
+            {...priorityGroups.fyi}
+            isFocusDimmed={isFocusActive}
+            isVisible={true}
+          />
+          
+          {/* Next Actions - Always visible and prominent */}
+          <DemoActionsSection visible={true} />
         </div>
       </main>
     </div>
