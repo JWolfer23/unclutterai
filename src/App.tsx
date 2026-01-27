@@ -29,6 +29,7 @@ import StrategyWealth from "./pages/StrategyWealth";
 import PerformanceReport from "./pages/PerformanceReport";
 import Pricing from "./pages/Pricing";
 import WhatIHandled from "./pages/WhatIHandled";
+import Demo from "./pages/Demo";
 import { useAuth } from "@/hooks/useAuth";
 import { SecurityProvider } from "@/components/SecurityProvider";
 import { AssistantProfileProvider } from "@/components/AssistantProfileProvider";
@@ -87,7 +88,7 @@ const AppRoutes = () => {
         <Route path="/community" element={user ? <CommunityRanking /> : <Navigate to="/auth" replace />} />
         <Route path="/performance" element={user ? <PerformanceReport /> : <Navigate to="/auth" replace />} />
         <Route path="/what-handled" element={user ? <WhatIHandled /> : <Navigate to="/auth" replace />} />
-        
+        <Route path="/demo" element={<Demo />} />
         {/* Legacy routes for backward compatibility */}
         <Route path="/news" element={user ? <NewsMode /> : <Navigate to="/auth" replace />} />
         <Route path="/learning" element={user ? <LearningMode /> : <Navigate to="/auth" replace />} />
