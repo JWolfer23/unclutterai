@@ -1,117 +1,337 @@
 
-# Presentation-Only Interaction State for Executive Inbox Demo
+# Cohesive Presentation Demo Experience for UnclutterAI
 
 ## Overview
-Add an automatic, timed interaction sequence to the existing Demo page that showcases the assistant handling a high-priority message. The sequence runs once on page load, demonstrating intelligent action without user input.
 
-## Interaction Timeline (~4-5 seconds total)
+Transform the existing `/demo` route into a multi-scene, single-system demo that visually supports Scenes 2-5 of the product video. The demo evolves through distinct phases, showing one continuous system—not separate demos.
 
-| Phase | Time | Visual State |
-|-------|------|--------------|
-| **Calm** | 0-1s | Static inbox, all messages visible |
-| **Focus** | 1-2s | First high-priority message gains emphasis, others fade to 50% opacity |
-| **Action** | 2-3.5s | Suggested action appears below focused message ("Approve contract") |
-| **Resolve** | 3.5-4.5s | Action completes, message fades out and collapses |
-| **Return** | 4.5s+ | Remaining messages return to full opacity, inbox calm |
+## Scene Flow Architecture
+
+The demo will progress through 4 distinct scenes, controlled by a phase state machine. Each scene builds on the previous, creating a narrative of increasing intelligence.
+
+```text
+Timeline: ~20-25 seconds total (adjustable)
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Scene 2       Scene 3         Scene 4           Scene 5               │
+│  (0-4s)        (4-9s)          (9-15s)           (15-22s)              │
+│                                                                         │
+│  Static        Messages        AI labels         Tasks                  │
+│  Inbox         fade in         appear            materialize            │
+│  at rest       one by one      on messages       from messages          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Scene 2: Product Introduction State (0-4s)
+
+**Purpose:** Establish UnclutterAI as real software at rest.
+
+**Visual State:**
+- Clean header with "Unified Inbox" title and UnclutterAI logo
+- Empty inbox area with subtle ambient glow
+- Status indicator: "Monitoring 3 channels"
+- Completely static, no motion
+
+**Implementation:**
+- Initial render shows header only
+- No messages visible yet
+- Calm, confident, production-ready appearance
+
+---
+
+## Scene 3: Unified Inbox Reveal (4-9s)
+
+**Purpose:** Show multi-channel unification.
+
+**Visual State:**
+- 7 messages fade in sequentially (staggered, 0.3s apart)
+- Each message shows:
+  - Source icon (Email/Slack/WhatsApp) - subtle, muted
+  - Sender name - primary text
+  - Subject/preview - secondary text
+  - Time indicator - tertiary, muted
+
+**Implementation:**
+- Messages appear in priority groups: "Requires Action" first, then "For Review", then "FYI"
+- Each row uses slow fade-in (opacity 0→1, duration 500ms)
+- No priority indicators yet—just raw unified inbox
+
+**Demo Data (7 messages):**
+| # | Sender | Intent | Source | Priority |
+|---|--------|--------|--------|----------|
+| 1 | Sarah Chen | Contract needs approval before Friday | Email | high |
+| 2 | DevOps Team | Production deployment blocked | Slack | high |
+| 3 | Michael Torres | Review updated proposal draft | Email | medium |
+| 4 | Product Team | Feedback requested on roadmap | Slack | medium |
+| 5 | Finance | Q4 invoice processed | Email | fyi |
+| 6 | Alex Kim | Confirmed meeting moved to 3pm | WhatsApp | fyi |
+| 7 | Board Assistant | Quarterly report attached | Email | fyi |
+
+---
+
+## Scene 4: AI Understanding — Urgency & Intent (9-15s)
+
+**Purpose:** Demonstrate real AI behavior.
+
+**Visual Changes:**
+- Priority indicators animate in (left-edge color bars)
+  - High: muted amber
+  - Medium: subtle blue
+  - FYI: no color (transparent)
+- AI intent labels appear below each message (staggered)
+
+**Intent Labels (factual, not promotional):**
+| Message | AI Label |
+|---------|----------|
+| Contract approval | "Decision required" |
+| Deployment blocked | "Awaiting response" |
+| Proposal draft | "Review requested" |
+| Roadmap feedback | "Input requested" |
+| Invoice processed | "No action needed" |
+| Meeting moved | "Acknowledged" |
+| Quarterly report | "For reference" |
+
+**Implementation:**
+- Priority bars fade in simultaneously (300ms)
+- Intent labels fade in staggered (0.2s apart)
+- Low-priority messages visually de-emphasized (opacity 60%)
+
+---
+
+## Scene 5: Output — Tasks & Clarity (15-22s)
+
+**Purpose:** Show the result of AI processing.
+
+**Visual Changes:**
+- Right panel slides in with "Your Next Actions" header
+- 4 tasks extracted from high/medium priority messages:
+  1. "Approve contract" — from Sarah Chen's email
+  2. "Unblock deployment" — from DevOps Slack
+  3. "Review proposal" — from Michael Torres
+  4. "Provide roadmap feedback" — from Product Team
+
+**Task Panel Design:**
+- Minimal, clean list
+- Each task shows:
+  - Clear action (primary text)
+  - Source reference (subtle, secondary)
+  - Priority indicator (left bar)
+
+**Implementation:**
+- Panel slides in from right (transform: translateX)
+- Tasks fade in staggered (0.3s apart)
+- FYI messages in inbox visually dim further (40% opacity)
+
+---
+
+## Visual Specifications
+
+### Layout Structure
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │  UnclutterAI Logo    Unified Inbox    Status Badge             │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+│  ┌─────────────────────────────────────┐ ┌──────────────────────────┐  │
+│  │                                     │ │                          │  │
+│  │         MESSAGE LIST                │ │      TASK PANEL          │  │
+│  │         (Scenes 2-4)                │ │      (Scene 5 only)      │  │
+│  │                                     │ │                          │  │
+│  │  ┌─────────────────────────────┐    │ │  Your Next Actions       │  │
+│  │  │ ▎ Sender                    │    │ │                          │  │
+│  │  │   Intent summary            │    │ │  ☐ Approve contract      │  │
+│  │  │   AI Label (Scene 4+)       │    │ │    ↳ from Sarah Chen     │  │
+│  │  │                  Source Time│    │ │                          │  │
+│  │  └─────────────────────────────┘    │ │  ☐ Unblock deployment    │  │
+│  │                                     │ │    ↳ from DevOps Team    │  │
+│  │                                     │ │                          │  │
+│  └─────────────────────────────────────┘ └──────────────────────────┘  │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Color Palette (Dark Mode Only)
+- Background: `#0b0b0d` to `#111111` gradient
+- Card: `rgba(255,255,255,0.03)` with subtle border
+- Primary accent: `hsl(266 83% 65%)` — UnclutterAI purple
+- Text primary: `#fafafa`
+- Text secondary: `#a1a1aa`
+- Text muted: `#71717a`
+- Priority high: `#d97706` (muted amber)
+- Priority medium: `#60a5fa` (soft blue)
+
+### Typography
+- Font: Inter (already configured)
+- Header: 24px, semibold, -0.02em tracking
+- Sender: 16px, semibold
+- Intent: 15px, regular, muted
+- AI Label: 13px, medium, primary color
+- Meta: 12px, regular, very muted
+
+### Spacing
+- Container max-width: 960px (two-panel layout)
+- Message row height: 76px
+- Row padding: 20px horizontal, 16px vertical
+- Section gap: 32px
+- Message gap: 12px
+
+### Motion Guidelines
+- All transitions: 500ms ease-out
+- Stagger delay: 200-300ms
+- No bounce, spring, or overshoot
+- Motion should feel "inevitable, not animated"
+
+---
 
 ## Technical Implementation
 
-### 1. State Management
-Add React state to track the interaction phase:
+### File Structure
+All changes contained in `src/pages/Demo.tsx`:
 
-```tsx
-type InteractionPhase = "calm" | "focus" | "action" | "resolve" | "complete";
-const [phase, setPhase] = useState<InteractionPhase>("calm");
+### State Machine
+```typescript
+type DemoScene = 
+  | "intro"        // Scene 2: Static header, empty inbox
+  | "inbox"        // Scene 3: Messages fade in
+  | "intelligence" // Scene 4: AI labels appear
+  | "tasks";       // Scene 5: Task panel slides in
+
+const [scene, setScene] = useState<DemoScene>("intro");
 ```
 
-### 2. Timing Sequence (useEffect)
-Implement the automatic sequence on component mount:
-
-```tsx
+### Timing Sequence
+```typescript
 useEffect(() => {
   const timers = [
-    setTimeout(() => setPhase("focus"), 1000),
-    setTimeout(() => setPhase("action"), 2000),
-    setTimeout(() => setPhase("resolve"), 3500),
-    setTimeout(() => setPhase("complete"), 4500),
+    setTimeout(() => setScene("inbox"), 2000),        // Scene 3 starts
+    setTimeout(() => setScene("intelligence"), 7000), // Scene 4 starts
+    setTimeout(() => setScene("tasks"), 13000),       // Scene 5 starts
   ];
   return () => timers.forEach(clearTimeout);
 }, []);
 ```
 
-### 3. Message Row Modifications
-Update `DemoMessageRow` to accept interaction state props:
+### Component Structure
 
-```tsx
-interface DemoMessageRowProps {
-  message: DemoMessage;
-  isFocused: boolean;
-  isFaded: boolean;
-  isResolving: boolean;
-  showAction: boolean;
+1. **DemoHeader** — Logo, title, status
+2. **DemoMessageList** — Container for message sections
+3. **DemoSection** — Priority group (label + messages)
+4. **DemoMessageRow** — Individual message with:
+   - Priority bar
+   - Sender/intent
+   - AI label (conditional)
+   - Source/time meta
+5. **DemoTaskPanel** — Slide-in task list (Scene 5)
+6. **DemoTaskRow** — Individual extracted task
+
+### Staggered Animations
+```typescript
+// Messages appear one by one in Scene 3
+const messageDelay = (index: number) => 
+  scene === "inbox" ? `${index * 300}ms` : "0ms";
+
+// AI labels appear staggered in Scene 4
+const labelDelay = (index: number) =>
+  scene === "intelligence" ? `${index * 200}ms` : "0ms";
+```
+
+### CSS Transitions
+```css
+/* Base message row */
+.demo-message-row {
+  opacity: 0;
+  transition: opacity 500ms ease-out;
+}
+
+/* Visible state */
+.demo-message-row--visible {
+  opacity: 1;
+}
+
+/* De-emphasized (FYI in Scene 4-5) */
+.demo-message-row--dimmed {
+  opacity: 0.4;
+}
+
+/* Task panel slide */
+.demo-task-panel {
+  transform: translateX(100%);
+  transition: transform 600ms ease-out;
+}
+
+.demo-task-panel--visible {
+  transform: translateX(0);
 }
 ```
 
-**Visual states:**
-- **Focused**: Slightly brighter background (`bg-card/50`), subtle ring (`ring-1 ring-primary/20`)
-- **Faded**: Reduced opacity (`opacity-50`)
-- **Resolving**: Collapse height to 0 with opacity fade
-- **Action visible**: Inline action button appears below intent text
+---
 
-### 4. Suggested Action Component
-Simple inline action that appears during "action" phase:
+## Demo Data
 
-```tsx
-function SuggestedAction({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-2 mt-2 animate-in fade-in duration-300">
-      <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-      <span className="text-sm text-primary font-medium">{label}</span>
-    </div>
-  );
-}
+### Messages (7 total)
+```typescript
+const DEMO_MESSAGES = [
+  { id: "1", sender: "Sarah Chen", intent: "Contract needs approval before Friday", source: "email", priority: "high", aiLabel: "Decision required" },
+  { id: "2", sender: "DevOps Team", intent: "Production deployment blocked", source: "slack", priority: "high", aiLabel: "Awaiting response" },
+  { id: "3", sender: "Michael Torres", intent: "Review updated proposal draft", source: "email", priority: "medium", aiLabel: "Review requested" },
+  { id: "4", sender: "Product Team", intent: "Feedback requested on roadmap", source: "slack", priority: "medium", aiLabel: "Input requested" },
+  { id: "5", sender: "Finance", intent: "Q4 invoice processed", source: "email", priority: "fyi", aiLabel: "No action needed" },
+  { id: "6", sender: "Alex Kim", intent: "Confirmed meeting moved to 3pm", source: "whatsapp", priority: "fyi", aiLabel: "Acknowledged" },
+  { id: "7", sender: "Board Assistant", intent: "Quarterly report attached", source: "email", priority: "fyi", aiLabel: "For reference" },
+];
 ```
 
-### 5. CSS Transitions
-All transitions use opacity and max-height only (per constraints):
-
-```tsx
-// Base row classes
-className={cn(
-  "transition-all duration-500 ease-out",
-  isFaded && "opacity-50",
-  isFocused && "bg-card/50 ring-1 ring-primary/20",
-  isResolving && "opacity-0 max-h-0 overflow-hidden py-0 my-0"
-)}
+### Tasks (4 derived from messages)
+```typescript
+const DEMO_TASKS = [
+  { id: "t1", action: "Approve contract", source: "Sarah Chen", messageId: "1", priority: "high" },
+  { id: "t2", action: "Unblock deployment", source: "DevOps Team", messageId: "2", priority: "high" },
+  { id: "t3", action: "Review proposal", source: "Michael Torres", messageId: "3", priority: "medium" },
+  { id: "t4", action: "Provide roadmap feedback", source: "Product Team", messageId: "4", priority: "medium" },
+];
 ```
 
-### 6. Header Badge Update
-During "complete" phase, update the badge from "All caught up" to reflect the resolved action (optional, subtle):
+---
 
-```tsx
-{phase === "complete" ? "1 handled" : "All caught up"}
-```
+## Removed / Avoided Elements
 
-## File Changes
+**Explicitly excluded:**
+- User avatars
+- Emojis
+- Playful copy or productivity jargon
+- Onboarding tips or tooltips
+- Glow effects or neon colors
+- Spring/bounce animations
+- Scrolling or cursor
+- Interactive elements
+- Marketing language ("magic", "supercharged", "AI-powered")
 
-**`src/pages/Demo.tsx`** - All changes in this single file:
+---
 
-1. Add `useState` and `useEffect` imports
-2. Add `InteractionPhase` type and state
-3. Add timing sequence in `useEffect`
-4. Create `SuggestedAction` component
-5. Update `DemoMessageRow` to accept and respond to phase props
-6. Pass phase-derived props from parent to each message row
-7. Add transition classes for smooth opacity/layout changes
-8. Target message ID "1" (Sarah Chen - Contract approval) as the focused message
+## Success Criteria
 
-## Visual Behavior Summary
+When someone watches the demo silently, they should conclude:
+- ✓ This is a real AI product
+- ✓ This is a real workflow
+- ✓ This could exist today
+- ✓ This is built for serious users
 
-- **No modals, tooltips, or explanations** - action appears inline
-- **No scrolling or cursor** - page is static
-- **Only opacity + subtle emphasis changes** - no sliding, bouncing, or dramatic animations
-- **Professional action labels**: "Approve contract" (matches the high-priority contract message)
-- **Message count updates**: Header shows "6 messages across 3 channels" after resolution
+The demo should feel:
+- **Calm** — Nothing demands attention unnecessarily
+- **Confident** — No explanations needed
+- **Inevitable** — Each transition feels natural
+- **Professional** — Apple / Linear / Stripe aesthetic
 
-## Demo Data Alignment
-The first high-priority message (Sarah Chen - "Contract needs approval before Friday") is perfect for this demo. The suggested action will be "Approve contract" - clear, professional, realistic.
+---
+
+## Implementation Summary
+
+| File | Changes |
+|------|---------|
+| `src/pages/Demo.tsx` | Complete rewrite with multi-scene state machine, new components, updated data |
+
+**Estimated scope:** Single file, ~400-500 lines of React/TypeScript
+
